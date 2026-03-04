@@ -26,6 +26,19 @@ st.title("Programação Máquinas Laser")
 # Carregar dados
 df = carregar_dados()
 
+df = carregar_dados()
+
+if not df.empty:
+    df.rename(columns={
+        "produto": "Produto",
+        "operador": "Operador",
+        "inicio": "Inicio",
+        "fim": "Fim",
+        "prazo_limite": "Prazo Limite",
+        "status": "Status",
+        "data_finalizado": "Data Finalizado"
+    }, inplace=True)
+
 if not df.empty:
     df["inicio"] = pd.to_datetime(df["inicio"], errors="coerce")
     df["fim"] = pd.to_datetime(df["fim"], errors="coerce")
