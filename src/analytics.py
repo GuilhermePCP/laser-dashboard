@@ -1,45 +1,48 @@
 import pandas as pd
 from datetime import datetime
 
-def calcular_metricas(df):
-
-    if not df.empty:
-        df["Inicio"] = pd.to_datetime(df["Inicio"], errors="coerce")
-        df["Fim"] = pd.to_datetime(df["Fim"], errors="coerce")
-        df["Prazo Limite"] = pd.to_datetime(df["Prazo Limite"], errors="coerce")
-
-    hoje = pd.Timestamp.today()
-
 
 def filtrar_dados(df, operador, status):
 
     df_filtrado = df.copy()
 
     if operador != "Todas":
-        df_filtrado = df_filtrado[df_filtrado["Operador"] == operador]
+        df_filtrado = df_filtrado[df_filtrado["operador"] == operador]
 
     if status != "Todos":
-        df_filtrado = df_filtrado[df_filtrado["Status"] == status]
+        df_filtrado = df_filtrado[df_filtrado["status"] == status]
 
     return df_filtrado
 
 
 def calcular_metricas(df):
 
+    if df.empty:
+        return {
+            "total_ops": 0,
+            "maquinas_ocupadas": 0,
+            "proxima_maquina": "Nenhum"
+        }
+
+    # Garantir que datas estão no formato datetime
+    df["inicio"] = pd.to_datetime(df["inicio"], errors="coerce")
+    df["fim"] = pd.to_datetime(df["fim"], errors="coerce")
+    df["prazo_limite"] = pd.to_datetime(df["prazo_limite"], errors="coerce")
+
     total_ops = len(df)
 
     # Operadores em produção
     operadores_ocupados = (
-        df[df["Status"] == "Em produção"]["Operador"]
+        df[df["status"] == "Em produção"]["operador"]
         .nunique()
     )
 
     hoje = pd.Timestamp(datetime.today().date())
 
-    proximas = df[df["Inicio"] > hoje].sort_values("Inicio")
+    proximas = df[df["inicio"] > hoje].sort_values("inicio")
 
     if not proximas.empty:
-        proximo_operador = proximas.iloc[0]["Operador"]
+        proximo_operador = proximas.iloc[0]["operador"]
     else:
         proximo_operador = "Nenhum"
 
