@@ -8,7 +8,14 @@ from src.analytics import calcular_metricas, filtrar_dados
 from src.visuals import grafico_gantt
 from datetime import datetime
 import pandas as pd
-from src.database import criar_tabela, carregar_dados, salvar_programacao
+from src.database import (
+    criar_tabela,
+    carregar_dados,
+    salvar_programacao,
+    carregar_operadores,
+    adicionar_operador,
+    remover_operador
+)
 
 criar_tabela()
 
