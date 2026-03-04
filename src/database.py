@@ -1,21 +1,13 @@
 from sqlalchemy import create_engine, text
 import pandas as pd
-import os
 import streamlit as st
-import sqlalchemy # ou psycopg2
 
-# O Streamlit busca automaticamente no .streamlit/secrets.toml (local)
-# ou na aba Secrets (nuvem)
-conn_string = st.secrets["DATABASE_URL"]
 
-def get_connection():
-    engine = sqlalchemy.create_engine(conn_string)
-    return engine.connect()
+# ----------------------------
+# CONEXÃO COM O BANCO (SUPABASE)
+# ----------------------------
 
-# Agora você pode usar essa conexão para ler seu banco
-
-# 🔥 Conexão com banco externo (Supabase)
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = st.secrets["DATABASE_URL"]
 engine = create_engine(DATABASE_URL)
 
 
@@ -24,7 +16,6 @@ engine = create_engine(DATABASE_URL)
 # ----------------------------
 
 def criar_tabela():
-
     with engine.connect() as conn:
 
         conn.execute(text("""
