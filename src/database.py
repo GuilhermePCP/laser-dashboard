@@ -1,95 +1,83 @@
-import sqlite3
+from sqlalchemy import create_engine, text
 import pandas as pd
+import os
+
+# 🔥 Conexão com banco externo (Supabase)
+DATABASE_URL = os.getenv("DATABASE_URL")
+engine = create_engine(DATABASE_URL)
 
 
-DB_PATH = "data/programacao.db"
-
-
-def conectar():
-    return sqlite3.connect(DB_PATH)
-
+# ----------------------------
+# CRIAR TABELAS (caso não existam)
+# ----------------------------
 
 def criar_tabela():
-    conn = conectar()
-    cursor = conn.cursor()
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS operadores (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT UNIQUE NOT NULL
-        )
-    """)
+    with engine.connect() as conn:
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS programacao (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            produto TEXT,
-            operador TEXT,
-            inicio TEXT,
-            Fim TEXT,
-            prazo_limite TEXT,
-            status TEXT,
-            data_finalizado TEXT
-        )
-    """)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS programacao (
+                id SERIAL PRIMARY KEY,
+                produto TEXT,
+                inicio TIMESTAMP,
+                fim TIMESTAMP,
+                prazo_limite TIMESTAMP,
+                status TEXT,
+                operador TEXT,
+                data_finalizado TIMESTAMP
+            )
+        """))
 
-    conn.commit()
-    conn.close()
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS operadores (
+                id SERIAL PRIMARY KEY,
+                nome TEXT UNIQUE
+            )
+        """))
+
+        conn.commit()
+
+
+# ----------------------------
+# CARREGAR DADOS
+# ----------------------------
+
+def carregar_dados():
+    query = "SELECT * FROM programacao"
+    return pd.read_sql(query, engine)
+
+
+# ----------------------------
+# SALVAR PROGRAMAÇÃO
+# ----------------------------
+
+def salvar_programacao(dados):
+    df = pd.DataFrame([dados])
+    df.to_sql("programacao", engine, if_exists="append", index=False)
+
+
+# ----------------------------
+# OPERADORES
+# ----------------------------
 
 def carregar_operadores():
-    conn = conectar()
-    df = pd.read_sql("SELECT * FROM operadores ORDER BY nome", conn)
-    conn.close()
-    return df
+    query = "SELECT * FROM operadores"
+    return pd.read_sql(query, engine)
 
 
 def adicionar_operador(nome):
-    conn = conectar()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("INSERT INTO operadores (nome) VALUES (?)", (nome,))
+    with engine.connect() as conn:
+        conn.execute(
+            text("INSERT INTO operadores (nome) VALUES (:nome) ON CONFLICT DO NOTHING"),
+            {"nome": nome}
+        )
         conn.commit()
-    except:
-        pass
-
-    conn.close()
 
 
 def remover_operador(nome):
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("DELETE FROM operadores WHERE nome = ?", (nome,))
-    conn.commit()
-    conn.close()
-
-
-def carregar_dados():
-    conn = conectar()
-    df = pd.read_sql("SELECT * FROM programacao", conn)
-    conn.close()
-
-    return df
-
-
-def salvar_programacao(dados):
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO programacao
-        (produto, inicio, fim, prazo_limite, status, operador, data_finalizado)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        dados["produto"],
-        dados["inicio"],
-        dados["fim"],
-        dados["prazo_limite"],
-        dados["status"],
-        dados["operador"],
-        dados["data_finalizado"]
-    ))
-
-    conn.commit()
-    conn.close()
+    with engine.connect() as conn:
+        conn.execute(
+            text("DELETE FROM operadores WHERE nome = :nome"),
+            {"nome": nome}
+        )
+        conn.commit()
