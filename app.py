@@ -47,7 +47,7 @@ if not df.empty:
 
 if not df.empty:
     df["Inicio"] = pd.to_datetime(df["Inicio"], errors="coerce")
-    df["fim"] = pd.to_datetime(df["fim"], errors="coerce")
+    df["Fim"] = pd.to_datetime(df["Fim"], errors="coerce")
     df["prazo_limite"] = pd.to_datetime(df["prazo_limite"], errors="coerce")
     df["data_finalizado"] = pd.to_datetime(df["data_finalizado"], errors="coerce")
 

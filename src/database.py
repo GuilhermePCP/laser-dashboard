@@ -26,7 +26,7 @@ def criar_tabela():
             produto TEXT,
             operador TEXT,
             inicio TEXT,
-            fim TEXT,
+            Fim TEXT,
             prazo_limite TEXT,
             status TEXT,
             data_finalizado TEXT
@@ -79,7 +79,7 @@ def salvar_programacao(dados):
 
     cursor.execute("""
         INSERT INTO programacao 
-        (produto, operador, inicio, fim, prazo_limite, status, data_finalizado)
+        (produto, operador, inicio, Fim, prazo_limite, status, data_finalizado)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (
         dados["Produto"],
