@@ -54,7 +54,7 @@ if not df.empty:
     }, inplace=True)
 
 # DEBUG (pode remover depois)
-st.write("COLUNAS DO DF:", df.columns)
+#st.write("COLUNAS DO DF:", df.columns)
 
 st.sidebar.divider()
 st.sidebar.subheader("➕ Nova Programação")
