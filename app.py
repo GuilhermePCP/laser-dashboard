@@ -44,29 +44,6 @@ st.title("Programação Máquinas Laser")
 df = carregar_dados()
 
 # -------------------------------------------------
-# LISTAGEM + BOTÃO FINALIZAR
-# -------------------------------------------------
-
-if not df.empty:
-
-    for index, row in df.iterrows():
-
-        col1, col2 = st.columns([4, 1])
-
-        with col1:
-            st.write(f"Produto: {row['produto']} | Status: {row['status']}")
-
-        with col2:
-            if row["status"] != "Finalizado":
-                if st.button("Finalizar", key=f"finalizar_{row['id']}"):
-                    finalizar_programacao(row["id"])
-                    st.success("Programação finalizada!")
-                    st.rerun()
-
-else:
-    st.info("Nenhuma programação cadastrada.")
-
-# -------------------------------------------------
 # FOOTER PERSONALIZADO
 # -------------------------------------------------
 
@@ -312,7 +289,7 @@ st.dataframe(df, use_container_width=True)
 # FINALIZAR PROGRAMAÇÃO (BOTÃO ÚNICO)
 # -------------------------------------------------
 
-st.markdown("### Finalizar Programação")
+st.markdown("### ✅ Finalizar Programação")
 
 if not df.empty:
 
@@ -342,41 +319,6 @@ if not df.empty:
 else:
     st.info("Nenhuma programação cadastrada.")
 
-st.subheader("✅ Finalizar Programação")
-
-# 🔥 usar minúsculo
-produtos_abertos = df_ativos["produto"].unique()
-
-if len(produtos_abertos) > 0:
-
-    op_finalizar = st.selectbox(
-        "Selecione o produto para finalizar",
-        produtos_abertos
-    )
-
-    if st.button("Marcar como Finalizado"):
-
-        hoje = datetime.today()
-
-        import sqlite3
-
-        conn = sqlite3.connect("data/programacao.db")
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            UPDATE programacao
-            SET status = ?, data_finalizado = ?
-            WHERE produto = ?
-        """, ("Finalizado", str(hoje), op_finalizar))
-
-        conn.commit()
-        conn.close()
-
-        st.success("Produto finalizado com sucesso!")
-        st.rerun()
-
-else:
-    st.info("Nenhum produto ativo para finalizar.")
 
 st.divider()
 
