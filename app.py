@@ -302,6 +302,46 @@ st.plotly_chart(fig, use_container_width=True)
 
 st.divider()
 
+# -------------------------------------------------
+# TABELA
+# -------------------------------------------------
+
+st.dataframe(df, use_container_width=True)
+
+# -------------------------------------------------
+# FINALIZAR PROGRAMAÇÃO (BOTÃO ÚNICO)
+# -------------------------------------------------
+
+st.markdown("### Finalizar Programação")
+
+if not df.empty:
+
+    # Filtrar apenas não finalizados
+    df_abertos = df[df["status"] != "Finalizado"]
+
+    if not df_abertos.empty:
+
+        produto_escolhido = st.selectbox(
+            "Selecione a programação para finalizar:",
+            df_abertos["id"].astype(str) + " - " + df_abertos["produto"]
+        )
+
+        if st.button("Finalizar Programação"):
+            
+            # Extrair ID (antes do hífen)
+            id_finalizar = int(produto_escolhido.split(" - ")[0])
+            
+            finalizar_programacao(id_finalizar)
+            
+            st.success("Programação finalizada com sucesso!")
+            st.rerun()
+
+    else:
+        st.info("Não há programações em aberto.")
+
+else:
+    st.info("Nenhuma programação cadastrada.")
+
 st.subheader("✅ Finalizar Programação")
 
 # 🔥 usar minúsculo
