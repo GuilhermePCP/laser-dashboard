@@ -4,18 +4,37 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import streamlit as st
-from src.data_loader import carregar_dados
 from src.analytics import calcular_metricas, filtrar_dados
 from src.visuals import grafico_gantt
 from datetime import datetime
 import pandas as pd
+from src.database import criar_tabela, carregar_dados, salvar_programacao
+
+criar_tabela()
 
 st.set_page_config(layout="wide")
 
 st.title("Programação Máquinas Laser")
 
 # Carregar dados
-df = carregar_dados("data/programacao.xlsx")
+df = carregar_dados()
+
+if not df.empty:
+    df["Inicio"] = pd.to_datetime(df["inicio"])
+    df["Fim"] = pd.to_datetime(df["fim"])
+    df["Prazo Limite"] = pd.to_datetime(df["prazo_limite"])
+    df["Data Finalizado"] = pd.to_datetime(df["data_finalizado"], errors="coerce")
+
+    # Padronizar nomes
+    df.rename(columns={
+        "produto": "Produto",
+        "operador": "Operador",
+        "inicio": "Inicio",
+        "fim": "Fim",
+        "prazo_limite": "Prazo Limite",
+        "status": "Status",
+        "data_finalizado": "Data Finalizado"
+    }, inplace=True)
 
 st.sidebar.divider()
 st.sidebar.subheader("➕ Nova Programação")
@@ -51,21 +70,20 @@ with st.sidebar.form("form_programacao"):
         else:
             nova_linha = {
                 "Produto": produto_novo.strip(),
-                "Inicio": inicio_novo,
-                "Fim": fim_novo,
-                "Prazo Limite": prazo_limite_novo,
+                "Inicio": str(inicio_novo),
+                "Fim": str(fim_novo),
+                "Prazo Limite": str(prazo_limite_novo),
                 "Status": status_novo,
-                "Operador": operador_novo
+                "Operador": operador_novo,
+                "Data Finalizado": None
             }
 
-            from src.data_loader import salvar_programacao
-            salvar_programacao("data/programacao.xlsx", nova_linha)
+            salvar_programacao(nova_linha)
 
             st.success("Programação adicionada com sucesso!")
             st.rerun()
 
 # Carregar dados
-df = carregar_dados("data/programacao.xlsx")
 
 # Sidebar filtros
 st.sidebar.header("Filtros")
@@ -164,10 +182,19 @@ if len(produtos_abertos) > 0:
 
         hoje = datetime.today()
 
-        df.loc[df["Produto"] == op_finalizar, "Status"] = "Finalizado"
-        df.loc[df["Produto"] == op_finalizar, "Data Finalizado"] = hoje
+        import sqlite3
 
-        df.to_excel("data/programacao.xlsx", index=False)
+        conn = sqlite3.connect("data/programacao.db")
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE programacao
+            SET status = ?, data_finalizado = ?
+            WHERE produto = ?
+        """, ("Finalizado", str(hoje), op_finalizar))
+
+        conn.commit()
+        conn.close()
 
         st.success("Produto finalizado com sucesso!")
         st.rerun()

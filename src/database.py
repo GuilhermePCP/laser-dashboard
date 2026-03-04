@@ -1,0 +1,60 @@
+import sqlite3
+import pandas as pd
+
+
+DB_PATH = "data/programacao.db"
+
+
+def conectar():
+    return sqlite3.connect(DB_PATH)
+
+
+def criar_tabela():
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS programacao (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            produto TEXT,
+            operador TEXT,
+            inicio TEXT,
+            fim TEXT,
+            prazo_limite TEXT,
+            status TEXT,
+            data_finalizado TEXT
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+def carregar_dados():
+    conn = conectar()
+    df = pd.read_sql("SELECT * FROM programacao", conn)
+    conn.close()
+
+    return df
+
+
+def salvar_programacao(dados):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO programacao 
+        (produto, operador, inicio, fim, prazo_limite, status, data_finalizado)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        dados["Produto"],
+        dados["Operador"],
+        str(dados["Inicio"]),
+        str(dados["Fim"]),
+        str(dados["Prazo Limite"]),
+        dados["Status"],
+        dados.get("Data Finalizado")
+    ))
+
+    conn.commit()
+    conn.close()
