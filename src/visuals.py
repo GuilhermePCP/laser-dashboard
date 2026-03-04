@@ -8,31 +8,36 @@ def grafico_gantt(df):
         return go.Figure()
 
     df = df.copy()
-    df["Inicio"] = pd.to_datetime(df["Inicio"])
-    df["Fim"] = pd.to_datetime(df["Fim"])
 
-    # Ordenar máquinas
-    df = df.sort_values(by=["Operador", "Inicio"])
+    # 🔥 garantir que datas estão no formato correto
+    df["inicio"] = pd.to_datetime(df["inicio"], errors="coerce")
+    df["fim"] = pd.to_datetime(df["fim"], errors="coerce")
 
-    # TEXTO BONITO DENTRO DA BARRA
-    df["Texto"] = (
-        df["Produto"].astype(str) +
+    # remover linhas inválidas
+    df = df.dropna(subset=["inicio", "fim"])
+
+    # Ordenar por operador e início
+    df = df.sort_values(by=["operador", "inicio"])
+
+    # Texto dentro da barra
+    df["texto"] = (
+        df["produto"].astype(str) +
         "<br>" +
-        df["Inicio"].dt.strftime("%d/%m") +
+        df["inicio"].dt.strftime("%d/%m") +
         " → " +
-        df["Fim"].dt.strftime("%d/%m")
+        df["fim"].dt.strftime("%d/%m")
     )
 
     fig = px.timeline(
         df,
-        x_start="Inicio",
-        x_end="Fim",
-        y="Operador",
-        color="Status",
-        text="Texto",  # ← TEM VÍRGULA AQUI
+        x_start="inicio",
+        x_end="fim",
+        y="operador",
+        color="status",
+        text="texto",
         hover_data={
-            "Inicio": "|%d/%m/%Y",
-            "Fim": "|%d/%m/%Y"
+            "inicio": "|%d/%m/%Y",
+            "fim": "|%d/%m/%Y"
         },
         color_discrete_map={
             "Programado": "#4C78A8",
@@ -41,7 +46,6 @@ def grafico_gantt(df):
         }
     )
 
-    # 🔥 TEXTO GRANDE + CONTORNO BRANCO
     fig.update_traces(
         textposition="inside",
         insidetextanchor="middle",
@@ -55,7 +59,6 @@ def grafico_gantt(df):
         cliponaxis=False
     )
 
-    # Layout premium industrial
     fig.update_layout(
         template="plotly_dark",
         plot_bgcolor="#0E1117",
@@ -76,22 +79,21 @@ def grafico_gantt(df):
             font_family="Arial"
         ),
         uniformtext_minsize=12,
-        uniformtext_mode="show",   # força mostrar texto
+        uniformtext_mode="show",
         bargap=0.25,
         height=650,
         margin=dict(l=40, r=40, t=70, b=40)
     )
 
-    # Grid suave
     fig.update_xaxes(
         showgrid=True,
-        gridcolor="rgba(255,255,255,0.05)"
+        gridcolor="rgba(255,255,255,0.05)",
+        tickformat="%d/%m/%Y"
     )
 
-    # Inverter eixo Y (estilo cronograma industrial)
     fig.update_yaxes(autorange="reversed")
 
-    # 🔴 Linha vertical mostrando HOJE
+    # Linha de HOJE
     hoje = pd.Timestamp.today().normalize()
 
     fig.add_vline(
@@ -109,10 +111,6 @@ def grafico_gantt(df):
         showarrow=False,
         font=dict(color="red", size=12),
         bgcolor="rgba(0,0,0,0.6)"
-    )
-
-    fig.update_xaxes(
-        tickformat="%d/%m/%Y"
     )
 
     return fig

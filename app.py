@@ -223,11 +223,15 @@ st.divider()
 
 st.subheader("✅ Finalizar Programação")
 
-produtos_abertos = df_ativos["Produto"].unique()
+# 🔥 usar minúsculo
+produtos_abertos = df_ativos["produto"].unique()
 
 if len(produtos_abertos) > 0:
 
-    op_finalizar = st.selectbox("Selecione o produto para finalizar", produtos_abertos)
+    op_finalizar = st.selectbox(
+        "Selecione o produto para finalizar",
+        produtos_abertos
+    )
 
     if st.button("Marcar como Finalizado"):
 
@@ -249,6 +253,7 @@ if len(produtos_abertos) > 0:
 
         st.success("Produto finalizado com sucesso!")
         st.rerun()
+
 else:
     st.info("Nenhum produto ativo para finalizar.")
 
