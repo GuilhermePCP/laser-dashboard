@@ -26,7 +26,13 @@ st.title("Programação Máquinas Laser")
 # Carregar dados
 df = carregar_dados()
 
-df = carregar_dados()
+colunas_data = ["Inicio", "Fim", "Prazo Limite", "Data Finalizado"]
+
+for col in colunas_data:
+    if col in df.columns:
+        df[col] = pd.to_datetime(df[col], errors="coerce")
+
+st.write("COLUNAS DO DF:", df.columns)
 
 if not df.empty:
     df.rename(columns={
@@ -40,7 +46,7 @@ if not df.empty:
     }, inplace=True)
 
 if not df.empty:
-    df["inicio"] = pd.to_datetime(df["inicio"], errors="coerce")
+    df["Inicio"] = pd.to_datetime(df["Inicio"], errors="coerce")
     df["fim"] = pd.to_datetime(df["fim"], errors="coerce")
     df["prazo_limite"] = pd.to_datetime(df["prazo_limite"], errors="coerce")
     df["data_finalizado"] = pd.to_datetime(df["data_finalizado"], errors="coerce")
