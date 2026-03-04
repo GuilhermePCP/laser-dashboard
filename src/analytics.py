@@ -24,10 +24,6 @@ def calcular_metricas(df):
             "proxima_maquina": "Nenhum"
         }
 
-    # Garantir que datas estão no formato datetime
-    df["inicio"] = pd.to_datetime(df["inicio"], errors="coerce")
-    df["fim"] = pd.to_datetime(df["fim"], errors="coerce")
-    df["prazo_limite"] = pd.to_datetime(df["prazo_limite"], errors="coerce")
 
     total_ops = len(df)
 

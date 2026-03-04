@@ -39,7 +39,7 @@ colunas_data = ["inicio", "fim", "prazo_limite", "data_finalizado"]
 
 for col in colunas_data:
     if col in df.columns:
-        df[col] = pd.to_datetime(df[col], errors="coerce")
+        df[col] = pd.to_datetime(df[col], format="mixed", errors="coerce")
 
 
 # DEBUG (pode remover depois)
@@ -163,9 +163,9 @@ df_exibir = df_filtrado[df_filtrado["status"] != "Finalizado"].copy()
 if not df_exibir.empty:
 
     # 🔥 FORMATAR DATAS
-    df_exibir["inicio"] = df_exibir["inicio"].dt.strftime("%d/%m/%Y")
-    df_exibir["im"] = df_exibir["fim"].dt.strftime("%d/%m/%Y")
-    df_exibir["prazo_limite"] = df_exibir["prazo_limite"].dt.strftime("%d/%m/%Y")
+    df_exibir["inicio"] = df_exibir["inicio"].dt.strftime("%d/%m/%Y").fillna("")
+    df_exibir["fim"] = df_exibir["fim"].dt.strftime("%d/%m/%Y").fillna("")
+    df_exibir["prazo_limite"] = df_exibir["prazo_limite"].dt.strftime("%d/%m/%Y").fillna("")
 
     # 🔥 ORDEM DAS COLUNAS
     colunas_exibir = ["produto", "operador", "status", "inicio", "fim", "prazo_limite"]
