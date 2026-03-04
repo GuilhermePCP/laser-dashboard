@@ -102,3 +102,31 @@ def remover_operador(nome):
             {"nome": nome}
         )
         conn.commit()
+
+def atualizar_programacao(df_editado):
+    with engine.connect() as conn:
+        for _, row in df_editado.iterrows():
+            conn.execute(
+                text("""
+                    UPDATE programacao
+                    SET produto = :produto,
+                        inicio = :inicio,
+                        fim = :fim,
+                        prazo_limite = :prazo_limite,
+                        status = :status,
+                        operador = :operador,
+                        data_finalizado = :data_finalizado
+                    WHERE id = :id
+                """),
+                {
+                    "id": row["id"],
+                    "produto": row["produto"],
+                    "inicio": row["inicio"],
+                    "fim": row["fim"],
+                    "prazo_limite": row["prazo_limite"],
+                    "status": row["status"],
+                    "operador": row["operador"],
+                    "data_finalizado": row["data_finalizado"]
+                }
+            )
+        conn.commit()
