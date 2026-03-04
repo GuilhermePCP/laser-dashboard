@@ -280,12 +280,6 @@ st.plotly_chart(fig, use_container_width=True)
 st.divider()
 
 # -------------------------------------------------
-# TABELA
-# -------------------------------------------------
-
-st.dataframe(df, use_container_width=True)
-
-# -------------------------------------------------
 # FINALIZAR PROGRAMAÇÃO (BOTÃO ÚNICO)
 # -------------------------------------------------
 
