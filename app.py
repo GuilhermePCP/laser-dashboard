@@ -1,23 +1,74 @@
 import sys
 import os
-
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import streamlit as st
-from src.analytics import calcular_metricas, filtrar_dados
-from src.visuals import grafico_gantt
 from datetime import datetime
 import pandas as pd
+import base64
+
+from src.analytics import calcular_metricas, filtrar_dados
+from src.visuals import grafico_gantt
 from src.database import (
     criar_tabela,
     carregar_dados,
     salvar_programacao,
     carregar_operadores,
     adicionar_operador,
-    remover_operador
+    remover_operador,
+    finalizar_programacao
 )
-import base64
 
+# -------------------------------------------------
+# CONFIGURAÇÃO DA PÁGINA (SEMPRE PRIMEIRO)
+# -------------------------------------------------
+
+st.set_page_config(layout="wide")
+
+# -------------------------------------------------
+# CRIAR TABELAS
+# -------------------------------------------------
+
+criar_tabela()
+
+# -------------------------------------------------
+# TÍTULO
+# -------------------------------------------------
+
+st.title("Programação Máquinas Laser")
+
+# -------------------------------------------------
+# CARREGAR DADOS
+# -------------------------------------------------
+
+df = carregar_dados()
+
+# -------------------------------------------------
+# LISTAGEM + BOTÃO FINALIZAR
+# -------------------------------------------------
+
+if not df.empty:
+
+    for index, row in df.iterrows():
+
+        col1, col2 = st.columns([4, 1])
+
+        with col1:
+            st.write(f"Produto: {row['produto']} | Status: {row['status']}")
+
+        with col2:
+            if row["status"] != "Finalizado":
+                if st.button("Finalizar", key=f"finalizar_{row['id']}"):
+                    finalizar_programacao(row["id"])
+                    st.success("Programação finalizada!")
+                    st.rerun()
+
+else:
+    st.info("Nenhuma programação cadastrada.")
+
+# -------------------------------------------------
+# FOOTER PERSONALIZADO
+# -------------------------------------------------
 
 def get_base64_image(path):
     with open(path, "rb") as img:
@@ -66,16 +117,6 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
-
-
-criar_tabela()
-
-st.set_page_config(layout="wide")
-
-st.title("Programação Máquinas Laser")
-
-# Carregar dados
-df = carregar_dados()
 
 # 🔥 Padronizar colunas (minúsculo + underscore)
 df.columns = (

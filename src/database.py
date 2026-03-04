@@ -1,6 +1,24 @@
 from sqlalchemy import create_engine, text
 import pandas as pd
 import streamlit as st
+from datetime import datetime
+from sqlalchemy import text
+
+def finalizar_programacao(id_programacao):
+    with engine.connect() as conn:
+        conn.execute(
+            text("""
+                UPDATE programacao
+                SET status = 'Finalizado',
+                    data_finalizado = :data_finalizado
+                WHERE id = :id
+            """),
+            {
+                "id": id_programacao,
+                "data_finalizado": datetime.now()
+            }
+        )
+        conn.commit()
 
 
 # ----------------------------
