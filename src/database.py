@@ -14,6 +14,13 @@ def criar_tabela():
     cursor = conn.cursor()
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS operadores (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT UNIQUE NOT NULL
+        )
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS programacao (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             produto TEXT,
@@ -26,6 +33,34 @@ def criar_tabela():
         )
     """)
 
+    conn.commit()
+    conn.close()
+
+def carregar_operadores():
+    conn = conectar()
+    df = pd.read_sql("SELECT * FROM operadores ORDER BY nome", conn)
+    conn.close()
+    return df
+
+
+def adicionar_operador(nome):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("INSERT INTO operadores (nome) VALUES (?)", (nome,))
+        conn.commit()
+    except:
+        pass
+
+    conn.close()
+
+
+def remover_operador(nome):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM operadores WHERE nome = ?", (nome,))
     conn.commit()
     conn.close()
 

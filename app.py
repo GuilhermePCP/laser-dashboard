@@ -41,7 +41,12 @@ st.sidebar.subheader("➕ Nova Programação")
 
 with st.sidebar.form("form_programacao"):
 
-    operador_novo = st.selectbox("Operador", df["Operador"].unique())
+    df_operadores = carregar_operadores()
+
+    operador_novo = st.selectbox(
+        "Operador",
+        df_operadores["nome"] if not df_operadores.empty else []
+    )
     produto_novo = st.text_input("Produto")
     inicio_novo = st.date_input("Data Início")
     fim_novo = st.date_input("Data Fim")
@@ -83,7 +88,33 @@ with st.sidebar.form("form_programacao"):
             st.success("Programação adicionada com sucesso!")
             st.rerun()
 
-# Carregar dados
+st.sidebar.divider()
+st.sidebar.subheader("⚙️ Gerenciar Operadores")
+
+from src.database import carregar_operadores, adicionar_operador, remover_operador
+
+df_operadores = carregar_operadores()
+
+# ➕ Adicionar operador
+novo_operador = st.sidebar.text_input("Novo Operador")
+
+if st.sidebar.button("Adicionar Operador"):
+    if novo_operador.strip():
+        adicionar_operador(novo_operador.strip())
+        st.sidebar.success("Operador adicionado!")
+        st.rerun()
+
+# ❌ Remover operador
+if not df_operadores.empty:
+    operador_remover = st.sidebar.selectbox(
+        "Remover Operador",
+        df_operadores["nome"]
+    )
+
+    if st.sidebar.button("Remover Operador"):
+        remover_operador(operador_remover)
+        st.sidebar.warning("Operador removido!")
+        st.rerun()
 
 # Sidebar filtros
 st.sidebar.header("Filtros")
