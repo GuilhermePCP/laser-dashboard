@@ -26,41 +26,35 @@ st.title("Programação Máquinas Laser")
 # Carregar dados
 df = carregar_dados()
 
-colunas_data = ["Inicio", "Fim", "Prazo Limite", "Data Finalizado"]
+# 🔥 Padronizar colunas (minúsculo + underscore)
+df.columns = (
+    df.columns
+        .str.strip()
+        .str.lower()
+        .str.replace(" ", "_")
+)
+
+# 🔥 Converter colunas de data com segurança
+colunas_data = ["inicio", "fim", "prazo_limite", "data_finalizado"]
 
 for col in colunas_data:
     if col in df.columns:
         df[col] = pd.to_datetime(df[col], errors="coerce")
 
+# 🔥 Renomear para exibição no sistema (opcional, apenas visual)
+if not df.empty:
+    df.rename(columns={
+        "produto": "Produto",
+        "operador": "Operador",
+        "inicio": "Inicio",
+        "fim": "Fim",
+        "prazo_limite": "Prazo Limite",
+        "status": "Status",
+        "data_finalizado": "Data Finalizado"
+    }, inplace=True)
+
+# DEBUG (pode remover depois)
 st.write("COLUNAS DO DF:", df.columns)
-
-if not df.empty:
-    df.rename(columns={
-        "produto": "Produto",
-        "operador": "Operador",
-        "inicio": "Inicio",
-        "fim": "Fim",
-        "prazo_limite": "Prazo Limite",
-        "status": "Status",
-        "data_finalizado": "Data Finalizado"
-    }, inplace=True)
-
-if not df.empty:
-    df["Inicio"] = pd.to_datetime(df["Inicio"], errors="coerce")
-    df["Fim"] = pd.to_datetime(df["Fim"], errors="coerce")
-    df["prazo_limite"] = pd.to_datetime(df["prazo_limite"], errors="coerce")
-    df["data_finalizado"] = pd.to_datetime(df["data_finalizado"], errors="coerce")
-
-    # Padronizar nomes
-    df.rename(columns={
-        "produto": "Produto",
-        "operador": "Operador",
-        "inicio": "Inicio",
-        "fim": "Fim",
-        "prazo_limite": "Prazo Limite",
-        "status": "Status",
-        "data_finalizado": "Data Finalizado"
-    }, inplace=True)
 
 st.sidebar.divider()
 st.sidebar.subheader("➕ Nova Programação")
@@ -100,13 +94,13 @@ with st.sidebar.form("form_programacao"):
             st.error("O prazo limite não pode ser menor que a data final.")
         else:
             nova_linha = {
-                "Produto": produto_novo.strip(),
-                "Inicio": str(inicio_novo),
-                "Fim": str(fim_novo),
-                "Prazo Limite": str(prazo_limite_novo),
-                "Status": status_novo,
-                "Operador": operador_novo,
-                "Data Finalizado": None
+                "produto": produto_novo.strip(),
+                "inicio": str(inicio_novo),
+                "fim": str(fim_novo),
+                "prazo_limite": str(prazo_limite_novo),
+                "status": status_novo,
+                "operador": operador_novo,
+                "data_finalizado": None
             }
 
             salvar_programacao(nova_linha)
