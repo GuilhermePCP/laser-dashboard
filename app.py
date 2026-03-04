@@ -16,6 +16,57 @@ from src.database import (
     adicionar_operador,
     remover_operador
 )
+import base64
+
+
+def get_base64_image(path):
+    with open(path, "rb") as img:
+        return base64.b64encode(img.read()).decode()
+
+logo_empresa = get_base64_image("assets/logo2.png")
+
+st.markdown(f"""
+<style>
+.footer-brand {{
+    position: fixed;
+    bottom: 20px;
+    right: 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(22, 27, 34, 0.85);
+    padding: 8px 14px;
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    z-index: 9999;
+}}
+
+.footer-brand img {{
+    height: 35px;
+}}
+
+.footer-text {{
+    font-size: 13px;
+    color: white;
+    line-height: 1.2;
+}}
+
+.footer-text span {{
+    color: #9ca3af;
+    font-size: 11px;
+}}
+</style>
+
+<div class="footer-brand">
+    <img src="data:image/png;base64,{logo_empresa}">
+    <div class="footer-text">
+        <strong>Guilherme Luiz</strong><br>
+        <span>Auxiliar De PCP</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
 
 criar_tabela()
 
@@ -299,23 +350,3 @@ if not df_finalizados.empty:
 
 else:
     st.info("Nenhuma programação finalizada.")
-
-
-    st.markdown(
-        """
-        <style>
-        .footer {
-            position: fixed;
-            right: 20px;
-            bottom: 10px;
-            font-size: 12px;
-            color: gray;
-            opacity: 0.8;
-        }
-        </style>
-        <div class="footer">
-            Desenvolvido por <b>Guilherme Luiz</b> | PCP
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
