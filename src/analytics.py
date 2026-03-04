@@ -1,6 +1,15 @@
 import pandas as pd
 from datetime import datetime
 
+def calcular_metricas(df):
+
+    if not df.empty:
+        df["Inicio"] = pd.to_datetime(df["Inicio"], errors="coerce")
+        df["Fim"] = pd.to_datetime(df["Fim"], errors="coerce")
+        df["Prazo Limite"] = pd.to_datetime(df["Prazo Limite"], errors="coerce")
+
+    hoje = pd.Timestamp.today()
+
 
 def filtrar_dados(df, operador, status):
 
