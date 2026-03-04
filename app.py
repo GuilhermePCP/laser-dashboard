@@ -299,3 +299,23 @@ if not df_finalizados.empty:
 
 else:
     st.info("Nenhuma programação finalizada.")
+
+
+    st.markdown(
+        """
+        <style>
+        .footer {
+            position: fixed;
+            right: 20px;
+            bottom: 10px;
+            font-size: 12px;
+            color: gray;
+            opacity: 0.8;
+        }
+        </style>
+        <div class="footer">
+            Desenvolvido por <b>Guilherme Luiz</b> | PCP
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
