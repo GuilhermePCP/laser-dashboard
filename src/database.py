@@ -78,17 +78,17 @@ def salvar_programacao(dados):
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO programacao 
-        (produto, operador, inicio, Fim, prazo_limite, status, data_finalizado)
+        INSERT INTO programacao
+        (produto, inicio, fim, prazo_limite, status, operador, data_finalizado)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (
-        dados["Produto"],
-        dados["Operador"],
-        str(dados["Inicio"]),
-        str(dados["Fim"]),
-        str(dados["Prazo Limite"]),
-        dados["Status"],
-        dados.get("Data Finalizado")
+        dados["produto"],
+        dados["inicio"],
+        dados["fim"],
+        dados["prazo_limite"],
+        dados["status"],
+        dados["operador"],
+        dados["data_finalizado"]
     ))
 
     conn.commit()
