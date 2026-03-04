@@ -27,9 +27,9 @@ st.title("Programação Máquinas Laser")
 df = carregar_dados()
 
 if not df.empty:
-    df["inicio"] = pd.to_datetime(df["inicio"])
-    df["fim"] = pd.to_datetime(df["fim"])
-    df["prazo_limite"] = pd.to_datetime(df["prazo_limite"])
+    df["inicio"] = pd.to_datetime(df["inicio"], errors="coerce")
+    df["fim"] = pd.to_datetime(df["fim"], errors="coerce")
+    df["prazo_limite"] = pd.to_datetime(df["prazo_limite"], errors="coerce")
     df["data_finalizado"] = pd.to_datetime(df["data_finalizado"], errors="coerce")
 
     # Padronizar nomes
