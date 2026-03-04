@@ -41,17 +41,6 @@ for col in colunas_data:
     if col in df.columns:
         df[col] = pd.to_datetime(df[col], errors="coerce")
 
-# 🔥 Renomear para exibição no sistema (opcional, apenas visual)
-if not df.empty:
-    df.rename(columns={
-        "produto": "Produto",
-        "operador": "Operador",
-        "inicio": "Inicio",
-        "fim": "Fim",
-        "prazo_limite": "Prazo Limite",
-        "status": "Status",
-        "data_finalizado": "Data Finalizado"
-    }, inplace=True)
 
 # DEBUG (pode remover depois)
 #st.write("COLUNAS DO DF:", df.columns)
@@ -141,18 +130,18 @@ st.sidebar.header("Filtros")
 
 maquina = st.sidebar.selectbox(
     "Operadores",
-    ["Todas"] + list(df["Operador"].unique())
+    ["Todas"] + list(df["operador"].unique())
 )
 
 status = st.sidebar.selectbox(
     "Status",
-    ["Todos"] + list(df["Status"].unique())
+    ["Todos"] + list(df["status"].unique())
 )
 
 df_filtrado = filtrar_dados(df, maquina, status)
 
-df_ativos = df_filtrado[df_filtrado["Status"] != "Finalizado"]
-df_finalizados = df_filtrado[df_filtrado["Status"] == "Finalizado"]
+df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
+df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
 
 # KPIs
 metricas = calcular_metricas(df_filtrado)
@@ -169,21 +158,21 @@ st.divider()
 st.subheader("Sequência de fabricação")
 
 # 🔥 PEGAR APENAS NÃO FINALIZADOS
-df_exibir = df_filtrado[df_filtrado["Status"] != "Finalizado"].copy()
+df_exibir = df_filtrado[df_filtrado["status"] != "Finalizado"].copy()
 
 if not df_exibir.empty:
 
     # 🔥 FORMATAR DATAS
-    df_exibir["Inicio"] = df_exibir["Inicio"].dt.strftime("%d/%m/%Y")
-    df_exibir["Fim"] = df_exibir["Fim"].dt.strftime("%d/%m/%Y")
-    df_exibir["Prazo Limite"] = df_exibir["Prazo Limite"].dt.strftime("%d/%m/%Y")
+    df_exibir["inicio"] = df_exibir["inicio"].dt.strftime("%d/%m/%Y")
+    df_exibir["im"] = df_exibir["fim"].dt.strftime("%d/%m/%Y")
+    df_exibir["prazo_limite"] = df_exibir["prazo_limite"].dt.strftime("%d/%m/%Y")
 
     # 🔥 ORDEM DAS COLUNAS
-    colunas_exibir = ["Produto", "Operador", "Status", "Inicio", "Fim", "Prazo Limite"]
+    colunas_exibir = ["produto", "operador", "status", "inicio", "fim", "prazo_limite"]
 
     # 🔥 PEGAR SOMENTE OPERADORES QUE TÊM PRODUÇÃO ATIVA
     operadores = (
-        df_exibir["Operador"]
+        df_exibir["operador"]
         .dropna()
         .astype(str)
         .unique()
@@ -198,7 +187,7 @@ if not df_exibir.empty:
             with aba:
 
                 df_operador = df_exibir[
-                    df_exibir["Operador"].astype(str) == operador
+                    df_exibir["operador"].astype(str) == operador
                 ]
 
                 if not df_operador.empty:
@@ -264,7 +253,7 @@ st.subheader("📋 Programações Finalizadas")
 if not df_finalizados.empty:
 
     operadores = (
-        df_finalizados["Operador"]
+        df_finalizados["operador"]
         .dropna()
         .astype(str)
         .unique()
@@ -278,26 +267,26 @@ if not df_finalizados.empty:
         with aba:
 
             df_operador = df_finalizados[
-                df_finalizados["Operador"].astype(str) == operador
+                df_finalizados["operador"].astype(str) == operador
             ].copy()
 
             # 🔥 FORMATAR DATAS
-            df_operador["Inicio"] = df_operador["Inicio"].dt.strftime("%d/%m/%Y")
-            df_operador["Fim"] = df_operador["Fim"].dt.strftime("%d/%m/%Y")
-            df_operador["Prazo Limite"] = df_operador["Prazo Limite"].dt.strftime("%d/%m/%Y")
-            df_operador["Data Finalizado"] = (
-                pd.to_datetime(df_operador["Data Finalizado"])
+            df_operador["inicio"] = df_operador["inicio"].dt.strftime("%d/%m/%Y")
+            df_operador["fim"] = df_operador["fim"].dt.strftime("%d/%m/%Y")
+            df_operador["prazo_limite"] = df_operador["prazo_limite"].dt.strftime("%d/%m/%Y")
+            df_operador["data_finalizado"] = (
+                pd.to_datetime(df_operador["data_finalizado"])
                 .dt.strftime("%d/%m/%Y")
             )
 
             # 🔥 ORDEM DAS COLUNAS
             colunas_exibir = [
-                "Produto",
-                "Inicio",
-                "Fim",
-                "Prazo Limite",
-                "Data Finalizado",
-                "Status"
+                "produto",
+                "inicio",
+                "fim",
+                "prazo_limite",
+                "data_finalizado",
+                "status"
             ]
 
             df_operador = df_operador[colunas_exibir]
