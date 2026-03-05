@@ -224,9 +224,9 @@ df_tabela = df_ativos.copy()
 
 if not df_tabela.empty:
 
-    df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"])
-    df_tabela["fim"] = pd.to_datetime(df_tabela["fim"])
-    df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"])
+    df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"], errors="coerce")
+    df_tabela["fim"] = pd.to_datetime(df_tabela["fim"], errors="coerce")
+    df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"], errors="coerce")
 
     colunas = [
         "id",
@@ -266,6 +266,7 @@ if not df_tabela.empty:
                 df_operador,
                 use_container_width=True,
                 num_rows="dynamic",
+                hide_index=True,
                 key=f"editor_{operador}",
                 column_config={
                     "inicio": st.column_config.DateColumn(
