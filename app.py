@@ -132,6 +132,10 @@ with st.sidebar.form("nova_op"):
         "Status",
         ["Programado","Em produção","Finalizado"]
     )
+    pdf_desenho = st.file_uploader(
+        "Desenho do Produto (PDF)",
+        type=["pdf"]
+    )
 
     salvar = st.form_submit_button("Salvar")
 
@@ -168,11 +172,6 @@ with st.sidebar.form("nova_op"):
 
         st.success("Programação criada")
         st.rerun()
-
-    pdf_desenho = st.file_uploader(
-        "Desenho do Produto (PDF)",
-        type=["pdf"]
-    )
 
 # -------------------------------------------------
 # GERENCIAR OPERADORES
