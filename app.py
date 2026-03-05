@@ -44,6 +44,9 @@ def abrir_pdf(nome_pdf):
 
 os.makedirs("desenhos", exist_ok=True)
 
+st.write("Arquivos na pasta desenhos:")
+st.write(os.listdir("desenhos"))
+
 # -------------------------------------------------
 # CONFIGURAÇÃO DA PÁGINA
 # -------------------------------------------------
@@ -174,10 +177,12 @@ with st.sidebar.form("nova_op"):
 
         if pdf_file is not None:
 
-            nome_pdf = pdf_file.name
+            nome_pdf = f"{produto}_{datetime.now().timestamp()}.pdf"
 
             with open(f"desenhos/{nome_pdf}", "wb") as f:
                 f.write(pdf_file.getbuffer())
+
+            st.success(f"PDF salvo em: desenhos/{nome_pdf}")
 
         nova = dict(
             produto=produto,
@@ -292,6 +297,8 @@ if not df_tabela.empty:
     ]
     df_tabela = df_tabela[colunas]
 
+    df_operador["desenho"] = df_operador["desenho"].apply(gerar_link_pdf)
+
     # --------------------------------
     # CRIAR ABAS POR OPERADOR
     # --------------------------------
@@ -305,8 +312,6 @@ if not df_tabela.empty:
         with abas[i]:
 
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
-
-            df_operador["desenho"] = df_operador["desenho"].apply(gerar_link_pdf)
 
             df_operador = df_operador.reset_index(drop=True)
 
