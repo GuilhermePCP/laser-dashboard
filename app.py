@@ -292,7 +292,7 @@ if not df_exibir.empty:
         opcoes
     )
 
-    if st.button("Finalizar Programação"):
+    if st.button("Finalizar Programação", key="botao_finalizar_programacao"):
 
         id_finalizar = int(programacao_escolhida.split(" - ")[0])
 
@@ -329,7 +329,7 @@ if not df.empty:
             df_abertos["id"].astype(str) + " - " + df_abertos["produto"]
         )
 
-        if st.button("Finalizar Programação"):
+        if st.button("Finalizar Programação", key="botao_finalizar_programacao"):
             
             # Extrair ID (antes do hífen)
             id_finalizar = int(produto_escolhido.split(" - ")[0])
