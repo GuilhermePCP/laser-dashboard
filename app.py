@@ -249,10 +249,10 @@ if not df_tabela.empty:
 
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
-            # -------------------------------
-            # FORMATAR DATAS (BRASIL)
-            # -------------------------------
+            # REMOVER INDEX
+            df_operador = df_operador.reset_index(drop=True)
 
+            # FORMATAR DATAS
             df_operador["inicio"] = df_operador["inicio"].dt.strftime("%d/%m/%Y")
             df_operador["fim"] = df_operador["fim"].dt.strftime("%d/%m/%Y")
             df_operador["prazo_limite"] = df_operador["prazo_limite"].dt.strftime("%d/%m/%Y")
