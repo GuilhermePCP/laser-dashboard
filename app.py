@@ -155,7 +155,7 @@ with st.sidebar.form("nova_op"):
         if pdf_file is not None:
 
             nome_pdf = pdf_file.name
-            caminho_pdf = f"desenhos/{nome_pdf}"
+            caminho_pdf = nome_pdf
 
             with open(caminho_pdf, "wb") as f:
                 f.write(pdf_file.getbuffer())
