@@ -142,7 +142,7 @@ with st.sidebar.form("nova_op"):
 
     os.makedirs("desenhos", exist_ok=True)
 
-    caminho_pdf = os.path.join("desenhos", nome_pdf)
+    caminho_pdf = os.path.join("desenhos", caminho_pdf)
 
     with open(caminho_pdf, "wb") as f:
         f.write(pdf_upload.getbuffer())
