@@ -22,6 +22,26 @@ from src.database import (
 
 from sqlalchemy import text
 
+import os
+import streamlit as st
+
+PASTA_DESENHOS = "desenhos"
+
+def abrir_pdf(nome_pdf):
+    caminho_pdf = os.path.join(PASTA_DESENHOS, nome_pdf)
+
+    if os.path.exists(caminho_pdf):
+        with open(caminho_pdf, "rb") as f:
+            st.download_button(
+                label="📄 Abrir PDF",
+                data=f,
+                file_name=nome_pdf,
+                mime="application/pdf"
+            )
+    else:
+        st.error("PDF não encontrado.")
+
+
 os.makedirs("desenhos", exist_ok=True)
 
 # -------------------------------------------------
@@ -241,7 +261,7 @@ st.divider()
 #--------------------------------------------------
 def gerar_link_pdf(nome):
     if pd.notna(nome):
-        return f"desenhos/{nome}"
+        return f"./desenhos/{nome}"
     return ""
 #--------------------------------------------------
 
@@ -286,13 +306,16 @@ if not df_tabela.empty:
 
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
+            df_operador["desenho"] = df_operador["desenho"].apply(gerar_link_pdf)
+
+            df_operador = df_operador.reset_index(drop=True)
+
             # REMOVER INDEX
             df_operador = df_operador.reset_index(drop=True)
 
             df_operador["inicio"] = pd.to_datetime(df_operador["inicio"], errors="coerce")
             df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce")
             df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce")
-            df_tabela["desenho"] = df_tabela["desenho"].apply(gerar_link_pdf)
 
             df_editado = st.data_editor(
                 df_operador,
