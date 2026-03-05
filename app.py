@@ -41,7 +41,11 @@ st.title("Programação Máquinas Laser")
 # CARREGAR DADOS
 # -------------------------------------------------
 
-df = carregar_dados()
+@st.cache_data
+def load_data():
+    return carregar_dados()
+
+df = load_data()
 
 # -------------------------------------------------
 # FOOTER PERSONALIZADO
@@ -263,18 +267,48 @@ if not df_exibir.empty:
 
                     df_operador = df_operador[colunas_exibir]
 
-                    st.dataframe(
+                    df_editado = st.data_editor(
                         df_operador,
                         use_container_width=True,
-                        hide_index=True
+                        hide_index=True,
+                        num_rows="dynamic"
                     )
 
 else:
     st.info("Nenhuma programação ativa.")
 
+if st.button("Salvar Alterações", key=f"salvar_{operador}"):
+
+    for _, linha in df_editado.iterrows():
+
+        query = """
+        UPDATE programacao
+        SET produto = :produto,
+            operador = :operador,
+            status = :status
+        WHERE produto = :produto
+        """
+
+        from src.database import engine
+        from sqlalchemy import text
+
+        with engine.connect() as conn:
+            conn.execute(
+                text(query),
+                {
+                    "produto": linha["produto"],
+                    "operador": linha["operador"],
+                    "status": linha["status"]
+                }
+            )
+            conn.commit()
+
+    st.success("Alterações salvas!")
+    st.rerun()
+
 st.divider()
 # Gantt
-fig = grafico_gantt(df_ativos)
+fig = grafico_gantt(df_ativos.sort_values("inicio"))
 st.plotly_chart(fig, use_container_width=True)
 
 st.divider()
@@ -285,33 +319,35 @@ st.divider()
 
 st.markdown("### ✅ Finalizar Programação")
 
-if not df.empty:
+df_abertos = df[df["status"] != "Finalizado"]
 
-    # Filtrar apenas não finalizados
-    df_abertos = df[df["status"] != "Finalizado"]
+if not df_abertos.empty:
 
-    if not df_abertos.empty:
+    opcoes = (
+        df_abertos["id"].astype(str)
+        + " | "
+        + df_abertos["produto"]
+        + " | "
+        + df_abertos["operador"]
+    )
 
-        produto_escolhido = st.selectbox(
-            "Selecione a programação para finalizar:",
-            df_abertos["id"].astype(str) + " - " + df_abertos["produto"]
-        )
+    escolha = st.selectbox(
+        "Selecione a programação:",
+        opcoes,
+        key="select_finalizar"
+    )
 
-        if st.button("Finalizar Programação", key="botao_finalizar_programacao"):
-            
-            # Extrair ID (antes do hífen)
-            id_finalizar = int(produto_escolhido.split(" - ")[0])
-            
-            finalizar_programacao(id_finalizar)
-            
-            st.success("Programação finalizada com sucesso!")
-            st.rerun()
+    if st.button("Finalizar", key="btn_finalizar"):
 
-    else:
-        st.info("Não há programações em aberto.")
+        id_finalizar = int(escolha.split(" | ")[0])
+
+        finalizar_programacao(id_finalizar)
+
+        st.success("Programação finalizada!")
+        st.rerun()
 
 else:
-    st.info("Nenhuma programação cadastrada.")
+    st.info("Não há programações abertas.")
 
 
 st.divider()
