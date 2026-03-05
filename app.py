@@ -275,32 +275,32 @@ if not df_exibir.empty:
                     )
                     if st.button("Salvar Alterações", key=f"salvar_{operador}"):
 
-                    for _, linha in df_editado.iterrows():
+                        for _, linha in df_editado.iterrows():
 
-                        query = """
-                        UPDATE programacao
-                        SET produto = :produto,
-                            operador = :operador,
-                            status = :status
-                        WHERE produto = :produto
-                        """
+                            query = """
+                            UPDATE programacao
+                            SET produto = :produto,
+                                operador = :operador,
+                                status = :status
+                            WHERE produto = :produto
+                            """
 
-                        from src.database import engine
-                        from sqlalchemy import text
+                            from src.database import engine
+                            from sqlalchemy import text
 
-                        with engine.connect() as conn:
-                            conn.execute(
-                                text(query),
-                                {
-                                    "produto": linha["produto"],
-                                    "operador": linha["operador"],
-                                    "status": linha["status"]
-                                }
-                            )
-                            conn.commit()
+                            with engine.connect() as conn:
+                                conn.execute(
+                                    text(query),
+                                    {
+                                        "produto": linha["produto"],
+                                        "operador": linha["operador"],
+                                        "status": linha["status"]
+                                    }
+                                )
+                                conn.commit()
 
-                    st.success("Alterações salvas!")
-                    st.rerun()
+                        st.success("Alterações salvas!")
+                        st.rerun()
 else:
     st.info("Nenhuma programação ativa.")
 
