@@ -215,45 +215,83 @@ st.divider()
 
 st.subheader("Sequência de fabricação")
 
-operadores = df_ativos["operador"].unique()
+df_tabela = df_ativos.copy()
 
-abas = st.tabs(list(operadores))
+if not df_tabela.empty:
 
-for i, operador in enumerate(operadores):
+    df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"])
+    df_tabela["fim"] = pd.to_datetime(df_tabela["fim"])
+    df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"])
 
-    with abas[i]:
+    colunas = [
+        "id",
+        "produto",
+        "operador",
+        "status",
+        "inicio",
+        "fim",
+        "prazo_limite"
+    ]
 
-        df_operador = df_ativos[df_ativos["operador"] == operador].copy()
+    df_tabela = df_tabela[colunas]
 
-        df_operador["inicio"] = pd.to_datetime(df_operador["inicio"])
-        df_operador["fim"] = pd.to_datetime(df_operador["fim"])
-        df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"])
+    # --------------------------------
+    # CRIAR ABAS POR OPERADOR
+    # --------------------------------
 
-        tabela_editavel = st.data_editor(
-            df_operador,
-            use_container_width=True,
-            num_rows="dynamic",
-            key=f"editor_{operador}"
-        )
+    operadores = df_tabela["operador"].unique()
 
-        if st.button("Salvar alterações", key=f"salvar_{operador}"):
+    abas = st.tabs(list(operadores))
 
-            for _, row in tabela_editavel.iterrows():
+    for i, operador in enumerate(operadores):
 
-                atualizar_programacao(
-                    row["id"],
-                    row["inicio"],
-                    row["fim"],
-                    row["prazo_limite"],
-                    row["status"]
-                )
+        with abas[i]:
 
-            st.success("Alterações salvas!")
-            st.rerun()
+            df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
-        else:
+            df_editado = st.data_editor(
+                df_operador,
+                use_container_width=True,
+                num_rows="dynamic",
+                key=f"editor_{operador}"
+            )
 
-            st.info("Nenhuma programação ativa")
+            if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
+
+                for _, row in df_editado.iterrows():
+
+                    query = """
+                    UPDATE programacao
+                    SET produto=:produto,
+                        operador=:operador,
+                        status=:status,
+                        inicio=:inicio,
+                        fim=:fim,
+                        prazo_limite=:prazo
+                    WHERE id=:id
+                    """
+
+                    with engine.connect() as conn:
+                        conn.execute(
+                            text(query),
+                            dict(
+                                produto=row["produto"],
+                                operador=row["operador"],
+                                status=row["status"],
+                                inicio=row["inicio"],
+                                fim=row["fim"],
+                                prazo=row["prazo_limite"],
+                                id=row["id"]
+                            )
+                        )
+                        conn.commit()
+
+                st.success("Alterações salvas")
+                st.rerun()
+
+else:
+
+    st.info("Nenhuma programação ativa")
 
 # -------------------------------------------------
 # GANTT
