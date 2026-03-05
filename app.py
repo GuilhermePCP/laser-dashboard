@@ -167,6 +167,8 @@ with st.sidebar.form("form_programacao"):
 
             salvar_programacao(nova_linha)
 
+            df = carregar_dados()
+
             st.success("Programação adicionada com sucesso!")
             st.rerun()
 
