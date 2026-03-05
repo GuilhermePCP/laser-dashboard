@@ -271,38 +271,6 @@ if not df_exibir.empty:
 
 else:
     st.info("Nenhuma programação ativa.")
-# -------------------------------------------------
-# FINALIZAR PROGRAMAÇÃO
-# -------------------------------------------------
-
-st.markdown("---")
-st.subheader("Finalizar Programação")
-
-if not df_exibir.empty:
-
-    # Criar lista para selectbox
-    opcoes = (
-        df_exibir["id"].astype(str) + " - " +
-        df_exibir["produto"] + " (" +
-        df_exibir["operador"].astype(str) + ")"
-    )
-
-    programacao_escolhida = st.selectbox(
-        "Selecione a programação para finalizar:",
-        opcoes
-    )
-
-    if st.button("Finalizar Programação"):
-
-        id_finalizar = int(programacao_escolhida.split(" - ")[0])
-
-        finalizar_programacao(id_finalizar)
-
-        st.success("Programação finalizada com sucesso!")
-        st.rerun()
-
-else:
-    st.info("Não há programações para finalizar.")
 
 st.divider()
 # Gantt
