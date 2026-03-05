@@ -142,18 +142,16 @@ with st.sidebar.form("nova_op"):
         fim_db = fim.strftime("%Y-%m-%d")
         prazo_db = prazo.strftime("%Y-%m-%d")
 
-        nome_pdf = None
+        pdf_file = st.file_uploader("Desenho (PDF)", type="pdf")
 
-        if pdf_desenho is not None:
+        caminho_pdf = None
 
-            nome_pdf = pdf_desenho.name
+        if pdf_file is not None:
+            nome_pdf = pdf_file.name
+            caminho_pdf = os.path.join("desenhos", nome_pdf)
 
-            os.makedirs("desenhos", exist_ok=True)
-
-           caminho_pdf = os.path.join("desenhos", nome_pdf)
-
-           with open(caminho_pdf, "wb") as f:
-               f.write(pdf_desenho.getbuffer())
+            with open(caminho_pdf, "wb") as f:
+                f.write(pdf_file.getbuffer())
 
         nova = dict(
             produto=produto,
