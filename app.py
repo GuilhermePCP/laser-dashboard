@@ -127,6 +127,11 @@ with st.sidebar.form("nova_op"):
         ["Programado","Em produção","Finalizado"]
     )
 
+    desenho_pdf = st.file_uploader(
+        "Desenho do produto (PDF)",
+        type=["pdf"]
+    )
+
     salvar = st.form_submit_button("Salvar")
 
     if salvar:
@@ -138,6 +143,7 @@ with st.sidebar.form("nova_op"):
             fim=str(fim),
             prazo_limite=str(prazo),
             status=status,
+            desenho=nome_pdf,
             data_finalizado=None
         )
 
@@ -219,10 +225,23 @@ df_tabela = df_ativos.copy()
 
 if not df_tabela.empty:
 
+    # converter datas
     df_tabela["inicio"] = df_tabela["inicio"].dt.date
     df_tabela["fim"] = df_tabela["fim"].dt.date
     df_tabela["prazo_limite"] = df_tabela["prazo_limite"].dt.date
 
+    # criar link do desenho
+    def link_pdf(nome):
+        if pd.notna(nome) and nome != "":
+            return f"desenhos/{nome}"
+        return ""
+
+    if "desenho" in df_tabela.columns:
+        df_tabela["desenho"] = df_tabela["desenho"].apply(link_pdf)
+    else:
+        df_tabela["desenho"] = ""
+
+    # ordem das colunas
     colunas = [
         "id",
         "produto",
@@ -230,27 +249,35 @@ if not df_tabela.empty:
         "status",
         "inicio",
         "fim",
-        "prazo_limite"
+        "prazo_limite",
+        "desenho"
     ]
 
     df_tabela = df_tabela[colunas]
 
+    # tabela editável
     df_editado = st.data_editor(
         df_tabela,
         use_container_width=True,
         hide_index=True,
         num_rows="dynamic",
-        disabled=["id"],
+        disabled=["id", "desenho"],
         column_config={
             "id": st.column_config.NumberColumn(
                 "ID",
                 width="small"
+            ),
+            "desenho": st.column_config.LinkColumn(
+                "Desenho",
+                display_text="📄 Abrir PDF"
             )
         }
     )
+
+    # botão salvar
     if st.button("💾 Salvar alterações"):
 
-        for _,row in df_editado.iterrows():
+        for _, row in df_editado.iterrows():
 
             query = """
             UPDATE programacao
