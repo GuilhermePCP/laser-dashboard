@@ -254,6 +254,9 @@ if not df_tabela.empty:
 
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
+            # REMOVER INDEX
+            df_operador = df_operador.reset_index(drop=True)
+
             df_operador["inicio"] = pd.to_datetime(df_operador["inicio"], errors="coerce")
             df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce")
             df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce")
