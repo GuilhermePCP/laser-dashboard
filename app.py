@@ -266,10 +266,22 @@ if not df_tabela.empty:
                 df_operador,
                 use_container_width=True,
                 num_rows="dynamic",
-                hide_index=True,
-                key=f"editor_{operador}"
+                key=f"editor_{operador}",
+                column_config={
+                    "inicio": st.column_config.DateColumn(
+                        "Início",
+                        format="DD/MM/YYYY"
+                    ),
+                    "fim": st.column_config.DateColumn(
+                        "Fim",
+                        format="DD/MM/YYYY"
+                    ),
+                    "prazo_limite": st.column_config.DateColumn(
+                        "Prazo limite",
+                        format="DD/MM/YYYY"
+                    )
+                }
             )
-
             if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
 
                 for _, row in df_editado.iterrows():
