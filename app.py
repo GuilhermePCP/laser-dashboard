@@ -23,17 +23,13 @@ from src.database import (
 from sqlalchemy import text
 
 # -------------------------------------------------
-# CONFIG
+# CONFIGURAÇÃO
 # -------------------------------------------------
 
 st.set_page_config(
     page_title="Programação Laser",
     layout="wide"
 )
-
-# -------------------------------------------------
-# CRIAR TABELA
-# -------------------------------------------------
 
 criar_tabela()
 
@@ -69,17 +65,58 @@ df = carregar()
 
 def gerar_link_pdf(nome):
 
-    if nome and os.path.exists(f"desenhos/{nome}"):
+    if pd.isna(nome):
+        return ""
 
-        with open(f"desenhos/{nome}", "rb") as f:
-            base64_pdf = base64.b64encode(f.read()).decode()
+    caminho = f"desenhos/{nome}"
 
-        href = f'<a href="data:application/pdf;base64,{base64_pdf}" target="_blank">📄 Abrir PDF</a>'
+    if not os.path.exists(caminho):
+        return ""
 
-        return href
+    with open(caminho, "rb") as f:
+        base64_pdf = base64.b64encode(f.read()).decode()
 
-    return ""
+    return f"data:application/pdf;base64,{base64_pdf}"
 
+
+# -------------------------------------------------
+# FOOTER
+# -------------------------------------------------
+
+def get_base64_image(path):
+    with open(path, "rb") as img:
+        return base64.b64encode(img.read()).decode()
+
+logo = get_base64_image("assets/logo2.png")
+
+st.markdown(f"""
+<style>
+.footer {{
+position: fixed;
+bottom: 15px;
+right: 20px;
+display: flex;
+align-items: center;
+gap: 10px;
+background: rgba(20,20,20,0.8);
+padding: 8px 12px;
+border-radius: 10px;
+font-size:12px;
+}}
+
+.footer img {{
+height:32px;
+}}
+</style>
+
+<div class="footer">
+<img src="data:image/png;base64,{logo}">
+<div>
+<b>Guilherme Luiz</b><br>
+Auxiliar PCP
+</div>
+</div>
+""", unsafe_allow_html=True)
 
 # -------------------------------------------------
 # SIDEBAR NOVA PROGRAMAÇÃO
@@ -118,15 +155,15 @@ with st.sidebar.form("nova_op"):
 
         nome_pdf = None
 
-        if pdf_desenho is not None:
+        if pdf_desenho:
 
             nome_pdf = pdf_desenho.name
 
             os.makedirs("desenhos", exist_ok=True)
 
-            caminho_pdf = os.path.join("desenhos", nome_pdf)
+            caminho = os.path.join("desenhos", nome_pdf)
 
-            with open(caminho_pdf, "wb") as f:
+            with open(caminho, "wb") as f:
                 f.write(pdf_desenho.getbuffer())
 
         nova = dict(
@@ -143,11 +180,10 @@ with st.sidebar.form("nova_op"):
         salvar_programacao(nova)
 
         st.success("Programação criada")
-
         st.rerun()
 
 # -------------------------------------------------
-# OPERADORES
+# GERENCIAR OPERADORES
 # -------------------------------------------------
 
 st.sidebar.divider()
@@ -156,11 +192,8 @@ st.sidebar.subheader("⚙️ Operadores")
 novo = st.sidebar.text_input("Novo operador")
 
 if st.sidebar.button("Adicionar operador"):
-
     if novo:
-
         adicionar_operador(novo)
-
         st.rerun()
 
 ops = carregar_operadores()
@@ -173,9 +206,7 @@ if not ops.empty:
     )
 
     if st.sidebar.button("Remover operador"):
-
         remover_operador(remover)
-
         st.rerun()
 
 # -------------------------------------------------
@@ -187,18 +218,17 @@ st.sidebar.subheader("Filtros")
 
 maquina = st.sidebar.selectbox(
     "Operador",
-    ["Todas"] + list(df["operador"].dropna().unique())
+    ["Todos"] + list(df["operador"].dropna().unique())
 )
 
-status = st.sidebar.selectbox(
+status_filtro = st.sidebar.selectbox(
     "Status",
     ["Todos"] + list(df["status"].dropna().unique())
 )
 
-df_filtrado = filtrar_dados(df, maquina, status)
+df_filtrado = filtrar_dados(df, maquina, status_filtro)
 
 df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
-
 df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
 
 # -------------------------------------------------
@@ -216,7 +246,7 @@ c3.metric("Próxima máquina", metricas["proxima_maquina"])
 st.divider()
 
 # -------------------------------------------------
-# TABELA
+# TABELA EDITÁVEL
 # -------------------------------------------------
 
 st.subheader("Sequência de fabricação")
@@ -229,31 +259,71 @@ if not df_tabela.empty:
     df_tabela["fim"] = df_tabela["fim"].dt.date
     df_tabela["prazo_limite"] = df_tabela["prazo_limite"].dt.date
 
-    if "desenho" in df_tabela.columns:
+    df_tabela["desenho_link"] = df_tabela["desenho"].apply(gerar_link_pdf)
 
-        df_tabela["pdf"] = df_tabela["desenho"].apply(gerar_link_pdf)
-
-    else:
-
-        df_tabela["pdf"] = ""
-
-    colunas = [
-        "id",
-        "produto",
-        "operador",
-        "status",
-        "inicio",
-        "fim",
-        "prazo_limite",
-        "pdf"
+    df_tabela = df_tabela[
+        [
+            "id",
+            "produto",
+            "operador",
+            "status",
+            "inicio",
+            "fim",
+            "prazo_limite",
+            "desenho_link"
+        ]
     ]
 
-    df_tabela = df_tabela[colunas]
-
-    st.write(
-        df_tabela.to_html(escape=False,index=False),
-        unsafe_allow_html=True
+    df_editado = st.data_editor(
+        df_tabela,
+        use_container_width=True,
+        hide_index=True,
+        num_rows="dynamic",
+        disabled=["id","desenho_link"],
+        column_config={
+            "id": st.column_config.NumberColumn(
+                "ID",
+                width="small"
+            ),
+            "desenho_link": st.column_config.LinkColumn(
+                "Desenho",
+                display_text="📄 Abrir"
+            )
+        }
     )
+
+    if st.button("💾 Salvar alterações"):
+
+        for _,row in df_editado.iterrows():
+
+            query = """
+            UPDATE programacao
+            SET produto=:produto,
+                operador=:operador,
+                status=:status,
+                inicio=:inicio,
+                fim=:fim,
+                prazo_limite=:prazo
+            WHERE id=:id
+            """
+
+            with engine.connect() as conn:
+                conn.execute(
+                    text(query),
+                    dict(
+                        produto=row["produto"],
+                        operador=row["operador"],
+                        status=row["status"],
+                        inicio=row["inicio"],
+                        fim=row["fim"],
+                        prazo=row["prazo_limite"],
+                        id=row["id"]
+                    )
+                )
+                conn.commit()
+
+        st.success("Alterações salvas")
+        st.rerun()
 
 else:
 
@@ -270,7 +340,7 @@ fig = grafico_gantt(df_ativos.sort_values("inicio"))
 st.plotly_chart(fig,use_container_width=True)
 
 # -------------------------------------------------
-# FINALIZAR
+# FINALIZAR OP
 # -------------------------------------------------
 
 st.divider()
@@ -300,7 +370,6 @@ if not df_abertos.empty:
         finalizar_programacao(id_finalizar)
 
         st.success("OP finalizada")
-
         st.rerun()
 
 else:
