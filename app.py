@@ -219,9 +219,9 @@ df_tabela = df_ativos.copy()
 
 if not df_tabela.empty:
 
-    df_tabela["inicio"] = df_tabela["inicio"].dt.date
-    df_tabela["fim"] = df_tabela["fim"].dt.date
-    df_tabela["prazo_limite"] = df_tabela["prazo_limite"].dt.date
+    df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"])
+    df_tabela["fim"] = pd.to_datetime(df_tabela["fim"])
+    df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"])
 
     colunas = [
         "id",
@@ -284,7 +284,12 @@ else:
 
 st.divider()
 
-fig = grafico_gantt(df_ativos.sort_values("inicio"))
+df_grafico = df_ativos.copy()
+
+df_grafico["inicio"] = pd.to_datetime(df_grafico["inicio"])
+df_grafico["fim"] = pd.to_datetime(df_grafico["fim"])
+
+fig = grafico_gantt(df_grafico.sort_values("inicio"))
 
 st.plotly_chart(fig,use_container_width=True)
 
