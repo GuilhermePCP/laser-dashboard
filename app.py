@@ -249,10 +249,19 @@ if not df_tabela.empty:
 
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
+            # -------------------------------
+            # FORMATAR DATAS (BRASIL)
+            # -------------------------------
+
+            df_operador["inicio"] = df_operador["inicio"].dt.strftime("%d/%m/%Y")
+            df_operador["fim"] = df_operador["fim"].dt.strftime("%d/%m/%Y")
+            df_operador["prazo_limite"] = df_operador["prazo_limite"].dt.strftime("%d/%m/%Y")
+
             df_editado = st.data_editor(
                 df_operador,
                 use_container_width=True,
                 num_rows="dynamic",
+                hide_index=True,
                 key=f"editor_{operador}"
             )
 
