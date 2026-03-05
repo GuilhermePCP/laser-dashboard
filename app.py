@@ -292,9 +292,9 @@ if not df_tabela.empty:
                                 produto=row["produto"],
                                 operador=row["operador"],
                                 status=row["status"],
-                                inicio=row["inicio"],
-                                fim=row["fim"],
-                                prazo=row["prazo_limite"],
+                                inicio=row["inicio"].strftime("%Y-%m-%d"),
+                                fim=row["fim"].strftime("%Y-%m-%d"),
+                                prazo=row["prazo_limite"].strftime("%Y-%m-%d"),
                                 id=row["id"]
                             )
                         )
