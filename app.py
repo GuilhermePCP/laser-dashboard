@@ -300,12 +300,18 @@ if not df_tabela.empty:
                 hide_index=True,
                 key=f"editor_{operador}",
                 column_config={
-                    "inicio": st.column_config.DateColumn("Início", format="DD/MM/YYYY"),
-                    "fim": st.column_config.DateColumn("Fim", format="DD/MM/YYYY"),
-                    "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY")
-                    
-                }
-                column_config={
+                    "inicio": st.column_config.DateColumn(
+                        "Início",
+                        format="DD/MM/YYYY"
+                    ),
+                    "fim": st.column_config.DateColumn(
+                        "Fim",
+                        format="DD/MM/YYYY"
+                    ),
+                    "prazo_limite": st.column_config.DateColumn(
+                        "Prazo limite",
+                        format="DD/MM/YYYY"
+                    ),
                     "desenho": st.column_config.LinkColumn(
                         "Desenho",
                         display_text="📄 Abrir PDF"
