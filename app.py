@@ -132,39 +132,39 @@ with st.sidebar.form("nova_op"):
     type=["pdf"]
 )
 
-salvar = st.form_submit_button("Salvar")
+    salvar = st.form_submit_button("Salvar")
 
-if salvar:
+    if salvar:
 
-    nome_pdf = None
+        nome_pdf = None
 
-    if pdf_desenho is not None:
+        if pdf_desenho is not None:
 
-        nome_pdf = pdf_desenho.name
+            nome_pdf = pdf_desenho.name
 
-        # cria pasta se não existir
-        os.makedirs("desenhos", exist_ok=True)
+            # cria pasta se não existir
+            os.makedirs("desenhos", exist_ok=True)
 
-        caminho_pdf = os.path.join("desenhos", nome_pdf)
+            caminho_pdf = os.path.join("desenhos", nome_pdf)
 
-        with open(caminho_pdf, "wb") as f:
-            f.write(pdf_desenho.getbuffer())
+            with open(caminho_pdf, "wb") as f:
+                f.write(pdf_desenho.getbuffer())
 
-    nova = dict(
-        produto=produto,
-        operador=operador,
-        inicio=str(inicio),
-        fim=str(fim),
-        prazo_limite=str(prazo),
-        status=status,
-        desenho=nome_pdf,
-        data_finalizado=None
-    )
+        nova = dict(
+            produto=produto,
+            operador=operador,
+            inicio=str(inicio),
+            fim=str(fim),
+            prazo_limite=str(prazo),
+            status=status,
+            desenho=nome_pdf,
+            data_finalizado=None
+        )
 
-    salvar_programacao(nova)
+        salvar_programacao(nova)
 
-    st.success("Programação criada")
-    st.rerun()
+        st.success("Programação criada")
+        st.rerun()
 
 # -------------------------------------------------
 # GERENCIAR OPERADORES
