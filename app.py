@@ -331,15 +331,7 @@ for i, operador in enumerate(operadores):
         df_editado = st.dataframe(
             df_operador,
             use_container_width=True,
-            num_rows="dynamic",
-            hide_index=True,
-            key=f"editor_{operador}",
-            column_config={
-                "inicio": st.column_config.DateColumn("Início", format="DD/MM/YYYY"),
-                "fim": st.column_config.DateColumn("Fim", format="DD/MM/YYYY"),
-                "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY"),
-                "desenho": st.column_config.TextColumn("Desenho")
-            }
+            hide_index=True
         )
 
         # BOTÕES PARA ABRIR PDF
