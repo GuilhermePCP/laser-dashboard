@@ -292,7 +292,7 @@ if not df_exibir.empty:
         opcoes
     )
 
-    if st.button("Finalizar Programação", key="botao_finalizar_programacao"):
+    if st.button("Finalizar Programação"):
 
         id_finalizar = int(programacao_escolhida.split(" - ")[0])
 
