@@ -215,64 +215,41 @@ st.divider()
 
 st.subheader("Sequência de fabricação")
 
-df_tabela = df_ativos.copy()
+operadores = df_ativos["operador"].unique()
 
-if not df_tabela.empty:
+abas = st.tabs(list(operadores))
 
-    df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"])
-    df_tabela["fim"] = pd.to_datetime(df_tabela["fim"])
-    df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"])
+for i, operador in enumerate(operadores):
 
-    colunas = [
-        "id",
-        "produto",
-        "operador",
-        "status",
-        "inicio",
-        "fim",
-        "prazo_limite"
-    ]
+    with abas[i]:
 
-    df_tabela = df_tabela[colunas]
+        df_operador = df_ativos[df_ativos["operador"] == operador].copy()
 
-    df_editado = st.data_editor(
-        df_tabela,
-        use_container_width=True,
-        num_rows="dynamic"
-    )
+        df_operador["inicio"] = pd.to_datetime(df_operador["inicio"])
+        df_operador["fim"] = pd.to_datetime(df_operador["fim"])
+        df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"])
 
-    if st.button("💾 Salvar alterações"):
+        tabela_editavel = st.data_editor(
+            df_operador,
+            use_container_width=True,
+            num_rows="dynamic",
+            key=f"editor_{operador}"
+        )
 
-        for _,row in df_editado.iterrows():
+        if st.button("Salvar alterações", key=f"salvar_{operador}"):
 
-            query = """
-            UPDATE programacao
-            SET produto=:produto,
-                operador=:operador,
-                status=:status,
-                inicio=:inicio,
-                fim=:fim,
-                prazo_limite=:prazo
-            WHERE id=:id
-            """
+            for _, row in tabela_editavel.iterrows():
 
-            with engine.connect() as conn:
-                conn.execute(
-                    text(query),
-                    dict(
-                        produto=row["produto"],
-                        operador=row["operador"],
-                        status=row["status"],
-                        inicio=row["inicio"],
-                        fim=row["fim"],
-                        prazo=row["prazo_limite"],
-                        id=row["id"]
-                    )
+                atualizar_programacao(
+                    row["id"],
+                    row["inicio"],
+                    row["fim"],
+                    row["prazo_limite"],
+                    row["status"]
                 )
-                conn.commit()
 
-        st.success("Alterações salvas")
-        st.rerun()
+            st.success("Alterações salvas!")
+            st.rerun()
 
 else:
 
