@@ -254,13 +254,9 @@ if not df_tabela.empty:
 
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
-            # REMOVER INDEX
-            df_operador = df_operador.reset_index(drop=True)
-
-            # FORMATAR DATAS
-            df_operador["inicio"] = df_operador["inicio"].dt.strftime("%d/%m/%Y")
-            df_operador["fim"] = df_operador["fim"].dt.strftime("%d/%m/%Y")
-            df_operador["prazo_limite"] = df_operador["prazo_limite"].dt.strftime("%d/%m/%Y")
+            df_operador["inicio"] = pd.to_datetime(df_operador["inicio"], errors="coerce")
+            df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce")
+            df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce")
 
             df_editado = st.data_editor(
                 df_operador,
@@ -269,18 +265,9 @@ if not df_tabela.empty:
                 hide_index=True,
                 key=f"editor_{operador}",
                 column_config={
-                    "inicio": st.column_config.DateColumn(
-                        "Início",
-                        format="DD/MM/YYYY"
-                    ),
-                    "fim": st.column_config.DateColumn(
-                        "Fim",
-                        format="DD/MM/YYYY"
-                    ),
-                    "prazo_limite": st.column_config.DateColumn(
-                        "Prazo limite",
-                        format="DD/MM/YYYY"
-                    )
+                    "inicio": st.column_config.DateColumn("Início", format="DD/MM/YYYY"),
+                    "fim": st.column_config.DateColumn("Fim", format="DD/MM/YYYY"),
+                    "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY")
                 }
             )
             if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
