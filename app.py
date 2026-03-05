@@ -136,6 +136,16 @@ with st.sidebar.form("nova_op"):
         "Desenho do Produto (PDF)",
         type=["pdf"]
     )
+    pdf_upload = st.file_uploader("Upload do desenho (PDF)", type="pdf")
+    if pdf_upload is not None:
+        nome_pdf = pdf_upload.name
+
+    os.makedirs("desenhos", exist_ok=True)
+
+    caminho_pdf = os.path.join("desenhos", nome_pdf)
+
+    with open(caminho_pdf, "wb") as f:
+        f.write(pdf_upload.getbuffer())
 
     salvar = st.form_submit_button("Salvar")
 
@@ -165,7 +175,7 @@ with st.sidebar.form("nova_op"):
             fim=str(fim),
             prazo_limite=str(prazo),
             status=status,
-            desenho=nome_pdf,
+            desenho = caminho_pdf,
             data_finalizado=None
         )
         salvar_programacao(nova)
