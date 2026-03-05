@@ -142,6 +142,19 @@ with st.sidebar.form("nova_op"):
         fim_db = fim.strftime("%Y-%m-%d")
         prazo_db = prazo.strftime("%Y-%m-%d")
 
+        nome_pdf = None
+
+        if pdf_desenho is not None:
+
+            nome_pdf = pdf_desenho.name
+
+            os.makedirs("desenhos", exist_ok=True)
+
+           caminho_pdf = os.path.join("desenhos", nome_pdf)
+
+           with open(caminho_pdf, "wb") as f:
+               f.write(pdf_desenho.getbuffer())
+
         nova = dict(
             produto=produto,
             quantidade=quantidade,
@@ -150,13 +163,18 @@ with st.sidebar.form("nova_op"):
             fim=str(fim),
             prazo_limite=str(prazo),
             status=status,
+            desenho=nome_pdf,
             data_finalizado=None
         )
-
         salvar_programacao(nova)
 
         st.success("Programação criada")
         st.rerun()
+
+    pdf_desenho = st.file_uploader(
+        "Desenho do Produto (PDF)",
+        type=["pdf"]
+    )
 
 # -------------------------------------------------
 # GERENCIAR OPERADORES
@@ -221,6 +239,13 @@ c3.metric("Próxima máquina", metricas["proxima_maquina"])
 
 st.divider()
 
+#--------------------------------------------------
+def gerar_link_pdf(nome):
+    if pd.notna(nome):
+        return f"desenhos/{nome}"
+    return ""
+#--------------------------------------------------
+
 # -------------------------------------------------
 # TABELA EDITÁVEL
 # -------------------------------------------------
@@ -243,7 +268,8 @@ if not df_tabela.empty:
         "status",
         "inicio",
         "fim",
-        "prazo_limite"
+        "prazo_limite",
+        "desenho"
     ]
     df_tabela = df_tabela[colunas]
 
@@ -267,6 +293,7 @@ if not df_tabela.empty:
             df_operador["inicio"] = pd.to_datetime(df_operador["inicio"], errors="coerce")
             df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce")
             df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce")
+            df_tabela["desenho"] = df_tabela["desenho"].apply(gerar_link_pdf)
 
             df_editado = st.data_editor(
                 df_operador,
@@ -278,8 +305,16 @@ if not df_tabela.empty:
                     "inicio": st.column_config.DateColumn("Início", format="DD/MM/YYYY"),
                     "fim": st.column_config.DateColumn("Fim", format="DD/MM/YYYY"),
                     "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY")
+                    
+                }
+                column_config={
+                    "desenho": st.column_config.LinkColumn(
+                        "Desenho",
+                        display_text="📄 Abrir PDF"
+                    )
                 }
             )
+                
             if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
 
                 for _, row in df_editado.iterrows():
