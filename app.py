@@ -259,35 +259,44 @@ if not df_tabela.empty:
     df_tabela["fim"] = df_tabela["fim"].dt.date
     df_tabela["prazo_limite"] = df_tabela["prazo_limite"].dt.date
 
-    df_tabela["desenho_link"] = df_tabela["desenho"].apply(gerar_link_pdf)
+    # criar coluna com link do PDF
+    def gerar_link(nome):
+        if pd.notna(nome) and nome != "":
+            return f"desenhos/{nome}"
+        return ""
 
-    df_tabela = df_tabela[
-        [
-            "id",
-            "produto",
-            "operador",
-            "status",
-            "inicio",
-            "fim",
-            "prazo_limite",
-            "desenho_link"
-        ]
+    if "desenho" in df_tabela.columns:
+        df_tabela["pdf"] = df_tabela["desenho"].apply(gerar_link)
+    else:
+        df_tabela["pdf"] = ""
+
+    colunas = [
+        "id",
+        "produto",
+        "operador",
+        "status",
+        "inicio",
+        "fim",
+        "prazo_limite",
+        "pdf"
     ]
+
+    df_tabela = df_tabela[colunas]
 
     df_editado = st.data_editor(
         df_tabela,
         use_container_width=True,
         hide_index=True,
         num_rows="dynamic",
-        disabled=["id","desenho_link"],
+        disabled=["id", "pdf"],
         column_config={
             "id": st.column_config.NumberColumn(
                 "ID",
                 width="small"
             ),
-            "desenho_link": st.column_config.LinkColumn(
+            "pdf": st.column_config.LinkColumn(
                 "Desenho",
-                display_text="📄 Abrir"
+                display_text="📄 Abrir PDF"
             )
         }
     )
