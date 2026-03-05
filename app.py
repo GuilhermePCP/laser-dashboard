@@ -23,13 +23,17 @@ from src.database import (
 from sqlalchemy import text
 
 # -------------------------------------------------
-# CONFIGURAÇÃO
+# CONFIGURAÇÃO DA PÁGINA
 # -------------------------------------------------
 
 st.set_page_config(
     page_title="Programação Laser",
     layout="wide"
 )
+
+# -------------------------------------------------
+# CRIAR TABELA
+# -------------------------------------------------
 
 criar_tabela()
 
@@ -38,7 +42,6 @@ criar_tabela()
 # -------------------------------------------------
 
 def carregar():
-
     df = carregar_dados()
 
     df.columns = (
@@ -48,7 +51,7 @@ def carregar():
         .str.replace(" ", "_")
     )
 
-    datas = ["inicio","fim","prazo_limite","data_finalizado"]
+    datas = ["inicio", "fim", "prazo_limite", "data_finalizado"]
 
     for col in datas:
         if col in df.columns:
@@ -58,26 +61,6 @@ def carregar():
 
 
 df = carregar()
-
-# -------------------------------------------------
-# FUNÇÃO GERAR LINK PDF
-# -------------------------------------------------
-
-def gerar_link_pdf(nome):
-
-    if pd.isna(nome):
-        return ""
-
-    caminho = f"desenhos/{nome}"
-
-    if not os.path.exists(caminho):
-        return ""
-
-    with open(caminho, "rb") as f:
-        base64_pdf = base64.b64encode(f.read()).decode()
-
-    return f"data:application/pdf;base64,{base64_pdf}"
-
 
 # -------------------------------------------------
 # FOOTER
@@ -144,27 +127,9 @@ with st.sidebar.form("nova_op"):
         ["Programado","Em produção","Finalizado"]
     )
 
-    pdf_desenho = st.file_uploader(
-        "Desenho do Produto (PDF)",
-        type=["pdf"]
-    )
-
     salvar = st.form_submit_button("Salvar")
 
     if salvar:
-
-        nome_pdf = None
-
-        if pdf_desenho:
-
-            nome_pdf = pdf_desenho.name
-
-            os.makedirs("desenhos", exist_ok=True)
-
-            caminho = os.path.join("desenhos", nome_pdf)
-
-            with open(caminho, "wb") as f:
-                f.write(pdf_desenho.getbuffer())
 
         nova = dict(
             produto=produto,
@@ -173,7 +138,6 @@ with st.sidebar.form("nova_op"):
             fim=str(fim),
             prazo_limite=str(prazo),
             status=status,
-            desenho=nome_pdf,
             data_finalizado=None
         )
 
@@ -218,15 +182,15 @@ st.sidebar.subheader("Filtros")
 
 maquina = st.sidebar.selectbox(
     "Operador",
-    ["Todos"] + list(df["operador"].dropna().unique())
+    ["Todas"] + list(df["operador"].dropna().unique())
 )
 
-status_filtro = st.sidebar.selectbox(
+status = st.sidebar.selectbox(
     "Status",
     ["Todos"] + list(df["status"].dropna().unique())
 )
 
-df_filtrado = filtrar_dados(df, maquina, status_filtro)
+df_filtrado = filtrar_dados(df, maquina, status)
 
 df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
 df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
@@ -259,17 +223,6 @@ if not df_tabela.empty:
     df_tabela["fim"] = df_tabela["fim"].dt.date
     df_tabela["prazo_limite"] = df_tabela["prazo_limite"].dt.date
 
-    # criar coluna com link do PDF
-    def gerar_link(nome):
-        if pd.notna(nome) and nome != "":
-            return f"desenhos/{nome}"
-        return ""
-
-    if "desenho" in df_tabela.columns:
-        df_tabela["pdf"] = df_tabela["desenho"].apply(gerar_link)
-    else:
-        df_tabela["pdf"] = ""
-
     colunas = [
         "id",
         "produto",
@@ -277,8 +230,7 @@ if not df_tabela.empty:
         "status",
         "inicio",
         "fim",
-        "prazo_limite",
-        "pdf"
+        "prazo_limite"
     ]
 
     df_tabela = df_tabela[colunas]
@@ -286,19 +238,7 @@ if not df_tabela.empty:
     df_editado = st.data_editor(
         df_tabela,
         use_container_width=True,
-        hide_index=True,
-        num_rows="dynamic",
-        disabled=["id", "pdf"],
-        column_config={
-            "id": st.column_config.NumberColumn(
-                "ID",
-                width="small"
-            ),
-            "pdf": st.column_config.LinkColumn(
-                "Desenho",
-                display_text="📄 Abrir PDF"
-            )
-        }
+        num_rows="dynamic"
     )
 
     if st.button("💾 Salvar alterações"):
@@ -349,7 +289,7 @@ fig = grafico_gantt(df_ativos.sort_values("inicio"))
 st.plotly_chart(fig,use_container_width=True)
 
 # -------------------------------------------------
-# FINALIZAR OP
+# FINALIZAR
 # -------------------------------------------------
 
 st.divider()
