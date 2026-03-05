@@ -137,43 +137,44 @@ with st.sidebar.form("nova_op"):
 
     # Upload do PDF
     pdf_file = st.file_uploader(
-    "Desenho (PDF)",
-    type=["pdf"]
-)
-
-salvar = st.form_submit_button("Salvar")
-
-if salvar:
-
-    inicio_db = inicio.strftime("%Y-%m-%d")
-    fim_db = fim.strftime("%Y-%m-%d")
-    prazo_db = prazo.strftime("%Y-%m-%d")
-
-    nome_pdf = None
-
-    if pdf_file is not None:
-
-        nome_pdf = pdf_file.name
-
-        with open(f"desenhos/{nome_pdf}", "wb") as f:
-            f.write(pdf_file.getbuffer())
-
-    nova = dict(
-        produto=produto,
-        quantidade=quantidade,
-        operador=operador,
-        inicio=inicio_db,
-        fim=fim_db,
-        prazo_limite=prazo_db,
-        status=status,
-        desenho=nome_pdf,
-        data_finalizado=None
+        "Desenho (PDF)",
+        type=["pdf"]
     )
 
-    salvar_programacao(nova)
+    # BOTÃO PRECISA ESTAR DENTRO DO FORM
+    salvar = st.form_submit_button("Salvar")
 
-    st.success("Programação criada")
-    st.rerun()
+    if salvar:
+
+        inicio_db = inicio.strftime("%Y-%m-%d")
+        fim_db = fim.strftime("%Y-%m-%d")
+        prazo_db = prazo.strftime("%Y-%m-%d")
+
+        nome_pdf = None
+
+        if pdf_file is not None:
+
+            nome_pdf = pdf_file.name
+
+            with open(f"desenhos/{nome_pdf}", "wb") as f:
+                f.write(pdf_file.getbuffer())
+
+        nova = dict(
+            produto=produto,
+            quantidade=quantidade,
+            operador=operador,
+            inicio=inicio_db,
+            fim=fim_db,
+            prazo_limite=prazo_db,
+            status=status,
+            desenho=nome_pdf,
+            data_finalizado=None
+        )
+
+        salvar_programacao(nova)
+
+        st.success("Programação criada")
+        st.rerun()
 # -------------------------------------------------
 # GERENCIAR OPERADORES
 # -------------------------------------------------
