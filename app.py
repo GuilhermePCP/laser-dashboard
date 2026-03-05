@@ -22,6 +22,8 @@ from src.database import (
 
 from sqlalchemy import text
 
+os.makedirs("desenhos", exist_ok=True)
+
 # -------------------------------------------------
 # CONFIGURAÇÃO DA PÁGINA
 # -------------------------------------------------
@@ -133,17 +135,16 @@ with st.sidebar.form("nova_op"):
         ["Programado","Em produção","Finalizado"]
     )
 
-    # UPLOAD DO PDF
+    # Upload do PDF
     pdf_file = st.file_uploader(
         "Desenho (PDF)",
-        type="pdf"
+        type=["pdf"]
     )
 
     salvar = st.form_submit_button("Salvar")
 
     if salvar:
 
-        # PADRONIZAR DATAS
         inicio_db = inicio.strftime("%Y-%m-%d")
         fim_db = fim.strftime("%Y-%m-%d")
         prazo_db = prazo.strftime("%Y-%m-%d")
@@ -153,10 +154,8 @@ with st.sidebar.form("nova_op"):
         # SALVAR PDF
         if pdf_file is not None:
 
-            os.makedirs("desenhos", exist_ok=True)
-
             nome_pdf = pdf_file.name
-            caminho_pdf = os.path.join("desenhos", nome_pdf)
+            caminho_pdf = f"desenhos/{nome_pdf}"
 
             with open(caminho_pdf, "wb") as f:
                 f.write(pdf_file.getbuffer())
@@ -303,18 +302,9 @@ if not df_tabela.empty:
                 hide_index=True,
                 key=f"editor_{operador}",
                 column_config={
-                    "inicio": st.column_config.DateColumn(
-                        "Início",
-                        format="DD/MM/YYYY"
-                    ),
-                    "fim": st.column_config.DateColumn(
-                        "Fim",
-                        format="DD/MM/YYYY"
-                    ),
-                    "prazo_limite": st.column_config.DateColumn(
-                        "Prazo limite",
-                        format="DD/MM/YYYY"
-                    ),
+                    "inicio": st.column_config.DateColumn("Início", format="DD/MM/YYYY"),
+                    "fim": st.column_config.DateColumn("Fim", format="DD/MM/YYYY"),
+                    "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY"),
                     "desenho": st.column_config.LinkColumn(
                         "Desenho",
                         display_text="📄 Abrir PDF"
