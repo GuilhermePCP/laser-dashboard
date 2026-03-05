@@ -111,9 +111,11 @@ with st.sidebar.form("nova_op"):
 
     operadores = carregar_operadores()
 
+    operadores_lista = operadores["nome"].tolist() if not operadores.empty else []
+
     operador = st.selectbox(
         "Operador",
-        operadores["nome"] if not operadores.empty else []
+        operadores_lista
     )
 
     produto = st.text_input("Produto")
@@ -142,6 +144,8 @@ with st.sidebar.form("nova_op"):
         )
 
         salvar_programacao(nova)
+
+        df = carregar()
 
         st.success("Programação criada")
         st.rerun()
@@ -182,7 +186,7 @@ st.sidebar.subheader("Filtros")
 
 maquina = st.sidebar.selectbox(
     "Operador",
-    ["Todas"] + list(df["operador"].dropna().unique())
+    ["Todas"] + sorted(df["operador"].dropna().unique())
 )
 
 status = st.sidebar.selectbox(
