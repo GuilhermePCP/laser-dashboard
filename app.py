@@ -23,7 +23,7 @@ from src.database import (
 from sqlalchemy import text
 
 # -------------------------------------------------
-# CONFIGURAÇÃO DA PÁGINA
+# CONFIG
 # -------------------------------------------------
 
 st.set_page_config(
@@ -42,6 +42,7 @@ criar_tabela()
 # -------------------------------------------------
 
 def carregar():
+
     df = carregar_dados()
 
     df.columns = (
@@ -51,7 +52,7 @@ def carregar():
         .str.replace(" ", "_")
     )
 
-    datas = ["inicio", "fim", "prazo_limite", "data_finalizado"]
+    datas = ["inicio","fim","prazo_limite","data_finalizado"]
 
     for col in datas:
         if col in df.columns:
@@ -63,43 +64,22 @@ def carregar():
 df = carregar()
 
 # -------------------------------------------------
-# FOOTER
+# FUNÇÃO GERAR LINK PDF
 # -------------------------------------------------
 
-def get_base64_image(path):
-    with open(path, "rb") as img:
-        return base64.b64encode(img.read()).decode()
+def gerar_link_pdf(nome):
 
-logo = get_base64_image("assets/logo2.png")
+    if nome and os.path.exists(f"desenhos/{nome}"):
 
-st.markdown(f"""
-<style>
-.footer {{
-position: fixed;
-bottom: 15px;
-right: 20px;
-display: flex;
-align-items: center;
-gap: 10px;
-background: rgba(20,20,20,0.8);
-padding: 8px 12px;
-border-radius: 10px;
-font-size:12px;
-}}
+        with open(f"desenhos/{nome}", "rb") as f:
+            base64_pdf = base64.b64encode(f.read()).decode()
 
-.footer img {{
-height:32px;
-}}
-</style>
+        href = f'<a href="data:application/pdf;base64,{base64_pdf}" target="_blank">📄 Abrir PDF</a>'
 
-<div class="footer">
-<img src="data:image/png;base64,{logo}">
-<div>
-<b>Guilherme Luiz</b><br>
-Auxiliar PCP
-</div>
-</div>
-""", unsafe_allow_html=True)
+        return href
+
+    return ""
+
 
 # -------------------------------------------------
 # SIDEBAR NOVA PROGRAMAÇÃO
@@ -128,9 +108,9 @@ with st.sidebar.form("nova_op"):
     )
 
     pdf_desenho = st.file_uploader(
-    "Desenho do Produto (PDF)",
-    type=["pdf"]
-)
+        "Desenho do Produto (PDF)",
+        type=["pdf"]
+    )
 
     salvar = st.form_submit_button("Salvar")
 
@@ -142,7 +122,6 @@ with st.sidebar.form("nova_op"):
 
             nome_pdf = pdf_desenho.name
 
-            # cria pasta se não existir
             os.makedirs("desenhos", exist_ok=True)
 
             caminho_pdf = os.path.join("desenhos", nome_pdf)
@@ -164,10 +143,11 @@ with st.sidebar.form("nova_op"):
         salvar_programacao(nova)
 
         st.success("Programação criada")
+
         st.rerun()
 
 # -------------------------------------------------
-# GERENCIAR OPERADORES
+# OPERADORES
 # -------------------------------------------------
 
 st.sidebar.divider()
@@ -176,8 +156,11 @@ st.sidebar.subheader("⚙️ Operadores")
 novo = st.sidebar.text_input("Novo operador")
 
 if st.sidebar.button("Adicionar operador"):
+
     if novo:
+
         adicionar_operador(novo)
+
         st.rerun()
 
 ops = carregar_operadores()
@@ -190,7 +173,9 @@ if not ops.empty:
     )
 
     if st.sidebar.button("Remover operador"):
+
         remover_operador(remover)
+
         st.rerun()
 
 # -------------------------------------------------
@@ -213,6 +198,7 @@ status = st.sidebar.selectbox(
 df_filtrado = filtrar_dados(df, maquina, status)
 
 df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
+
 df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
 
 # -------------------------------------------------
@@ -230,7 +216,7 @@ c3.metric("Próxima máquina", metricas["proxima_maquina"])
 st.divider()
 
 # -------------------------------------------------
-# TABELA EDITÁVEL
+# TABELA
 # -------------------------------------------------
 
 st.subheader("Sequência de fabricação")
@@ -239,23 +225,18 @@ df_tabela = df_ativos.copy()
 
 if not df_tabela.empty:
 
-    # converter datas
     df_tabela["inicio"] = df_tabela["inicio"].dt.date
     df_tabela["fim"] = df_tabela["fim"].dt.date
     df_tabela["prazo_limite"] = df_tabela["prazo_limite"].dt.date
 
-    # criar link do desenho
-    def link_pdf(nome):
-        if pd.notna(nome) and nome != "":
-            return f"desenhos/{nome}"
-        return ""
-
     if "desenho" in df_tabela.columns:
-        df_tabela["desenho"] = df_tabela["desenho"].apply(link_pdf)
-    else:
-        df_tabela["desenho"] = ""
 
-    # ordem das colunas
+        df_tabela["pdf"] = df_tabela["desenho"].apply(gerar_link_pdf)
+
+    else:
+
+        df_tabela["pdf"] = ""
+
     colunas = [
         "id",
         "produto",
@@ -264,63 +245,15 @@ if not df_tabela.empty:
         "inicio",
         "fim",
         "prazo_limite",
-        "desenho"
+        "pdf"
     ]
 
     df_tabela = df_tabela[colunas]
 
-    # tabela editável
-    df_editado = st.data_editor(
-        df_tabela,
-        use_container_width=True,
-        hide_index=True,
-        num_rows="dynamic",
-        disabled=["id", "desenho"],
-        column_config={
-            "id": st.column_config.NumberColumn(
-                "ID",
-                width="small"
-            ),
-            "desenho": st.column_config.LinkColumn(
-                "Desenho",
-                display_text="📄 Abrir PDF"
-            )
-        }
+    st.write(
+        df_tabela.to_html(escape=False,index=False),
+        unsafe_allow_html=True
     )
-
-    # botão salvar
-    if st.button("💾 Salvar alterações"):
-
-        for _, row in df_editado.iterrows():
-
-            query = """
-            UPDATE programacao
-            SET produto=:produto,
-                operador=:operador,
-                status=:status,
-                inicio=:inicio,
-                fim=:fim,
-                prazo_limite=:prazo
-            WHERE id=:id
-            """
-
-            with engine.connect() as conn:
-                conn.execute(
-                    text(query),
-                    dict(
-                        produto=row["produto"],
-                        operador=row["operador"],
-                        status=row["status"],
-                        inicio=row["inicio"],
-                        fim=row["fim"],
-                        prazo=row["prazo_limite"],
-                        id=row["id"]
-                    )
-                )
-                conn.commit()
-
-        st.success("Alterações salvas")
-        st.rerun()
 
 else:
 
@@ -367,6 +300,7 @@ if not df_abertos.empty:
         finalizar_programacao(id_finalizar)
 
         st.success("OP finalizada")
+
         st.rerun()
 
 else:
