@@ -336,12 +336,26 @@ for i, operador in enumerate(operadores):
                 "inicio": st.column_config.DateColumn("Início", format="DD/MM/YYYY"),
                 "fim": st.column_config.DateColumn("Fim", format="DD/MM/YYYY"),
                 "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY"),
-                "desenho": st.column_config.LinkColumn(
-                    "Desenho",
-                    display_text="📄 Abrir PDF"
-                )
+                "desenho": st.column_config.TextColumn("Desenho")
             }
         )
+        st.subheader("📄 Abrir desenho")
+
+        for _, row in df_operador.iterrows():
+
+            if pd.notna(row["desenho"]):
+
+                caminho_pdf = row["desenho"]
+
+                if os.path.exists(caminho_pdf):
+
+                    with open(caminho_pdf, "rb") as file:
+                        st.download_button(
+                            label=f"Abrir PDF - {row['produto']}",
+                            data=file,
+                            file_name=os.path.basename(caminho_pdf),
+                            mime="application/pdf"
+                        )
 
         if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
 
