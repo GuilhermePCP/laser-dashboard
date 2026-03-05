@@ -131,12 +131,17 @@ with st.sidebar.form("nova_op"):
 
     if salvar:
 
+        # PADRONIZAR DATAS
+        inicio_db = inicio.strftime("%Y-%m-%d")
+        fim_db = fim.strftime("%Y-%m-%d")
+        prazo_db = prazo.strftime("%Y-%m-%d")
+
         nova = dict(
             produto=produto,
             operador=operador,
-            inicio=str(inicio),
-            fim=str(fim),
-            prazo_limite=str(prazo),
+            inicio=inicio_db,
+            fim=fim_db,
+            prazo_limite=prazo_db,
             status=status,
             data_finalizado=None
         )
