@@ -267,8 +267,8 @@ st.divider()
 def gerar_link_pdf(caminho):
     if caminho:
         nome = os.path.basename(caminho)
-        return f"/~/+/{nome}"
-    return None
+        return f'<a href="{caminho}" target="_blank">📄 Abrir PDF</a>'
+    return ""
 #--------------------------------------------------
 
 # -------------------------------------------------
@@ -313,6 +313,8 @@ for i, operador in enumerate(operadores):
 
         df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
+        df_operador["desenho"] = df_operador["desenho"].apply(gerar_link_pdf)
+
         # transformar caminho do pdf em link
         if "desenho" in df_operador.columns:
             df_operador["desenho"] = df_operador["desenho"].apply(
@@ -326,7 +328,7 @@ for i, operador in enumerate(operadores):
         df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce")
         df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce")
 
-        df_editado = st.data_editor(
+        df_editado = st.dataframe(
             df_operador,
             use_container_width=True,
             num_rows="dynamic",
