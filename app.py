@@ -264,10 +264,11 @@ c3.metric("Próxima máquina", metricas["proxima_maquina"])
 st.divider()
 
 #--------------------------------------------------
-def gerar_link_pdf(nome):
-    if pd.notna(nome):
-        return f"./desenhos/{nome}"
-    return ""
+def gerar_link_pdf(caminho):
+    if caminho:
+        nome = os.path.basename(caminho)
+        return f"/~/+/{nome}"
+    return None
 #--------------------------------------------------
 
 # -------------------------------------------------
@@ -297,82 +298,85 @@ if not df_tabela.empty:
     ]
     df_tabela = df_tabela[colunas]
 
-    df_operador["desenho"] = df_operador["desenho"].apply(gerar_link_pdf)
 
     # --------------------------------
-    # CRIAR ABAS POR OPERADOR
-    # --------------------------------
+# CRIAR ABAS POR OPERADOR
+# --------------------------------
 
-    operadores = df_tabela["operador"].unique()
+operadores = df_tabela["operador"].unique()
 
-    abas = st.tabs(list(operadores))
+abas = st.tabs(list(operadores))
 
-    for i, operador in enumerate(operadores):
+for i, operador in enumerate(operadores):
 
-        with abas[i]:
+    with abas[i]:
 
-            df_operador = df_tabela[df_tabela["operador"] == operador].copy()
+        df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
-            df_operador = df_operador.reset_index(drop=True)
-
-            # REMOVER INDEX
-            df_operador = df_operador.reset_index(drop=True)
-
-            df_operador["inicio"] = pd.to_datetime(df_operador["inicio"], errors="coerce")
-            df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce")
-            df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce")
-
-            df_editado = st.data_editor(
-                df_operador,
-                use_container_width=True,
-                num_rows="dynamic",
-                hide_index=True,
-                key=f"editor_{operador}",
-                column_config={
-                    "inicio": st.column_config.DateColumn("Início", format="DD/MM/YYYY"),
-                    "fim": st.column_config.DateColumn("Fim", format="DD/MM/YYYY"),
-                    "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY"),
-                    "desenho": st.column_config.LinkColumn(
-                        "Desenho",
-                        display_text="📄 Abrir PDF"
-                    )
-                }
+        # transformar caminho do pdf em link
+        if "desenho" in df_operador.columns:
+            df_operador["desenho"] = df_operador["desenho"].apply(
+                lambda x: gerar_link_pdf(x) if pd.notna(x) else None
             )
-                
-            if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
 
-                for _, row in df_editado.iterrows():
+        df_operador = df_operador.reset_index(drop=True)
 
-                    query = """
-                    UPDATE programacao
-                    SET produto=:produto,
-                        quantidade=:quantidade,
-                        operador=:operador,
-                        status=:status,
-                        inicio=:inicio,
-                        fim=:fim,
-                        prazo_limite=:prazo
-                    WHERE id=:id
-                    """
+        # converter datas
+        df_operador["inicio"] = pd.to_datetime(df_operador["inicio"], errors="coerce")
+        df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce")
+        df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce")
 
-                    with engine.connect() as conn:
-                        conn.execute(
-                            text(query),
-                            dict(
-                                produto=row["produto"],
-                                quantidade=row["quantidade"],
-                                operador=row["operador"],
-                                status=row["status"],
-                                inicio=row["inicio"],
-                                fim=row["fim"],
-                                prazo=row["prazo_limite"],
-                                id=row["id"]
-                            )
+        df_editado = st.data_editor(
+            df_operador,
+            use_container_width=True,
+            num_rows="dynamic",
+            hide_index=True,
+            key=f"editor_{operador}",
+            column_config={
+                "inicio": st.column_config.DateColumn("Início", format="DD/MM/YYYY"),
+                "fim": st.column_config.DateColumn("Fim", format="DD/MM/YYYY"),
+                "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY"),
+                "desenho": st.column_config.LinkColumn(
+                    "Desenho",
+                    display_text="📄 Abrir PDF"
+                )
+            }
+        )
+
+        if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
+
+            for _, row in df_editado.iterrows():
+
+                query = """
+                UPDATE programacao
+                SET produto=:produto,
+                    quantidade=:quantidade,
+                    operador=:operador,
+                    status=:status,
+                    inicio=:inicio,
+                    fim=:fim,
+                    prazo_limite=:prazo
+                WHERE id=:id
+                """
+
+                with engine.connect() as conn:
+                    conn.execute(
+                        text(query),
+                        dict(
+                            produto=row["produto"],
+                            quantidade=row["quantidade"],
+                            operador=row["operador"],
+                            status=row["status"],
+                            inicio=row["inicio"],
+                            fim=row["fim"],
+                            prazo=row["prazo_limite"],
+                            id=row["id"]
                         )
-                        conn.commit()
+                    )
+                    conn.commit()
 
-                st.success("Alterações salvas")
-                st.rerun()
+            st.success("Alterações salvas")
+            st.rerun()
 
 else:
 
