@@ -251,9 +251,9 @@ for i, operador in enumerate(operadores):
             st.success("Alterações salvas!")
             st.rerun()
 
-else:
+        else:
 
-    st.info("Nenhuma programação ativa")
+            st.info("Nenhuma programação ativa")
 
 # -------------------------------------------------
 # GANTT
