@@ -118,6 +118,12 @@ with st.sidebar.form("nova_op"):
 
     produto = st.text_input("Produto")
 
+    quantidade = st.number_input(
+        "Quantidade",
+        min_value=1,
+        step=1
+    )
+
     inicio = st.date_input("Início")
     fim = st.date_input("Fim")
     prazo = st.date_input("Prazo limite")
@@ -138,10 +144,11 @@ with st.sidebar.form("nova_op"):
 
         nova = dict(
             produto=produto,
+            quantidade=quantidade,
             operador=operador,
-            inicio=inicio_db,
-            fim=fim_db,
-            prazo_limite=prazo_db,
+            inicio=str(inicio),
+            fim=str(fim),
+            prazo_limite=str(prazo),
             status=status,
             data_finalizado=None
         )
@@ -231,13 +238,13 @@ if not df_tabela.empty:
     colunas = [
         "id",
         "produto",
+        "quantidade",
         "operador",
         "status",
         "inicio",
         "fim",
         "prazo_limite"
     ]
-
     df_tabela = df_tabela[colunas]
 
     # --------------------------------
@@ -280,6 +287,7 @@ if not df_tabela.empty:
                     query = """
                     UPDATE programacao
                     SET produto=:produto,
+                        quantidade=:quantidade,
                         operador=:operador,
                         status=:status,
                         inicio=:inicio,
@@ -293,11 +301,12 @@ if not df_tabela.empty:
                             text(query),
                             dict(
                                 produto=row["produto"],
+                                quantidade=row["quantidade"],
                                 operador=row["operador"],
                                 status=row["status"],
-                                inicio=pd.to_datetime(row["inicio"]).strftime("%Y-%m-%d"),
-                                fim=pd.to_datetime(row["fim"]).strftime("%Y-%m-%d"),
-                                prazo=pd.to_datetime(row["prazo_limite"]).strftime("%Y-%m-%d"),
+                                inicio=row["inicio"],
+                                fim=row["fim"],
+                                prazo=row["prazo_limite"],
                                 id=row["id"]
                             )
                         )
