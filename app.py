@@ -132,57 +132,51 @@ with st.sidebar.form("nova_op"):
         "Status",
         ["Programado","Em produção","Finalizado"]
     )
-    pdf_desenho = st.file_uploader(
-        "Desenho do Produto (PDF)",
-        type=["pdf"]
-    )
-    pdf_upload = st.file_uploader("Upload do desenho (PDF)", type="pdf")
-    if pdf_upload is not None:
-        nome_pdf = pdf_upload.name
 
-    os.makedirs("desenhos", exist_ok=True)
-
-    # upload do pdf
-pdf_file = st.file_uploader("Desenho (PDF)", type="pdf")
-
-salvar = st.form_submit_button("Salvar")
-
-if salvar:
-
-    # PADRONIZAR DATAS
-    inicio_db = inicio.strftime("%Y-%m-%d")
-    fim_db = fim.strftime("%Y-%m-%d")
-    prazo_db = prazo.strftime("%Y-%m-%d")
-
-    caminho_pdf = None
-
-    # salvar pdf se existir
-    if pdf_file is not None:
-
-        os.makedirs("desenhos", exist_ok=True)
-
-        nome_pdf = pdf_file.name
-        caminho_pdf = os.path.join("desenhos", nome_pdf)
-
-        with open(caminho_pdf, "wb") as f:
-            f.write(pdf_file.getbuffer())
-
-    nova = dict(
-        produto=produto,
-        quantidade=quantidade,
-        operador=operador,
-        inicio=inicio_db,
-        fim=fim_db,
-        prazo_limite=prazo_db,
-        status=status,
-        desenho=caminho_pdf,
-        data_finalizado=None
+    # UPLOAD DO PDF
+    pdf_file = st.file_uploader(
+        "Desenho (PDF)",
+        type="pdf"
     )
 
-    salvar_programacao(nova)
+    salvar = st.form_submit_button("Salvar")
 
-    st.success("Programação criada")
-    st.rerun()
+    if salvar:
+
+        # PADRONIZAR DATAS
+        inicio_db = inicio.strftime("%Y-%m-%d")
+        fim_db = fim.strftime("%Y-%m-%d")
+        prazo_db = prazo.strftime("%Y-%m-%d")
+
+        caminho_pdf = None
+
+        # SALVAR PDF
+        if pdf_file is not None:
+
+            os.makedirs("desenhos", exist_ok=True)
+
+            nome_pdf = pdf_file.name
+            caminho_pdf = os.path.join("desenhos", nome_pdf)
+
+            with open(caminho_pdf, "wb") as f:
+                f.write(pdf_file.getbuffer())
+
+        nova = dict(
+            produto=produto,
+            quantidade=quantidade,
+            operador=operador,
+            inicio=inicio_db,
+            fim=fim_db,
+            prazo_limite=prazo_db,
+            status=status,
+            desenho=caminho_pdf,
+            data_finalizado=None
+        )
+
+        salvar_programacao(nova)
+
+        st.success("Programação criada")
+        st.rerun()
 # -------------------------------------------------
 # GERENCIAR OPERADORES
 # -------------------------------------------------
