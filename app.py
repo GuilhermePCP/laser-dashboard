@@ -339,7 +339,9 @@ for i, operador in enumerate(operadores):
                 "desenho": st.column_config.TextColumn("Desenho")
             }
         )
-        st.subheader("📄 Abrir desenho")
+
+        # BOTÕES PARA ABRIR PDF
+        st.subheader("📄 Desenhos")
 
         for _, row in df_operador.iterrows():
 
@@ -354,7 +356,8 @@ for i, operador in enumerate(operadores):
                             label=f"Abrir PDF - {row['produto']}",
                             data=file,
                             file_name=os.path.basename(caminho_pdf),
-                            mime="application/pdf"
+                            mime="application/pdf",
+                            key=f"pdf_{row['id']}"
                         )
 
         if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
