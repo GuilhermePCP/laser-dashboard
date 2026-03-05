@@ -3,9 +3,9 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import streamlit as st
-from datetime import datetime
 import pandas as pd
 import base64
+from datetime import datetime
 
 from src.analytics import calcular_metricas, filtrar_dados
 from src.visuals import grafico_gantt
@@ -16,201 +16,178 @@ from src.database import (
     carregar_operadores,
     adicionar_operador,
     remover_operador,
-    finalizar_programacao
+    finalizar_programacao,
+    engine
+)
+
+from sqlalchemy import text
+
+# -------------------------------------------------
+# CONFIGURAÇÃO DA PÁGINA
+# -------------------------------------------------
+
+st.set_page_config(
+    page_title="Programação Laser",
+    layout="wide"
 )
 
 # -------------------------------------------------
-# CONFIGURAÇÃO DA PÁGINA (SEMPRE PRIMEIRO)
-# -------------------------------------------------
-
-st.set_page_config(layout="wide")
-
-# -------------------------------------------------
-# CRIAR TABELAS
+# CRIAR TABELA
 # -------------------------------------------------
 
 criar_tabela()
 
 # -------------------------------------------------
-# TÍTULO
+# FUNÇÃO CARREGAR DADOS
 # -------------------------------------------------
 
-st.title("Programação Máquinas Laser")
+def carregar():
+    df = carregar_dados()
+
+    df.columns = (
+        df.columns
+        .str.strip()
+        .str.lower()
+        .str.replace(" ", "_")
+    )
+
+    datas = ["inicio", "fim", "prazo_limite", "data_finalizado"]
+
+    for col in datas:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors="coerce")
+
+    return df
+
+
+df = carregar()
 
 # -------------------------------------------------
-# CARREGAR DADOS
-# -------------------------------------------------
-
-@st.cache_data
-def load_data():
-    return carregar_dados()
-
-df = load_data()
-
-# -------------------------------------------------
-# FOOTER PERSONALIZADO
+# FOOTER
 # -------------------------------------------------
 
 def get_base64_image(path):
     with open(path, "rb") as img:
         return base64.b64encode(img.read()).decode()
 
-logo_empresa = get_base64_image("assets/logo2.png")
+logo = get_base64_image("assets/logo2.png")
 
 st.markdown(f"""
 <style>
-.footer-brand {{
-    position: fixed;
-    bottom: 20px;
-    right: 25px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: rgba(22, 27, 34, 0.85);
-    padding: 8px 14px;
-    border-radius: 12px;
-    backdrop-filter: blur(8px);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    z-index: 9999;
+.footer {{
+position: fixed;
+bottom: 15px;
+right: 20px;
+display: flex;
+align-items: center;
+gap: 10px;
+background: rgba(20,20,20,0.8);
+padding: 8px 12px;
+border-radius: 10px;
+font-size:12px;
 }}
 
-.footer-brand img {{
-    height: 35px;
-}}
-
-.footer-text {{
-    font-size: 13px;
-    color: white;
-    line-height: 1.2;
-}}
-
-.footer-text span {{
-    color: #9ca3af;
-    font-size: 11px;
+.footer img {{
+height:32px;
 }}
 </style>
 
-<div class="footer-brand">
-    <img src="data:image/png;base64,{logo_empresa}">
-    <div class="footer-text">
-        <strong>Guilherme Luiz</strong><br>
-        <span>Auxiliar De PCP</span>
-    </div>
+<div class="footer">
+<img src="data:image/png;base64,{logo}">
+<div>
+<b>Guilherme Luiz</b><br>
+Auxiliar PCP
+</div>
 </div>
 """, unsafe_allow_html=True)
 
-# 🔥 Padronizar colunas (minúsculo + underscore)
-df.columns = (
-    df.columns
-        .str.strip()
-        .str.lower()
-        .str.replace(" ", "_")
-)
+# -------------------------------------------------
+# SIDEBAR NOVA PROGRAMAÇÃO
+# -------------------------------------------------
 
-# 🔥 Converter colunas de data com segurança
-colunas_data = ["inicio", "fim", "prazo_limite", "data_finalizado"]
-
-for col in colunas_data:
-    if col in df.columns:
-        df[col] = pd.to_datetime(df[col], format="mixed", errors="coerce")
-
-
-# DEBUG (pode remover depois)
-#st.write("COLUNAS DO DF:", df.columns)
-
-st.sidebar.divider()
 st.sidebar.subheader("➕ Nova Programação")
 
-with st.sidebar.form("form_programacao"):
+with st.sidebar.form("nova_op"):
 
-    df_operadores = carregar_operadores()
+    operadores = carregar_operadores()
 
-    operador_novo = st.selectbox(
+    operador = st.selectbox(
         "Operador",
-        df_operadores["nome"] if not df_operadores.empty else []
+        operadores["nome"] if not operadores.empty else []
     )
-    produto_novo = st.text_input("Produto")
-    inicio_novo = st.date_input("Data Início")
-    fim_novo = st.date_input("Data Fim")
-    prazo_limite_novo = st.date_input("Prazo Limite")
-    status_novo = st.selectbox("Status", ["Programado", "Em produção", "Finalizado"])
 
-    submit = st.form_submit_button("Salvar")
+    produto = st.text_input("Produto")
 
-    if submit:
+    inicio = st.date_input("Início")
+    fim = st.date_input("Fim")
+    prazo = st.date_input("Prazo limite")
 
-        # 🔎 VALIDAÇÕES
-        if not operador_novo:
-            st.error("Selecione um operador.")
-        elif not produto_novo.strip():
-            st.error("Digite o produto.")
-        elif not inicio_novo:
-            st.error("Selecione a data de início.")
-        elif not fim_novo:
-            st.error("Selecione a data de fim.")
-        elif not status_novo:
-            st.error("Selecione o status.")
-        elif fim_novo < inicio_novo:
-            st.error("A data final não pode ser menor que a data inicial.")
-        elif prazo_limite_novo < fim_novo:
-            st.error("O prazo limite não pode ser menor que a data final.")
-        else:
-            nova_linha = {
-                "produto": produto_novo.strip(),
-                "inicio": str(inicio_novo),
-                "fim": str(fim_novo),
-                "prazo_limite": str(prazo_limite_novo),
-                "status": status_novo,
-                "operador": operador_novo,
-                "data_finalizado": None
-            }
+    status = st.selectbox(
+        "Status",
+        ["Programado","Em produção","Finalizado"]
+    )
 
-            salvar_programacao(nova_linha)
+    salvar = st.form_submit_button("Salvar")
 
-            df = carregar_dados()
+    if salvar:
 
-            st.success("Programação adicionada com sucesso!")
-            st.rerun()
+        nova = dict(
+            produto=produto,
+            operador=operador,
+            inicio=str(inicio),
+            fim=str(fim),
+            prazo_limite=str(prazo),
+            status=status,
+            data_finalizado=None
+        )
+
+        salvar_programacao(nova)
+
+        st.success("Programação criada")
+        st.rerun()
+
+# -------------------------------------------------
+# GERENCIAR OPERADORES
+# -------------------------------------------------
 
 st.sidebar.divider()
-st.sidebar.subheader("⚙️ Gerenciar Operadores")
+st.sidebar.subheader("⚙️ Operadores")
 
-from src.database import carregar_operadores, adicionar_operador, remover_operador
+novo = st.sidebar.text_input("Novo operador")
 
-df_operadores = carregar_operadores()
-
-# ➕ Adicionar operador
-novo_operador = st.sidebar.text_input("Novo Operador")
-
-if st.sidebar.button("Adicionar Operador"):
-    if novo_operador.strip():
-        adicionar_operador(novo_operador.strip())
-        st.sidebar.success("Operador adicionado!")
+if st.sidebar.button("Adicionar operador"):
+    if novo:
+        adicionar_operador(novo)
         st.rerun()
 
-# ❌ Remover operador
-if not df_operadores.empty:
-    operador_remover = st.sidebar.selectbox(
-        "Remover Operador",
-        df_operadores["nome"]
+ops = carregar_operadores()
+
+if not ops.empty:
+
+    remover = st.sidebar.selectbox(
+        "Remover operador",
+        ops["nome"]
     )
 
-    if st.sidebar.button("Remover Operador"):
-        remover_operador(operador_remover)
-        st.sidebar.warning("Operador removido!")
+    if st.sidebar.button("Remover operador"):
+        remover_operador(remover)
         st.rerun()
 
-# Sidebar filtros
-st.sidebar.header("Filtros")
+# -------------------------------------------------
+# FILTROS
+# -------------------------------------------------
+
+st.sidebar.divider()
+st.sidebar.subheader("Filtros")
 
 maquina = st.sidebar.selectbox(
-    "Operadores",
-    ["Todas"] + list(df["operador"].unique())
+    "Operador",
+    ["Todas"] + list(df["operador"].dropna().unique())
 )
 
 status = st.sidebar.selectbox(
     "Status",
-    ["Todos"] + list(df["status"].unique())
+    ["Todos"] + list(df["status"].dropna().unique())
 )
 
 df_filtrado = filtrar_dados(df, maquina, status)
@@ -218,108 +195,105 @@ df_filtrado = filtrar_dados(df, maquina, status)
 df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
 df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
 
+# -------------------------------------------------
 # KPIs
+# -------------------------------------------------
+
 metricas = calcular_metricas(df_filtrado)
 
-col1, col2, col3 = st.columns(3)
+c1,c2,c3 = st.columns(3)
 
-col1.metric("Total de OPs", metricas["total_ops"])
-col2.metric("Operadores em Produção", metricas["maquinas_ocupadas"])
-col3.metric("Próximo Operador a Iniciar", metricas["proxima_maquina"])
+c1.metric("Total OPs", metricas["total_ops"])
+c2.metric("Operadores ativos", metricas["maquinas_ocupadas"])
+c3.metric("Próxima máquina", metricas["proxima_maquina"])
 
 st.divider()
 
-# Tabela
+# -------------------------------------------------
+# TABELA EDITÁVEL
+# -------------------------------------------------
+
 st.subheader("Sequência de fabricação")
 
-# 🔥 PEGAR APENAS NÃO FINALIZADOS
-df_exibir = df_filtrado[df_filtrado["status"] != "Finalizado"].copy()
+df_tabela = df_ativos.copy()
 
-if not df_exibir.empty:
+if not df_tabela.empty:
 
-    # 🔥 FORMATAR DATAS
-    df_exibir["inicio"] = df_exibir["inicio"].dt.strftime("%d/%m/%Y").fillna("")
-    df_exibir["fim"] = df_exibir["fim"].dt.strftime("%d/%m/%Y").fillna("")
-    df_exibir["prazo_limite"] = df_exibir["prazo_limite"].dt.strftime("%d/%m/%Y").fillna("")
+    df_tabela["inicio"] = df_tabela["inicio"].dt.date
+    df_tabela["fim"] = df_tabela["fim"].dt.date
+    df_tabela["prazo_limite"] = df_tabela["prazo_limite"].dt.date
 
-    # 🔥 ORDEM DAS COLUNAS
-    colunas_exibir = ["produto", "operador", "status", "inicio", "fim", "prazo_limite"]
+    colunas = [
+        "id",
+        "produto",
+        "operador",
+        "status",
+        "inicio",
+        "fim",
+        "prazo_limite"
+    ]
 
-    # 🔥 PEGAR SOMENTE OPERADORES QUE TÊM PRODUÇÃO ATIVA
-    operadores = (
-        df_exibir["operador"]
-        .dropna()
-        .astype(str)
-        .unique()
-        .tolist()
+    df_tabela = df_tabela[colunas]
+
+    df_editado = st.data_editor(
+        df_tabela,
+        use_container_width=True,
+        num_rows="dynamic"
     )
 
-    if operadores:
+    if st.button("💾 Salvar alterações"):
 
-        abas = st.tabs(operadores)
+        for _,row in df_editado.iterrows():
 
-        for aba, operador in zip(abas, operadores):
-            with aba:
+            query = """
+            UPDATE programacao
+            SET produto=:produto,
+                operador=:operador,
+                status=:status,
+                inicio=:inicio,
+                fim=:fim,
+                prazo_limite=:prazo
+            WHERE id=:id
+            """
 
-                df_operador = df_exibir[
-                    df_exibir["operador"].astype(str) == operador
-                ]
-
-                if not df_operador.empty:
-
-                    df_operador = df_operador[colunas_exibir]
-
-                    df_editado = st.data_editor(
-                        df_operador,
-                        use_container_width=True,
-                        hide_index=True,
-                        num_rows="dynamic"
+            with engine.connect() as conn:
+                conn.execute(
+                    text(query),
+                    dict(
+                        produto=row["produto"],
+                        operador=row["operador"],
+                        status=row["status"],
+                        inicio=row["inicio"],
+                        fim=row["fim"],
+                        prazo=row["prazo_limite"],
+                        id=row["id"]
                     )
-                    if st.button("Salvar Alterações", key=f"salvar_{operador}"):
+                )
+                conn.commit()
 
-                        for _, linha in df_editado.iterrows():
+        st.success("Alterações salvas")
+        st.rerun()
 
-                            query = """
-                            UPDATE programacao
-                            SET produto = :produto,
-                                operador = :operador,
-                                status = :status
-                            WHERE produto = :produto
-                            """
-
-                            from src.database import engine
-                            from sqlalchemy import text
-
-                            with engine.connect() as conn:
-                                conn.execute(
-                                    text(query),
-                                    {
-                                        "produto": linha["produto"],
-                                        "operador": linha["operador"],
-                                        "status": linha["status"]
-                                    }
-                                )
-                                conn.commit()
-
-                        st.success("Alterações salvas!")
-                        st.rerun()
 else:
-    st.info("Nenhuma programação ativa.")
 
+    st.info("Nenhuma programação ativa")
 
+# -------------------------------------------------
+# GANTT
+# -------------------------------------------------
 
 st.divider()
-# Gantt
+
 fig = grafico_gantt(df_ativos.sort_values("inicio"))
-st.plotly_chart(fig, use_container_width=True)
+
+st.plotly_chart(fig,use_container_width=True)
+
+# -------------------------------------------------
+# FINALIZAR
+# -------------------------------------------------
 
 st.divider()
-
-# -------------------------------------------------
-# FINALIZAR PROGRAMAÇÃO (BOTÃO ÚNICO)
-# -------------------------------------------------
-
-st.markdown("### ✅ Finalizar Programação")
+st.subheader("Finalizar programação")
 
 df_abertos = df[df["status"] != "Finalizado"]
 
@@ -327,81 +301,60 @@ if not df_abertos.empty:
 
     opcoes = (
         df_abertos["id"].astype(str)
-        + " | "
-        + df_abertos["produto"]
-        + " | "
-        + df_abertos["operador"]
+        +" | "+
+        df_abertos["produto"]
+        +" | "+
+        df_abertos["operador"]
     )
 
     escolha = st.selectbox(
-        "Selecione a programação:",
-        opcoes,
-        key="select_finalizar"
+        "Selecionar OP",
+        opcoes
     )
 
-    if st.button("Finalizar", key="btn_finalizar"):
+    if st.button("Finalizar OP"):
 
-        id_finalizar = int(escolha.split(" | ")[0])
+        id_finalizar = int(escolha.split("|")[0])
 
         finalizar_programacao(id_finalizar)
 
-        st.success("Programação finalizada!")
+        st.success("OP finalizada")
         st.rerun()
 
 else:
-    st.info("Não há programações abertas.")
 
+    st.info("Nenhuma OP aberta")
+
+# -------------------------------------------------
+# HISTÓRICO
+# -------------------------------------------------
 
 st.divider()
-
-st.subheader("📋 Programações Finalizadas")
+st.subheader("Programações finalizadas")
 
 if not df_finalizados.empty:
 
-    operadores = (
-        df_finalizados["operador"]
-        .dropna()
-        .astype(str)
-        .unique()
-        .tolist()
-    )
+    df_hist = df_finalizados.copy()
 
-    abas = st.tabs(operadores)
+    df_hist["inicio"] = df_hist["inicio"].dt.date
+    df_hist["fim"] = df_hist["fim"].dt.date
+    df_hist["prazo_limite"] = df_hist["prazo_limite"].dt.date
+    df_hist["data_finalizado"] = df_hist["data_finalizado"].dt.date
 
-    for aba, operador in zip(abas, operadores):
-
-        with aba:
-
-            df_operador = df_finalizados[
-                df_finalizados["operador"].astype(str) == operador
-            ].copy()
-
-            # 🔥 FORMATAR DATAS
-            df_operador["inicio"] = df_operador["inicio"].dt.strftime("%d/%m/%Y")
-            df_operador["fim"] = df_operador["fim"].dt.strftime("%d/%m/%Y")
-            df_operador["prazo_limite"] = df_operador["prazo_limite"].dt.strftime("%d/%m/%Y")
-            df_operador["data_finalizado"] = (
-                pd.to_datetime(df_operador["data_finalizado"])
-                .dt.strftime("%d/%m/%Y")
-            )
-
-            # 🔥 ORDEM DAS COLUNAS
-            colunas_exibir = [
+    st.dataframe(
+        df_hist[
+            [
                 "produto",
+                "operador",
                 "inicio",
                 "fim",
                 "prazo_limite",
-                "data_finalizado",
-                "status"
+                "data_finalizado"
             ]
-
-            df_operador = df_operador[colunas_exibir]
-
-            st.dataframe(
-                df_operador,
-                use_container_width=True,
-                hide_index=True
-            )
+        ],
+        use_container_width=True
+    )
 
 else:
-    st.info("Nenhuma programação finalizada.")
+
+    st.info("Nenhuma finalizada")
