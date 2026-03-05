@@ -238,9 +238,16 @@ if not df_tabela.empty:
     df_editado = st.data_editor(
         df_tabela,
         use_container_width=True,
-        num_rows="dynamic"
+        hide_index=True,
+        num_rows="dynamic",
+        disabled=["id"],
+        column_config={
+            "id": st.column_config.NumberColumn(
+                "ID",
+                width="small"
+            )
+        }
     )
-
     if st.button("💾 Salvar alterações"):
 
         for _,row in df_editado.iterrows():
