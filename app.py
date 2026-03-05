@@ -142,47 +142,47 @@ with st.sidebar.form("nova_op"):
 
     os.makedirs("desenhos", exist_ok=True)
 
-    caminho_pdf = os.path.join("desenhos", caminho_pdf)
+    # upload do pdf
+pdf_file = st.file_uploader("Desenho (PDF)", type="pdf")
 
-    with open(caminho_pdf, "wb") as f:
-        f.write(pdf_upload.getbuffer())
+salvar = st.form_submit_button("Salvar")
 
-    salvar = st.form_submit_button("Salvar")
+if salvar:
 
-    if salvar:
+    # PADRONIZAR DATAS
+    inicio_db = inicio.strftime("%Y-%m-%d")
+    fim_db = fim.strftime("%Y-%m-%d")
+    prazo_db = prazo.strftime("%Y-%m-%d")
 
-        # PADRONIZAR DATAS
-        inicio_db = inicio.strftime("%Y-%m-%d")
-        fim_db = fim.strftime("%Y-%m-%d")
-        prazo_db = prazo.strftime("%Y-%m-%d")
+    caminho_pdf = None
 
-        pdf_file = st.file_uploader("Desenho (PDF)", type="pdf")
+    # salvar pdf se existir
+    if pdf_file is not None:
 
-        caminho_pdf = None
+        os.makedirs("desenhos", exist_ok=True)
 
-        if pdf_file is not None:
-            nome_pdf = pdf_file.name
-            caminho_pdf = os.path.join("desenhos", nome_pdf)
+        nome_pdf = pdf_file.name
+        caminho_pdf = os.path.join("desenhos", nome_pdf)
 
-            with open(caminho_pdf, "wb") as f:
-                f.write(pdf_file.getbuffer())
+        with open(caminho_pdf, "wb") as f:
+            f.write(pdf_file.getbuffer())
 
-        nova = dict(
-            produto=produto,
-            quantidade=quantidade,
-            operador=operador,
-            inicio=str(inicio),
-            fim=str(fim),
-            prazo_limite=str(prazo),
-            status=status,
-            desenho = caminho_pdf,
-            data_finalizado=None
-        )
-        salvar_programacao(nova)
+    nova = dict(
+        produto=produto,
+        quantidade=quantidade,
+        operador=operador,
+        inicio=inicio_db,
+        fim=fim_db,
+        prazo_limite=prazo_db,
+        status=status,
+        desenho=caminho_pdf,
+        data_finalizado=None
+    )
 
-        st.success("Programação criada")
-        st.rerun()
+    salvar_programacao(nova)
 
+    st.success("Programação criada")
+    st.rerun()
 # -------------------------------------------------
 # GERENCIAR OPERADORES
 # -------------------------------------------------
