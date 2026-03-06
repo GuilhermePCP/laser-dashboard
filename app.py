@@ -25,6 +25,17 @@ from sqlalchemy import text
 import os
 import streamlit as st
 
+def mostrar_pdf(caminho_pdf):
+    with open(caminho_pdf, "rb") as f:
+        base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+
+    pdf_display = f"""
+    <iframe src="data:application/pdf;base64,{base64_pdf}" 
+    width="700" height="800" type="application/pdf"></iframe>
+    """
+
+    st.markdown(pdf_display, unsafe_allow_html=True)
+
 PASTA_DESENHOS = "desenhos"
 
 def abrir_pdf(nome_pdf):
@@ -404,6 +415,9 @@ for i, operador in enumerate(operadores):
 
             st.success("Alterações salvas")
             st.rerun()
+
+        if st.button("Abrir desenho"):
+            mostrar_pdf("desenhos/peca123.pdf")
 
 else:
 
