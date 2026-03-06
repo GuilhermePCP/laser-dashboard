@@ -22,6 +22,37 @@ from src.database import (
 
 from sqlalchemy import text
 
+def mostrar_pdf(caminho):
+    if os.path.exists(caminho):
+
+        with open(caminho, "rb") as f:
+            pdf_bytes = f.read()
+
+        st.download_button(
+            "📄 Baixar desenho",
+            data=pdf_bytes,
+            file_name=os.path.basename(caminho),
+            mime="application/pdf"
+        )
+
+        st.markdown("### Preview")
+
+        pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
+
+        pdf_display = f"""
+        <embed 
+        src="data:application/pdf;base64,{pdf_base64}" 
+        width="100%" 
+        height="900px" 
+        type="application/pdf">
+        """
+
+        st.markdown(pdf_display, unsafe_allow_html=True)
+
+    else:
+        st.warning("Desenho não encontrado.")
+
+
 # -------------------------------------------------
 # CONFIG
 # -------------------------------------------------
@@ -58,37 +89,6 @@ def carregar():
             df[col] = pd.to_datetime(df[col], errors="coerce")
 
     return df
-
-
-def mostrar_pdf(caminho):
-    if os.path.exists(caminho):
-
-        with open(caminho, "rb") as f:
-            pdf_bytes = f.read()
-
-        st.download_button(
-            "📄 Baixar desenho",
-            data=pdf_bytes,
-            file_name=os.path.basename(caminho),
-            mime="application/pdf"
-        )
-
-        st.markdown("### Preview")
-
-        pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
-
-        pdf_display = f"""
-        <embed 
-        src="data:application/pdf;base64,{pdf_base64}" 
-        width="100%" 
-        height="900px" 
-        type="application/pdf">
-        """
-
-        st.markdown(pdf_display, unsafe_allow_html=True)
-
-    else:
-        st.warning("Desenho não encontrado.")
 
 
 # -------------------------------------------------
