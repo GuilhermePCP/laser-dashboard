@@ -270,8 +270,6 @@ def gerar_link_pdf(nome):
     return ""
 #--------------------------------------------------
 
-df_operador["desenho"] = df_operador["desenho"].apply(gerar_link_pdf)
-
 # -------------------------------------------------
 # TABELA EDITÁVEL
 # -------------------------------------------------
