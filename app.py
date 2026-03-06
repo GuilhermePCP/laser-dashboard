@@ -416,43 +416,6 @@ fig = grafico_gantt(df_grafico.sort_values("inicio"))
 st.plotly_chart(fig,use_container_width=True)
 
 # -------------------------------------------------
-# FINALIZAR
-# -------------------------------------------------
-
-st.divider()
-st.subheader("Finalizar programação")
-
-df_abertos = df[df["status"] != "Finalizado"]
-
-if not df_abertos.empty:
-
-    opcoes = (
-        df_abertos["id"].astype(str)
-        +" | "+
-        df_abertos["produto"]
-        +" | "+
-        df_abertos["operador"]
-    )
-
-    escolha = st.selectbox(
-        "Selecionar OP",
-        opcoes
-    )
-
-    if st.button("Finalizar OP"):
-
-        id_finalizar = int(escolha.split("|")[0])
-
-        finalizar_programacao(id_finalizar)
-
-        st.success("OP finalizada")
-        st.rerun()
-
-else:
-
-    st.info("Nenhuma OP aberta")
-
-# -------------------------------------------------
 # HISTÓRICO
 # -------------------------------------------------
 
