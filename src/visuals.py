@@ -1,56 +1,41 @@
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
-import plotly.express as px
 
-def grafico_gantt(df, cores_status):
 
-    fig = px.timeline(
-        df,
-        x_start="inicio",
-        x_end="fim",
-        y="operador",
-        color="status",
-        text="produto",
-        color_discrete_map=cores_status
-    )
-
-    fig.update_yaxes(autorange="reversed")
-
-    fig.update_layout(
-        title="Programação de Produção",
-        xaxis_title="Data",
-        yaxis_title="Operador",
-        legend_title="Status"
-    )
-
-    return fig
-
-def grafico_gantt(df):
+def grafico_gantt(df, cores_status=None):
 
     if df.empty:
         return go.Figure()
 
     df = df.copy()
 
-    # 🔥 garantir que datas estão no formato correto
+    # garantir formato das datas
     df["inicio"] = pd.to_datetime(df["inicio"], errors="coerce")
     df["fim"] = pd.to_datetime(df["fim"], errors="coerce")
 
     # remover linhas inválidas
     df = df.dropna(subset=["inicio", "fim"])
 
-    # Ordenar por operador e início
+    # ordenar
     df = df.sort_values(by=["operador", "inicio"])
 
-    # Texto dentro da barra
+    # texto dentro da barra
     df["texto"] = (
-        df["produto"].astype(str) +
-        "<br>" +
-        df["inicio"].dt.strftime("%d/%m") +
-        " → " +
-        df["fim"].dt.strftime("%d/%m")
+        df["produto"].astype(str)
+        + "<br>"
+        + df["inicio"].dt.strftime("%d/%m")
+        + " → "
+        + df["fim"].dt.strftime("%d/%m")
     )
+
+    # cores padrão caso não sejam enviadas
+    if cores_status is None:
+        cores_status = {
+            "Programado": "#f1c40f",
+            "Em produção": "#2ecc71",
+            "Finalizado": "#95a5a6"
+        }
 
     fig = px.timeline(
         df,
@@ -63,11 +48,7 @@ def grafico_gantt(df):
             "inicio": "|%d/%m/%Y",
             "fim": "|%d/%m/%Y"
         },
-        color_discrete_map={
-            "Programado": "#4C78A8",
-            "Em produção": "#F58518",
-            "Finalizado": "#54A24B"
-        }
+        color_discrete_map=cores_status
     )
 
     fig.update_traces(
@@ -117,7 +98,7 @@ def grafico_gantt(df):
 
     fig.update_yaxes(autorange="reversed")
 
-    # Linha de HOJE
+    # linha vertical de HOJE
     hoje = pd.Timestamp.today().normalize()
 
     fig.add_vline(
