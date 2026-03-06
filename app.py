@@ -22,44 +22,8 @@ from src.database import (
 
 from sqlalchemy import text
 
-import os
-import streamlit as st
-
-def mostrar_pdf(caminho_pdf):
-    with open(caminho_pdf, "rb") as f:
-        base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-
-    pdf_display = f"""
-    <iframe src="data:application/pdf;base64,{base64_pdf}" 
-    width="700" height="800" type="application/pdf"></iframe>
-    """
-
-    st.markdown(pdf_display, unsafe_allow_html=True)
-
-PASTA_DESENHOS = "desenhos"
-
-def abrir_pdf(nome_pdf):
-    caminho_pdf = os.path.join(PASTA_DESENHOS, nome_pdf)
-
-    if os.path.exists(caminho_pdf):
-        with open(caminho_pdf, "rb") as f:
-            st.download_button(
-                label="📄 Abrir PDF",
-                data=f,
-                file_name=nome_pdf,
-                mime="application/pdf"
-            )
-    else:
-        st.error("PDF não encontrado.")
-
-
-os.makedirs("desenhos", exist_ok=True)
-
-st.write("Arquivos na pasta desenhos:")
-st.write(os.listdir("desenhos"))
-
 # -------------------------------------------------
-# CONFIGURAÇÃO DA PÁGINA
+# CONFIG
 # -------------------------------------------------
 
 st.set_page_config(
@@ -67,17 +31,17 @@ st.set_page_config(
     layout="wide"
 )
 
-# -------------------------------------------------
-# CRIAR TABELA
-# -------------------------------------------------
+PASTA_DESENHOS = "desenhos"
+os.makedirs(PASTA_DESENHOS, exist_ok=True)
 
 criar_tabela()
 
 # -------------------------------------------------
-# FUNÇÃO CARREGAR DADOS
+# FUNÇÕES
 # -------------------------------------------------
 
 def carregar():
+
     df = carregar_dados()
 
     df.columns = (
@@ -87,7 +51,7 @@ def carregar():
         .str.replace(" ", "_")
     )
 
-    datas = ["inicio", "fim", "prazo_limite", "data_finalizado"]
+    datas = ["inicio","fim","prazo_limite","data_finalizado"]
 
     for col in datas:
         if col in df.columns:
@@ -96,46 +60,28 @@ def carregar():
     return df
 
 
+def preview_pdf(caminho_pdf):
+
+    if not os.path.exists(caminho_pdf):
+        st.warning("Desenho não encontrado")
+        return
+
+    with open(caminho_pdf, "rb") as f:
+        base64_pdf = base64.b64encode(f.read()).decode("utf-8")
+
+    pdf_display = f"""
+    <iframe src="data:application/pdf;base64,{base64_pdf}"
+    width="100%" height="900" type="application/pdf"></iframe>
+    """
+
+    st.markdown(pdf_display, unsafe_allow_html=True)
+
+
+# -------------------------------------------------
+# CARREGAR DADOS
+# -------------------------------------------------
+
 df = carregar()
-
-# -------------------------------------------------
-# FOOTER
-# -------------------------------------------------
-
-def get_base64_image(path):
-    with open(path, "rb") as img:
-        return base64.b64encode(img.read()).decode()
-
-logo = get_base64_image("assets/logo2.png")
-
-st.markdown(f"""
-<style>
-.footer {{
-position: fixed;
-bottom: 15px;
-right: 20px;
-display: flex;
-align-items: center;
-gap: 10px;
-background: rgba(20,20,20,0.8);
-padding: 8px 12px;
-border-radius: 10px;
-font-size:12px;
-}}
-
-.footer img {{
-height:32px;
-}}
-</style>
-
-<div class="footer">
-<img src="data:image/png;base64,{logo}">
-<div>
-<b>Guilherme Luiz</b><br>
-Auxiliar PCP
-</div>
-</div>
-""", unsafe_allow_html=True)
 
 # -------------------------------------------------
 # SIDEBAR NOVA PROGRAMAÇÃO
@@ -169,39 +115,31 @@ with st.sidebar.form("nova_op"):
         ["Programado","Em produção","Finalizado"]
     )
 
-    # Upload do PDF
     pdf_file = st.file_uploader(
         "Desenho (PDF)",
         type=["pdf"]
     )
 
-    # BOTÃO PRECISA ESTAR DENTRO DO FORM
     salvar = st.form_submit_button("Salvar")
 
     if salvar:
 
-        inicio_db = inicio.strftime("%Y-%m-%d")
-        fim_db = fim.strftime("%Y-%m-%d")
-        prazo_db = prazo.strftime("%Y-%m-%d")
-
         nome_pdf = None
 
-        if pdf_file is not None:
+        if pdf_file:
 
             nome_pdf = f"{produto}_{datetime.now().timestamp()}.pdf"
 
-            with open(f"desenhos/{nome_pdf}", "wb") as f:
+            with open(f"{PASTA_DESENHOS}/{nome_pdf}", "wb") as f:
                 f.write(pdf_file.getbuffer())
-
-            st.success(f"PDF salvo em: desenhos/{nome_pdf}")
 
         nova = dict(
             produto=produto,
             quantidade=quantidade,
             operador=operador,
-            inicio=inicio_db,
-            fim=fim_db,
-            prazo_limite=prazo_db,
+            inicio=inicio,
+            fim=fim,
+            prazo_limite=prazo,
             status=status,
             desenho=nome_pdf,
             data_finalizado=None
@@ -211,6 +149,7 @@ with st.sidebar.form("nova_op"):
 
         st.success("Programação criada")
         st.rerun()
+
 # -------------------------------------------------
 # GERENCIAR OPERADORES
 # -------------------------------------------------
@@ -221,6 +160,7 @@ st.sidebar.subheader("⚙️ Operadores")
 novo = st.sidebar.text_input("Novo operador")
 
 if st.sidebar.button("Adicionar operador"):
+
     if novo:
         adicionar_operador(novo)
         st.rerun()
@@ -235,6 +175,7 @@ if not ops.empty:
     )
 
     if st.sidebar.button("Remover operador"):
+
         remover_operador(remover)
         st.rerun()
 
@@ -274,154 +215,59 @@ c3.metric("Próxima máquina", metricas["proxima_maquina"])
 
 st.divider()
 
-#--------------------------------------------------
-def gerar_link_pdf(nome):
-    if pd.notna(nome):
-        return f"desenhos/{nome}"
-    return ""
-#--------------------------------------------------
-
 # -------------------------------------------------
-# TABELA EDITÁVEL
+# TABELA + PREVIEW PDF
 # -------------------------------------------------
 
 st.subheader("Sequência de fabricação")
 
-df_tabela = df_ativos.copy()
+col_tabela, col_pdf = st.columns([2,1])
 
-if not df_tabela.empty:
+with col_tabela:
 
-    df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"], errors="coerce")
-    df_tabela["fim"] = pd.to_datetime(df_tabela["fim"], errors="coerce")
-    df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"], errors="coerce")
+    if not df_ativos.empty:
 
-    colunas = [
-        "id",
-        "produto",
-        "quantidade",
-        "operador",
-        "status",
-        "inicio",
-        "fim",
-        "prazo_limite",
-        "desenho"
-    ]
-    df_tabela = df_tabela[colunas]
+        df_view = df_ativos[
+            [
+                "id",
+                "produto",
+                "quantidade",
+                "operador",
+                "status",
+                "inicio",
+                "fim",
+                "prazo_limite"
+            ]
+        ].copy()
 
-# --------------------------------
-# CRIAR ABAS POR OPERADOR
-# --------------------------------
-
-operadores = df_tabela["operador"].unique()
-
-abas = st.tabs(list(operadores))
-
-for i, operador in enumerate(operadores):
-
-    with abas[i]:
-
-        df_operador = df_tabela[df_tabela["operador"] == operador].copy()
-
-        # RESETAR INDEX
-        df_operador = df_operador.reset_index(drop=True)
-
-        # CONVERTER DATAS
-        df_operador["inicio"] = pd.to_datetime(df_operador["inicio"], errors="coerce")
-        df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce")
-        df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce")
-
-        # GERAR LINK DO PDF
-        if "desenho" in df_operador.columns:
-            df_operador["desenho"] = df_operador["desenho"].apply(
-                lambda x: f"desenhos/{x}" if pd.notna(x) else ""
-            )
-
-        df_editado = st.data_editor(
-            df_operador,
+        tabela = st.dataframe(
+            df_view,
             use_container_width=True,
-            hide_index=True,
-            key=f"editor_{operador}",
-            column_config={
-                "inicio": st.column_config.DateColumn(
-                    "Início",
-                    format="DD/MM/YYYY"
-                ),
-                "fim": st.column_config.DateColumn(
-                    "Fim",
-                    format="DD/MM/YYYY"
-                ),
-                "prazo_limite": st.column_config.DateColumn(
-                    "Prazo limite",
-                    format="DD/MM/YYYY"
-                ),
-                "desenho": st.column_config.LinkColumn(
-                    "Desenho",
-                    display_text="📄 Abrir PDF"
-                )
-            }
+            selection_mode="single-row",
+            on_select="rerun"
         )
 
-        # BOTÕES PARA ABRIR PDF
-        st.subheader("📄 Desenhos")
+        if tabela["selection"]["rows"]:
 
-        for _, row in df_operador.iterrows():
+            index = tabela["selection"]["rows"][0]
 
-            if pd.notna(row["desenho"]):
+            linha = df_ativos.iloc[index]
 
-                caminho_pdf = row["desenho"]
+            st.session_state["pdf_selecionado"] = linha["desenho"]
 
-                if os.path.exists(caminho_pdf):
+with col_pdf:
 
-                    with open(caminho_pdf, "rb") as file:
-                        st.download_button(
-                            label=f"Abrir PDF - {row['produto']}",
-                            data=file,
-                            file_name=os.path.basename(caminho_pdf),
-                            mime="application/pdf",
-                            key=f"pdf_{row['id']}"
-                        )
+    st.subheader("📄 Desenho da peça")
 
-        if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
+    if "pdf_selecionado" in st.session_state:
 
-            for _, row in df_editado.iterrows():
+        caminho_pdf = f"{PASTA_DESENHOS}/{st.session_state['pdf_selecionado']}"
 
-                query = """
-                UPDATE programacao
-                SET produto=:produto,
-                    quantidade=:quantidade,
-                    operador=:operador,
-                    status=:status,
-                    inicio=:inicio,
-                    fim=:fim,
-                    prazo_limite=:prazo
-                WHERE id=:id
-                """
+        preview_pdf(caminho_pdf)
 
-                with engine.connect() as conn:
-                    conn.execute(
-                        text(query),
-                        dict(
-                            produto=row["produto"],
-                            quantidade=row["quantidade"],
-                            operador=row["operador"],
-                            status=row["status"],
-                            inicio=row["inicio"],
-                            fim=row["fim"],
-                            prazo=row["prazo_limite"],
-                            id=row["id"]
-                        )
-                    )
-                    conn.commit()
+    else:
 
-            st.success("Alterações salvas")
-            st.rerun()
-
-        if st.button("Abrir essa merda", key=f"abrir_pdf_{i}"):
-            mostrar_pdf("desenhos/peca123.pdf")
-
-else:
-
-    st.info("Nenhuma programação ativa")
+        st.info("Clique em uma peça para visualizar o desenho")
 
 # -------------------------------------------------
 # GANTT
@@ -436,10 +282,10 @@ df_grafico["fim"] = pd.to_datetime(df_grafico["fim"])
 
 fig = grafico_gantt(df_grafico.sort_values("inicio"))
 
-st.plotly_chart(fig,use_container_width=True)
+st.plotly_chart(fig, use_container_width=True)
 
 # -------------------------------------------------
-# FINALIZAR
+# FINALIZAR OP
 # -------------------------------------------------
 
 st.divider()
