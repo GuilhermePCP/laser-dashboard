@@ -241,7 +241,7 @@ c3.metric("Próxima máquina", metricas["proxima_maquina"])
 st.divider()
 
 # -------------------------------------------------
-# TABELA EDITÁVEL
+# TABELA DE FABRICAÇÃO
 # -------------------------------------------------
 
 st.subheader("Sequência de fabricação")
@@ -254,20 +254,6 @@ if not df_tabela.empty:
     df_tabela["fim"] = pd.to_datetime(df_tabela["fim"], errors="coerce")
     df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"], errors="coerce")
 
-    colunas = [
-        "id",
-        "produto",
-        "quantidade",
-        "operador",
-        "status",
-        "inicio",
-        "fim",
-        "prazo_limite",
-        "desenho"
-    ]
-
-    df_tabela = df_tabela[colunas]
-
     operadores = df_tabela["operador"].unique()
 
     abas = st.tabs(list(operadores))
@@ -277,15 +263,21 @@ if not df_tabela.empty:
         with abas[i]:
 
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
-
             df_operador = df_operador.reset_index(drop=True)
 
-            df_operador["inicio"] = pd.to_datetime(df_operador["inicio"], errors="coerce")
-            df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce")
-            df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce")
+            # guardar desenho separado
+            desenhos = df_operador["desenho"]
+
+            # remover coluna desenho da tabela
+            df_operador = df_operador.drop(columns=["desenho"])
+
+            # formatar datas para padrão brasileiro
+            df_operador["inicio"] = df_operador["inicio"].dt.strftime("%d/%m/%Y")
+            df_operador["fim"] = df_operador["fim"].dt.strftime("%d/%m/%Y")
+            df_operador["prazo_limite"] = df_operador["prazo_limite"].dt.strftime("%d/%m/%Y")
 
             # -------------------------
-            # TABELA SELECIONÁVEL
+            # TABELA
             # -------------------------
 
             tabela = st.dataframe(
@@ -306,7 +298,7 @@ if not df_tabela.empty:
 
                 linha = df_operador.iloc[index]
 
-                nome_img = linha["desenho"]
+                nome_img = desenhos.iloc[index]
 
                 if nome_img:
 
@@ -326,58 +318,6 @@ if not df_tabela.empty:
 
                 else:
                     st.info("Essa OP não possui desenho")
-
-            # -------------------------
-            # EDITOR PARA ALTERAR
-            # -------------------------
-
-            df_editado = st.data_editor(
-                df_operador,
-                use_container_width=True,
-                num_rows="dynamic",
-                hide_index=True,
-                key=f"editor_{operador}",
-                column_config={
-                    "inicio": st.column_config.DateColumn("Início", format="DD/MM/YYYY"),
-                    "fim": st.column_config.DateColumn("Fim", format="DD/MM/YYYY"),
-                    "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY")
-                }
-            )
-
-            if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
-
-                for _, row in df_editado.iterrows():
-
-                    query = """
-                    UPDATE programacao
-                    SET produto=:produto,
-                        quantidade=:quantidade,
-                        operador=:operador,
-                        status=:status,
-                        inicio=:inicio,
-                        fim=:fim,
-                        prazo_limite=:prazo
-                    WHERE id=:id
-                    """
-
-                    with engine.connect() as conn:
-                        conn.execute(
-                            text(query),
-                            dict(
-                                produto=row["produto"],
-                                quantidade=row["quantidade"],
-                                operador=row["operador"],
-                                status=row["status"],
-                                inicio=row["inicio"],
-                                fim=row["fim"],
-                                prazo=row["prazo_limite"],
-                                id=row["id"]
-                            )
-                        )
-                        conn.commit()
-
-                st.success("Alterações salvas")
-                st.rerun()
 
 else:
 
