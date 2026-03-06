@@ -299,8 +299,7 @@ if not df_tabela.empty:
     ]
     df_tabela = df_tabela[colunas]
 
-
-    # --------------------------------
+# --------------------------------
 # CRIAR ABAS POR OPERADOR
 # --------------------------------
 
@@ -314,20 +313,19 @@ for i, operador in enumerate(operadores):
 
         df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
-        df_operador["desenho"] = df_operador["desenho"].apply(gerar_link_pdf)
-
-        # transformar caminho do pdf em link
-        if "desenho" in df_operador.columns:
-            df_operador["desenho"] = df_operador["desenho"].apply(
-                lambda x: gerar_link_pdf(x) if pd.notna(x) else None
-            )
-
+        # RESETAR INDEX
         df_operador = df_operador.reset_index(drop=True)
 
-        # converter datas
+        # CONVERTER DATAS
         df_operador["inicio"] = pd.to_datetime(df_operador["inicio"], errors="coerce")
         df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce")
         df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce")
+
+        # GERAR LINK DO PDF
+        if "desenho" in df_operador.columns:
+            df_operador["desenho"] = df_operador["desenho"].apply(
+                lambda x: f"desenhos/{x}" if pd.notna(x) else ""
+            )
 
         df_editado = st.data_editor(
             df_operador,
@@ -335,9 +333,18 @@ for i, operador in enumerate(operadores):
             hide_index=True,
             key=f"editor_{operador}",
             column_config={
-                "inicio": st.column_config.DateColumn("Início", format="DD/MM/YYYY"),
-                "fim": st.column_config.DateColumn("Fim", format="DD/MM/YYYY"),
-                "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY"),
+                "inicio": st.column_config.DateColumn(
+                    "Início",
+                    format="DD/MM/YYYY"
+                ),
+                "fim": st.column_config.DateColumn(
+                    "Fim",
+                    format="DD/MM/YYYY"
+                ),
+                "prazo_limite": st.column_config.DateColumn(
+                    "Prazo limite",
+                    format="DD/MM/YYYY"
+                ),
                 "desenho": st.column_config.LinkColumn(
                     "Desenho",
                     display_text="📄 Abrir PDF"
