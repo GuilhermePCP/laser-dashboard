@@ -265,6 +265,7 @@ if not df_tabela.empty:
         "prazo_limite",
         "desenho"
     ]
+
     df_tabela = df_tabela[colunas]
 
     operadores = df_tabela["operador"].unique()
@@ -283,6 +284,53 @@ if not df_tabela.empty:
             df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce")
             df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce")
 
+            # -------------------------
+            # TABELA SELECIONÁVEL
+            # -------------------------
+
+            tabela = st.dataframe(
+                df_operador,
+                use_container_width=True,
+                selection_mode="single-row",
+                on_select="rerun",
+                hide_index=True
+            )
+
+            # -------------------------
+            # DETECTAR CLIQUE
+            # -------------------------
+
+            if tabela["selection"]["rows"]:
+
+                index = tabela["selection"]["rows"][0]
+
+                linha = df_operador.iloc[index]
+
+                nome_img = linha["desenho"]
+
+                if nome_img:
+
+                    caminho_img = os.path.join("desenhos", nome_img)
+
+                    if os.path.exists(caminho_img):
+
+                        st.markdown(f"### 🖼️ Desenho da peça — {linha['produto']}")
+
+                        st.image(
+                            caminho_img,
+                            use_container_width=True
+                        )
+
+                    else:
+                        st.warning("Imagem não encontrada")
+
+                else:
+                    st.info("Essa OP não possui desenho")
+
+            # -------------------------
+            # EDITOR PARA ALTERAR
+            # -------------------------
+
             df_editado = st.data_editor(
                 df_operador,
                 use_container_width=True,
@@ -295,22 +343,6 @@ if not df_tabela.empty:
                     "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY")
                 }
             )
-
-            # -----------------------------
-            # ABRIR DESENHO
-            # -----------------------------
-
-            for _, row in df_editado.iterrows():
-
-                if row["desenho"]:
-
-                    caminho_img = os.path.join("desenhos", row["desenho"])
-
-                    if os.path.exists(caminho_img):
-
-                        if st.button(f"Abrir desenho OP {row['id']}", key=f"img_{row['id']}"):
-
-                            st.image(caminho_img, use_container_width=True)
 
             if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
 
