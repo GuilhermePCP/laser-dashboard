@@ -60,21 +60,35 @@ def carregar():
     return df
 
 
-def preview_pdf(caminho_pdf):
+def mostrar_pdf(caminho):
+    if os.path.exists(caminho):
 
-    if not os.path.exists(caminho_pdf):
-        st.warning("Desenho não encontrado")
-        return
+        with open(caminho, "rb") as f:
+            pdf_bytes = f.read()
 
-    with open(caminho_pdf, "rb") as f:
-        base64_pdf = base64.b64encode(f.read()).decode("utf-8")
+        st.download_button(
+            "📄 Baixar desenho",
+            data=pdf_bytes,
+            file_name=os.path.basename(caminho),
+            mime="application/pdf"
+        )
 
-    pdf_display = f"""
-    <iframe src="data:application/pdf;base64,{base64_pdf}"
-    width="100%" height="900" type="application/pdf"></iframe>
-    """
+        st.markdown("### Preview")
 
-    st.markdown(pdf_display, unsafe_allow_html=True)
+        pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
+
+        pdf_display = f"""
+        <embed 
+        src="data:application/pdf;base64,{pdf_base64}" 
+        width="100%" 
+        height="900px" 
+        type="application/pdf">
+        """
+
+        st.markdown(pdf_display, unsafe_allow_html=True)
+
+    else:
+        st.warning("Desenho não encontrado.")
 
 
 # -------------------------------------------------
