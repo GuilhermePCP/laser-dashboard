@@ -303,6 +303,15 @@ with col_tabela:
 
         nova_ordem = sort_items(itens)
 
+        df_programacao = carregar_programacao()
+
+# editor da tabela
+        df_editado = st.data_editor(
+            df_programacao,
+            use_container_width=True,
+            num_rows="dynamic"
+        )
+
         if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
 
             for i, row in df_editado.iterrows():
