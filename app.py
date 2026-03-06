@@ -294,11 +294,33 @@ if not df_tabela.empty:
             df_operador["prazo_limite"] = df_operador["prazo_limite"].dt.strftime("%d/%m/%Y")
 
             # -------------------------
+            # FUNÇÃO DE COR DO STATUS
+            # -------------------------
+
+            def cor_status(val):
+
+                if val == "Programado":
+                    return "background-color: #ffe066; color:black; font-weight:bold"
+
+                elif val == "Em produção":
+                    return "background-color: #8ce99a; color:black; font-weight:bold"
+
+                elif val == "Finalizado":
+                    return "background-color: #74c0fc; color:black; font-weight:bold"
+
+                elif val == "Atrasado":
+                    return "background-color: #ff6b6b; color:white; font-weight:bold"
+
+                return ""
+
+            df_estilizado = df_operador.style.map(cor_status, subset=["status"])
+
+            # -------------------------
             # TABELA
             # -------------------------
 
             tabela = st.dataframe(
-                df_operador,
+                df_estilizado,
                 use_container_width=True,
                 selection_mode="single-row",
                 on_select="rerun",
