@@ -264,12 +264,13 @@ c3.metric("Próxima máquina", metricas["proxima_maquina"])
 st.divider()
 
 #--------------------------------------------------
-def gerar_link_pdf(caminho):
-    if caminho:
-        nome = os.path.basename(caminho)
-        return f'<a href="{caminho}" target="_blank">📄 Abrir PDF</a>'
+def gerar_link_pdf(nome):
+    if pd.notna(nome):
+        return f"desenhos/{nome}"
     return ""
 #--------------------------------------------------
+
+df_operador["desenho"] = df_operador["desenho"].apply(gerar_link_pdf)
 
 # -------------------------------------------------
 # TABELA EDITÁVEL
@@ -328,10 +329,20 @@ for i, operador in enumerate(operadores):
         df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce")
         df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce")
 
-        df_editado = st.dataframe(
+        df_editado = st.data_editor(
             df_operador,
             use_container_width=True,
-            hide_index=True
+            hide_index=True,
+            key=f"editor_{operador}",
+            column_config={
+                "inicio": st.column_config.DateColumn("Início", format="DD/MM/YYYY"),
+                "fim": st.column_config.DateColumn("Fim", format="DD/MM/YYYY"),
+                "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY"),
+                "desenho": st.column_config.LinkColumn(
+                    "Desenho",
+                    display_text="📄 Abrir PDF"
+                )
+            }
         )
 
         # BOTÕES PARA ABRIR PDF
