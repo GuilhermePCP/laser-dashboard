@@ -416,7 +416,7 @@ for i, operador in enumerate(operadores):
             st.success("Alterações salvas")
             st.rerun()
 
-        if st.button("Abrir desenho"):
+        if st.button("Abrir essa merda"):
             mostrar_pdf("desenhos/peca123.pdf")
 
 else:
