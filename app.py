@@ -21,25 +21,6 @@ from src.database import (
 )
 
 from sqlalchemy import text
-from streamlit_sortables import sort_items
-
-def carregar_programacao():
-
-    query = "SELECT * FROM programacao ORDER BY inicio"
-
-    with engine.connect() as conn:
-        df = pd.read_sql(query, conn)
-
-    return df
-
-# -------------------------------------------------
-# PASTA DESENHOS
-# -------------------------------------------------
-
-PASTA_DESENHOS = "desenhos"
-
-if not os.path.exists(PASTA_DESENHOS):
-    os.makedirs(PASTA_DESENHOS)
 
 # -------------------------------------------------
 # CONFIGURAÇÃO DA PÁGINA
@@ -152,23 +133,14 @@ with st.sidebar.form("nova_op"):
         ["Programado","Em produção","Finalizado"]
     )
 
-    pdf = st.file_uploader(
-        "Desenho da peça (PDF)",
-        type="pdf"
-    )
-
     salvar = st.form_submit_button("Salvar")
 
     if salvar:
 
-        nome_pdf = None
-
-        if pdf is not None:
-            nome_pdf = pdf.name
-            caminho_pdf = os.path.join(PASTA_DESENHOS, nome_pdf)
-
-            with open(caminho_pdf, "wb") as f:
-                f.write(pdf.getbuffer())
+        # PADRONIZAR DATAS
+        inicio_db = inicio.strftime("%Y-%m-%d")
+        fim_db = fim.strftime("%Y-%m-%d")
+        prazo_db = prazo.strftime("%Y-%m-%d")
 
         nova = dict(
             produto=produto,
@@ -178,8 +150,7 @@ with st.sidebar.form("nova_op"):
             fim=str(fim),
             prazo_limite=str(prazo),
             status=status,
-            data_finalizado=None,
-            desenho=nome_pdf
+            data_finalizado=None
         )
 
         salvar_programacao(nova)
@@ -251,156 +222,102 @@ c3.metric("Próxima máquina", metricas["proxima_maquina"])
 st.divider()
 
 # -------------------------------------------------
-# TABELA + DOWNLOAD PDF
+# TABELA EDITÁVEL
 # -------------------------------------------------
 
 st.subheader("Sequência de fabricação")
 
-col_tabela, col_pdf = st.columns([3,1])
+df_tabela = df_ativos.copy()
 
-with col_tabela:
+if not df_tabela.empty:
 
-    df_tabela = df_ativos.copy()
+    df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"], errors="coerce")
+    df_tabela["fim"] = pd.to_datetime(df_tabela["fim"], errors="coerce")
+    df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"], errors="coerce")
 
-    if not df_tabela.empty:
+    colunas = [
+        "id",
+        "produto",
+        "quantidade",
+        "operador",
+        "status",
+        "inicio",
+        "fim",
+        "prazo_limite"
+    ]
+    df_tabela = df_tabela[colunas]
 
-        df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"], errors="coerce")
-        df_tabela["fim"] = pd.to_datetime(df_tabela["fim"], errors="coerce")
-        df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"], errors="coerce")
+    # --------------------------------
+    # CRIAR ABAS POR OPERADOR
+    # --------------------------------
 
-        colunas = [
-            "id",
-            "produto",
-            "quantidade",
-            "operador",
-            "status",
-            "inicio",
-            "fim",
-            "prazo_limite"
-        ]
+    operadores = df_tabela["operador"].unique()
 
-        df_tabela = df_tabela[colunas]
+    abas = st.tabs(list(operadores))
 
-        # ------------------------------
-        # TABELA SELECIONÁVEL
-        # ------------------------------
+    for i, operador in enumerate(operadores):
 
-        tabela = st.dataframe(
-            df_tabela,
-            use_container_width=True,
-            selection_mode="single-row",
-            on_select="rerun"
-        )
+        with abas[i]:
 
-        if tabela["selection"]["rows"]:
-            index = tabela["selection"]["rows"][0]
-            linha = df_ativos.iloc[index]
-            st.session_state["pdf_selecionado"] = linha.get("desenho")
+            df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
-        st.divider()
+            # REMOVER INDEX
+            df_operador = df_operador.reset_index(drop=True)
 
-        # ------------------------------
-        # DRAG AND DROP DA SEQUÊNCIA
-        # ------------------------------
+            df_operador["inicio"] = pd.to_datetime(df_operador["inicio"], errors="coerce")
+            df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce")
+            df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce")
 
-        st.markdown("### 🔀 Reorganizar sequência da máquina")
+            df_editado = st.data_editor(
+                df_operador,
+                use_container_width=True,
+                num_rows="dynamic",
+                hide_index=True,
+                key=f"editor_{operador}",
+                column_config={
+                    "inicio": st.column_config.DateColumn("Início", format="DD/MM/YYYY"),
+                    "fim": st.column_config.DateColumn("Fim", format="DD/MM/YYYY"),
+                    "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY")
+                }
+            )
+            if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
 
-        itens = [
-            f"{row['id']} - {row['produto']}"
-            for _, row in df_tabela.iterrows()
-        ]
+                for _, row in df_editado.iterrows():
 
-        nova_ordem = sort_items(itens)
+                    query = """
+                    UPDATE programacao
+                    SET produto=:produto,
+                        quantidade=:quantidade,
+                        operador=:operador,
+                        status=:status,
+                        inicio=:inicio,
+                        fim=:fim,
+                        prazo_limite=:prazo
+                    WHERE id=:id
+                    """
 
-        df_programacao = carregar_programacao()
-
-        # editor da tabela
-        df_editado = st.data_editor(
-            df_programacao,
-            use_container_width=True,
-            num_rows="dynamic",
-            key="editor_programacao"
-        )
-
-        df_editado = df_editado.reset_index(drop=True)
-
-        if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
-
-            for i, row in df_editado.iterrows():
-
-                # definir status automaticamente
-                if i == 0:
-                    novo_status = "Em produção"
-                else:
-                    novo_status = "Programado"
-
-                query = """
-                UPDATE programacao
-                SET produto=:produto,
-                    quantidade=:quantidade,
-                    operador=:operador,
-                    status=:status,
-                    inicio=:inicio,
-                    fim=:fim,
-                    prazo_limite=:prazo
-                WHERE id=:id
-                """
-
-                with engine.connect() as conn:
-                    conn.execute(
-                        text(query),
-                        dict(
-                            produto=row["produto"],
-                            quantidade=row["quantidade"],
-                            operador=row["operador"],
-                            status=novo_status,
-                            inicio=row["inicio"],
-                            fim=row["fim"],
-                            prazo=row["prazo_limite"],
-                            id=row["id"]
+                    with engine.connect() as conn:
+                        conn.execute(
+                            text(query),
+                            dict(
+                                produto=row["produto"],
+                                quantidade=row["quantidade"],
+                                operador=row["operador"],
+                                status=row["status"],
+                                inicio=row["inicio"],
+                                fim=row["fim"],
+                                prazo=row["prazo_limite"],
+                                id=row["id"]
+                            )
                         )
-                    )
-                    conn.commit()
+                        conn.commit()
 
-            st.success("Sequência atualizada automaticamente")
-            st.rerun()
+                st.success("Alterações salvas")
+                st.rerun()
 
+else:
 
-# -----------------------------------------
-# COLUNA DO PDF
-# -----------------------------------------
-
-with col_pdf:
-
-    st.subheader("📄 Desenho")
-
-    if "pdf_selecionado" in st.session_state:
-
-        nome_pdf = st.session_state["pdf_selecionado"]
-
-        if nome_pdf:
-
-            caminho_pdf = os.path.join(PASTA_DESENHOS, nome_pdf)
-
-            if os.path.exists(caminho_pdf):
-
-                with open(caminho_pdf, "rb") as f:
-                    st.download_button(
-                        "⬇ Baixar PDF",
-                        f,
-                        file_name=nome_pdf,
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-
-            else:
-                st.warning("PDF não encontrado")
-
-        else:
-            st.info("Essa OP não possui desenho")
-
-    else:
-        st.info("Selecione uma OP")
+    st.info("Nenhuma programação ativa")
 
 # -------------------------------------------------
 # GANTT
