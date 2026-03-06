@@ -6,6 +6,7 @@ import streamlit as st
 import pandas as pd
 import base64
 from datetime import datetime
+from PIL import Image
 
 from src.analytics import calcular_metricas, filtrar_dados
 from src.visuals import grafico_gantt
@@ -133,14 +134,31 @@ with st.sidebar.form("nova_op"):
         ["Programado","Em produção","Finalizado"]
     )
 
+    # -----------------------------
+    # UPLOAD DO DESENHO
+    # -----------------------------
+
+    desenho = st.file_uploader(
+        "Desenho da peça (PNG ou JPG)",
+        type=["png","jpg","jpeg"]
+    )
+
     salvar = st.form_submit_button("Salvar")
 
     if salvar:
 
-        # PADRONIZAR DATAS
-        inicio_db = inicio.strftime("%Y-%m-%d")
-        fim_db = fim.strftime("%Y-%m-%d")
-        prazo_db = prazo.strftime("%Y-%m-%d")
+        nome_arquivo = None
+
+        if desenho is not None:
+
+            os.makedirs("desenhos", exist_ok=True)
+
+            nome_arquivo = f"{produto}_{datetime.now().timestamp()}.png"
+
+            caminho = os.path.join("desenhos", nome_arquivo)
+
+            with open(caminho, "wb") as f:
+                f.write(desenho.getbuffer())
 
         nova = dict(
             produto=produto,
@@ -150,6 +168,7 @@ with st.sidebar.form("nova_op"):
             fim=str(fim),
             prazo_limite=str(prazo),
             status=status,
+            desenho=nome_arquivo,
             data_finalizado=None
         )
 
@@ -243,13 +262,10 @@ if not df_tabela.empty:
         "status",
         "inicio",
         "fim",
-        "prazo_limite"
+        "prazo_limite",
+        "desenho"
     ]
     df_tabela = df_tabela[colunas]
-
-    # --------------------------------
-    # CRIAR ABAS POR OPERADOR
-    # --------------------------------
 
     operadores = df_tabela["operador"].unique()
 
@@ -261,7 +277,6 @@ if not df_tabela.empty:
 
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
-            # REMOVER INDEX
             df_operador = df_operador.reset_index(drop=True)
 
             df_operador["inicio"] = pd.to_datetime(df_operador["inicio"], errors="coerce")
@@ -280,6 +295,23 @@ if not df_tabela.empty:
                     "prazo_limite": st.column_config.DateColumn("Prazo limite", format="DD/MM/YYYY")
                 }
             )
+
+            # -----------------------------
+            # ABRIR DESENHO
+            # -----------------------------
+
+            for _, row in df_editado.iterrows():
+
+                if row["desenho"]:
+
+                    caminho_img = os.path.join("desenhos", row["desenho"])
+
+                    if os.path.exists(caminho_img):
+
+                        if st.button(f"Abrir desenho OP {row['id']}", key=f"img_{row['id']}"):
+
+                            st.image(caminho_img, use_container_width=True)
+
             if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
 
                 for _, row in df_editado.iterrows():
