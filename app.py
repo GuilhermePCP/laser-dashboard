@@ -305,12 +305,15 @@ with col_tabela:
 
         df_programacao = carregar_programacao()
 
-# editor da tabela
+        # editor da tabela
         df_editado = st.data_editor(
             df_programacao,
             use_container_width=True,
-            num_rows="dynamic"
+            num_rows="dynamic",
+            key="editor_programacao"
         )
+
+        df_editado = df_editado.reset_index(drop=True)
 
         if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
 
