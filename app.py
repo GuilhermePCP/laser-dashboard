@@ -344,53 +344,57 @@ if not df_tabela.empty:
 
                     st.write("")
 
-                    # BOTÃO INICIAR
+                    # -------------------------
+                    # BOTÃO DINÂMICO
+                    # -------------------------
 
-                    if st.button("▶ Iniciar produção", key=f"iniciar_{linha['id']}"):
+                    if linha["status"] != "Em produção":
 
-                        query = """
-                        UPDATE programacao
-                        SET status = :status
-                        WHERE id = :id
-                        """
+                        if st.button("▶ Iniciar produção", key=f"iniciar_{linha['id']}"):
 
-                        with engine.connect() as conn:
-                            conn.execute(
-                                text(query),
-                                {
-                                    "status": "Em produção",
-                                    "id": int(linha["id"])
-                                }
-                            )
-                            conn.commit()
+                            query = """
+                            UPDATE programacao
+                            SET status = :status
+                            WHERE id = :id
+                            """
 
-                        st.success("Produção iniciada")
-                        st.rerun()
+                            with engine.connect() as conn:
+                                conn.execute(
+                                    text(query),
+                                    {
+                                        "status": "Em produção",
+                                        "id": int(linha["id"])
+                                    }
+                                )
+                                conn.commit()
 
-                    # BOTÃO FINALIZAR
+                            st.success("Produção iniciada")
+                            st.rerun()
 
-                    if st.button("✅ Finalizar produção", key=f"finalizar_{linha['id']}"):
+                    else:
 
-                        query = """
-                        UPDATE programacao
-                        SET status = :status,
-                            data_finalizado = :data
-                        WHERE id = :id
-                        """
+                        if st.button("✅ Finalizar produção", key=f"finalizar_{linha['id']}"):
 
-                        with engine.connect() as conn:
-                            conn.execute(
-                                text(query),
-                                {
-                                    "status": "Finalizado",
-                                    "data": datetime.now(),
-                                    "id": int(linha["id"])
-                                }
-                            )
-                            conn.commit()
+                            query = """
+                            UPDATE programacao
+                            SET status = :status,
+                                data_finalizado = :data
+                            WHERE id = :id
+                            """
 
-                        st.success("Produção finalizada")
-                        st.rerun()
+                            with engine.connect() as conn:
+                                conn.execute(
+                                    text(query),
+                                    {
+                                        "status": "Finalizado",
+                                        "data": datetime.now(),
+                                        "id": int(linha["id"])
+                                    }
+                                )
+                                conn.commit()
+
+                            st.success("Produção finalizada")
+                            st.rerun()
 
 else:
 
