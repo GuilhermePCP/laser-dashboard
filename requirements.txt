@@ -4,3 +4,5 @@ plotly
 openpyxl
 psycopg2-binary
 sqlalchemy
+pdf2image
+Pillow

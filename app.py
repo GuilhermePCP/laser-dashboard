@@ -22,35 +22,24 @@ from src.database import (
 
 from sqlalchemy import text
 
+from pdf2image import convert_from_path
+from PIL import Image
+
 def mostrar_pdf(caminho):
-    if os.path.exists(caminho):
 
-        with open(caminho, "rb") as f:
-            pdf_bytes = f.read()
+    with open(caminho, "rb") as f:
+        base64_pdf = base64.b64encode(f.read()).decode("utf-8")
 
-        st.download_button(
-            "📄 Baixar desenho",
-            data=pdf_bytes,
-            file_name=os.path.basename(caminho),
-            mime="application/pdf"
-        )
+    pdf_display = f"""
+        <iframe
+            src="data:application/pdf;base64,{base64_pdf}"
+            width="100%"
+            height="600"
+            type="application/pdf">
+        </iframe>
+    """
 
-        st.markdown("### Preview")
-
-        pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
-
-        pdf_display = f"""
-        <embed 
-        src="data:application/pdf;base64,{pdf_base64}" 
-        width="100%" 
-        height="900px" 
-        type="application/pdf">
-        """
-
-        st.markdown(pdf_display, unsafe_allow_html=True)
-
-    else:
-        st.warning("Desenho não encontrado.")
+    st.markdown(pdf_display, unsafe_allow_html=True)
 
 
 # -------------------------------------------------
@@ -237,6 +226,10 @@ st.subheader("Sequência de fabricação")
 
 col_tabela, col_pdf = st.columns([2,1])
 
+# -------------------------------
+# TABELA DE PRODUÇÃO
+# -------------------------------
+
 with col_tabela:
 
     if not df_ativos.empty:
@@ -269,6 +262,11 @@ with col_tabela:
 
             st.session_state["pdf_selecionado"] = linha["desenho"]
 
+
+# -------------------------------
+# VISUALIZAÇÃO DO PDF
+# -------------------------------
+
 with col_pdf:
 
     st.subheader("📄 Desenho da peça")
@@ -277,6 +275,16 @@ with col_pdf:
 
         caminho_pdf = f"{PASTA_DESENHOS}/{st.session_state['pdf_selecionado']}"
 
+        # BOTÃO DE DOWNLOAD
+        with open(caminho_pdf, "rb") as pdf_file:
+            st.download_button(
+                label="⬇️ Baixar desenho",
+                data=pdf_file,
+                file_name=st.session_state["pdf_selecionado"],
+                mime="application/pdf"
+            )
+
+        # PREVIEW DO PDF
         mostrar_pdf(caminho_pdf)
 
     else:
