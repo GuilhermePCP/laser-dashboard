@@ -324,7 +324,7 @@ if not df_tabela.empty:
             # -------------------------
 
             tabela = st.dataframe(
-                df_estilizado,
+                df_operador,
                 use_container_width=True,
                 selection_mode="single-row",
                 on_select="rerun",
