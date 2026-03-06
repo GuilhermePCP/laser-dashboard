@@ -277,7 +277,7 @@ with col_pdf:
 
         caminho_pdf = f"{PASTA_DESENHOS}/{st.session_state['pdf_selecionado']}"
 
-        preview_pdf(caminho_pdf)
+        mostrar_pdf(caminho_pdf)
 
     else:
 
