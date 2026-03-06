@@ -265,13 +265,13 @@ if not df_tabela.empty:
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
             df_operador = df_operador.reset_index(drop=True)
 
-            # guardar desenho separado
+            # guardar coluna desenho
             desenhos = df_operador["desenho"]
 
-            # remover coluna desenho da tabela
+            # remover da tabela
             df_operador = df_operador.drop(columns=["desenho"])
 
-            # formatar datas para padrão brasileiro
+            # formatar datas
             df_operador["inicio"] = df_operador["inicio"].dt.strftime("%d/%m/%Y")
             df_operador["fim"] = df_operador["fim"].dt.strftime("%d/%m/%Y")
             df_operador["prazo_limite"] = df_operador["prazo_limite"].dt.strftime("%d/%m/%Y")
@@ -289,35 +289,90 @@ if not df_tabela.empty:
             )
 
             # -------------------------
-            # DETECTAR CLIQUE
+            # SELEÇÃO DA OP
             # -------------------------
 
             if tabela["selection"]["rows"]:
 
                 index = tabela["selection"]["rows"][0]
 
-                linha = df_operador.iloc[index]
+                linha = df_tabela[df_tabela["operador"] == operador].iloc[index]
 
                 nome_img = desenhos.iloc[index]
 
-                if nome_img:
+                st.divider()
 
-                    caminho_img = os.path.join("desenhos", nome_img)
+                col1, col2 = st.columns([2,1])
 
-                    if os.path.exists(caminho_img):
+                # -------------------------
+                # IMAGEM
+                # -------------------------
 
-                        st.markdown(f"### 🖼️ Desenho da peça — {linha['produto']}")
+                with col1:
 
-                        st.image(
-                            caminho_img,
-                            use_container_width=True
-                        )
+                    if nome_img:
+
+                        caminho_img = os.path.join("desenhos", nome_img)
+
+                        if os.path.exists(caminho_img):
+
+                            st.markdown(f"### 🖼️ Desenho da peça — {linha['produto']}")
+
+                            st.image(
+                                caminho_img,
+                                use_container_width=True
+                            )
+
+                        else:
+                            st.warning("Imagem não encontrada")
 
                     else:
-                        st.warning("Imagem não encontrada")
+                        st.info("Essa OP não possui desenho")
 
-                else:
-                    st.info("Essa OP não possui desenho")
+                # -------------------------
+                # CONTROLE DA PRODUÇÃO
+                # -------------------------
+
+                with col2:
+
+                    st.markdown("### Controle da OP")
+
+                    st.write(f"**Produto:** {linha['produto']}")
+                    st.write(f"**Quantidade:** {linha['quantidade']}")
+                    st.write(f"**Operador:** {linha['operador']}")
+                    st.write(f"**Status:** {linha['status']}")
+
+                    st.write("")
+
+                    # BOTÃO INICIAR
+
+                    if linha["status"] == "Programado":
+
+                        if st.button("▶ Iniciar produção", key=f"iniciar_{linha['id']}"):
+
+                            query = """
+                            UPDATE programacao
+                            SET status='Em produção'
+                            WHERE id=:id
+                            """
+
+                            with engine.connect() as conn:
+                                conn.execute(text(query), {"id": linha["id"]})
+                                conn.commit()
+
+                            st.success("Produção iniciada")
+                            st.rerun()
+
+                    # BOTÃO FINALIZAR
+
+                    elif linha["status"] == "Em produção":
+
+                        if st.button("✔ Finalizar produção", key=f"finalizar_{linha['id']}"):
+
+                            finalizar_programacao(linha["id"])
+
+                            st.success("Produção finalizada")
+                            st.rerun()
 
 else:
 
