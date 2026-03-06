@@ -7,3 +7,4 @@ sqlalchemy
 pdf2image
 Pillow
 streamlit-sortables
+streamlit-plotly-events
