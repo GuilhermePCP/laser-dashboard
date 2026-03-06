@@ -346,33 +346,51 @@ if not df_tabela.empty:
 
                     # BOTÃO INICIAR
 
-                    if linha["status"] == "Programado":
+                    if st.button("▶ Iniciar produção", key=f"iniciar_{linha['id']}"):
 
-                        if st.button("▶ Iniciar produção", key=f"iniciar_{linha['id']}"):
+                        query = """
+                        UPDATE programacao
+                        SET status = :status
+                        WHERE id = :id
+                        """
 
-                            query = """
-                            UPDATE programacao
-                            SET status='Em produção'
-                            WHERE id=:id
-                            """
+                        with engine.connect() as conn:
+                            conn.execute(
+                                text(query),
+                                {
+                                    "status": "Em produção",
+                                    "id": int(linha["id"])
+                                }
+                            )
+                            conn.commit()
 
-                            with engine.connect() as conn:
-                                conn.execute(text(query), {"id": (linha["id"])})
-                                conn.commit()
-
-                            st.success("Produção iniciada")
-                            st.rerun()
+                        st.success("Produção iniciada")
+                        st.rerun()
 
                     # BOTÃO FINALIZAR
 
-                    elif linha["status"] == "Em produção":
+                    if st.button("✅ Finalizar produção", key=f"finalizar_{linha['id']}"):
 
-                        if st.button("✔ Finalizar produção", key=f"finalizar_{linha['id']}"):
+                        query = """
+                        UPDATE programacao
+                        SET status = :status,
+                            data_finalizado = :data
+                        WHERE id = :id
+                        """
 
-                            finalizar_programacao(int(linha["id"]))
+                        with engine.connect() as conn:
+                            conn.execute(
+                                text(query),
+                                {
+                                    "status": "Finalizado",
+                                    "data": datetime.now(),
+                                    "id": int(linha["id"])
+                                }
+                            )
+                            conn.commit()
 
-                            st.success("Produção finalizada")
-                            st.rerun()
+                        st.success("Produção finalizada")
+                        st.rerun()
 
 else:
 
