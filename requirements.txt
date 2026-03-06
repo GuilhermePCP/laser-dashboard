@@ -6,3 +6,4 @@ psycopg2-binary
 sqlalchemy
 pdf2image
 Pillow
+streamlit-sortables
