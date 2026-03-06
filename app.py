@@ -23,6 +23,15 @@ from src.database import (
 from sqlalchemy import text
 from streamlit_sortables import sort_items
 
+def carregar_programacao():
+
+    query = "SELECT * FROM programacao ORDER BY inicio"
+
+    with engine.connect() as conn:
+        df = pd.read_sql(query, conn)
+
+    return df
+
 # -------------------------------------------------
 # PASTA DESENHOS
 # -------------------------------------------------
