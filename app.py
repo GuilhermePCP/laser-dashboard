@@ -303,31 +303,46 @@ with col_tabela:
 
         nova_ordem = sort_items(itens)
 
-        if st.button("💾 Salvar nova sequência"):
+        if st.button("💾 Salvar alterações", key=f"salvar_{operador}"):
 
-            for pos, item in enumerate(nova_ordem):
+            for i, row in df_editado.iterrows():
 
-                id_op = int(item.split("-")[0].strip())
+                # definir status automaticamente
+                if i == 0:
+                    novo_status = "Em produção"
+                else:
+                    novo_status = "Programado"
 
                 query = """
                 UPDATE programacao
-                SET inicio = inicio
+                SET produto=:produto,
+                    quantidade=:quantidade,
+                    operador=:operador,
+                    status=:status,
+                    inicio=:inicio,
+                    fim=:fim,
+                    prazo_limite=:prazo
                 WHERE id=:id
                 """
 
                 with engine.connect() as conn:
                     conn.execute(
                         text(query),
-                        dict(id=id_op)
+                        dict(
+                            produto=row["produto"],
+                            quantidade=row["quantidade"],
+                            operador=row["operador"],
+                            status=novo_status,
+                            inicio=row["inicio"],
+                            fim=row["fim"],
+                            prazo=row["prazo_limite"],
+                            id=row["id"]
+                        )
                     )
                     conn.commit()
 
-            st.success("Sequência atualizada")
+            st.success("Sequência atualizada automaticamente")
             st.rerun()
-
-    else:
-
-        st.info("Nenhuma programação ativa")
 
 
 # -----------------------------------------
