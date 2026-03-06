@@ -23,8 +23,6 @@ from src.database import (
 from sqlalchemy import text
 from streamlit_sortables import sort_items
 
-from streamlit_plotly_events import plotly_events
-
 # -------------------------------------------------
 # PASTA DESENHOS
 # -------------------------------------------------
@@ -374,8 +372,6 @@ with col_pdf:
 
 st.divider()
 
-st.subheader("📊 Planejamento visual")
-
 df_grafico = df_ativos.copy()
 
 df_grafico["inicio"] = pd.to_datetime(df_grafico["inicio"])
@@ -383,19 +379,7 @@ df_grafico["fim"] = pd.to_datetime(df_grafico["fim"])
 
 fig = grafico_gantt(df_grafico.sort_values("inicio"))
 
-fig.update_layout(
-    dragmode="pan"
-)
-
-selected = plotly_events(
-    fig,
-    click_event=True,
-    hover_event=False,
-    select_event=True,
-    override_height=600
-)
-
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig,use_container_width=True)
 
 # -------------------------------------------------
 # FINALIZAR
