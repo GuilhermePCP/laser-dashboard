@@ -240,7 +240,7 @@ c3.metric("Próxima máquina", metricas["proxima_maquina"])
 
 st.divider()
 
-# -------------------------------------------------
+# ------------------------------------------------- 
 # TABELA DE FABRICAÇÃO
 # -------------------------------------------------
 
@@ -269,7 +269,24 @@ if not df_tabela.empty:
             desenhos = df_operador["desenho"]
 
             # remover da tabela
-            df_operador = df_operador.drop(columns=["desenho"])
+            df_operador = df_operador.drop(columns=["desenho"], errors="ignore")
+
+            # -------------------------
+            # ORDEM DAS COLUNAS
+            # -------------------------
+
+            df_operador = df_operador[
+                [
+                    "id",
+                    "produto",
+                    "quantidade",
+                    "operador",
+                    "status",
+                    "inicio",
+                    "fim",
+                    "prazo_limite",
+                ]
+            ]
 
             # formatar datas
             df_operador["inicio"] = df_operador["inicio"].dt.strftime("%d/%m/%Y")
