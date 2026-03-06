@@ -454,9 +454,21 @@ df_grafico = df_ativos.copy()
 df_grafico["inicio"] = pd.to_datetime(df_grafico["inicio"])
 df_grafico["fim"] = pd.to_datetime(df_grafico["fim"])
 
-fig = grafico_gantt(df_grafico.sort_values("inicio"))
+# -------------------------
+# CORES DOS STATUS
+# -------------------------
 
-st.plotly_chart(fig,use_container_width=True)
+cores_status = {
+    "Programado": "#f1c40f",     # amarelo
+    "Em produção": "#2ecc71"     # verde
+}
+
+fig = grafico_gantt(
+    df_grafico.sort_values("inicio"),
+    cores_status
+)
+
+st.plotly_chart(fig, use_container_width=True)
 
 # -------------------------------------------------
 # HISTÓRICO

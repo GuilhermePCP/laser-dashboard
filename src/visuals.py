@@ -1,6 +1,30 @@
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
+import plotly.express as px
+
+def grafico_gantt(df, cores_status):
+
+    fig = px.timeline(
+        df,
+        x_start="inicio",
+        x_end="fim",
+        y="operador",
+        color="status",
+        text="produto",
+        color_discrete_map=cores_status
+    )
+
+    fig.update_yaxes(autorange="reversed")
+
+    fig.update_layout(
+        title="Programação de Produção",
+        xaxis_title="Data",
+        yaxis_title="Operador",
+        legend_title="Status"
+    )
+
+    return fig
 
 def grafico_gantt(df):
 
