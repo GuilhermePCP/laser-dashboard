@@ -297,23 +297,27 @@ if not df_tabela.empty:
             # FUNÇÃO DE COR DO STATUS
             # -------------------------
 
-            def cor_status(val):
+            # -------------------------
+            # BOLINHA DE STATUS
+            # -------------------------
 
-                if val == "Programado":
-                    return "background-color: #ffe066; color:black; font-weight:bold"
+            def icone_status(status):
 
-                elif val == "Em produção":
-                    return "background-color: #8ce99a; color:black; font-weight:bold"
+                if status == "Programado":
+                    return "🟡 Programado"
 
-                elif val == "Finalizado":
-                    return "background-color: #74c0fc; color:black; font-weight:bold"
+                elif status == "Em produção":
+                    return "🟢 Em produção"
 
-                elif val == "Atrasado":
-                    return "background-color: #ff6b6b; color:white; font-weight:bold"
+                elif status == "Finalizado":
+                    return "🔵 Finalizado"
 
-                return ""
+                elif status == "Atrasado":
+                    return "🔴 Atrasado"
 
-            df_estilizado = df_operador.style.map(cor_status, subset=["status"])
+                return status
+
+            df_operador["status"] = df_operador["status"].apply(icone_status)
 
             # -------------------------
             # TABELA
