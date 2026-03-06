@@ -357,7 +357,7 @@ if not df_tabela.empty:
                             """
 
                             with engine.connect() as conn:
-                                conn.execute(text(query), {"id": linha["id"]})
+                                conn.execute(text(query), {"id": (linha["id"])})
                                 conn.commit()
 
                             st.success("Produção iniciada")
@@ -369,7 +369,7 @@ if not df_tabela.empty:
 
                         if st.button("✔ Finalizar produção", key=f"finalizar_{linha['id']}"):
 
-                            finalizar_programacao(linha["id"])
+                            finalizar_programacao(int(linha["id"]))
 
                             st.success("Produção finalizada")
                             st.rerun()
