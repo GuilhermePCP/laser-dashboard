@@ -72,8 +72,7 @@ def carregar_dados():
 # SALVAR PROGRAMAÇÃO
 # ----------------------------
 
-def salvar_programacao(dados):
-    df = pd.DataFrame([dados])
+def salvar_programacao(df):
     df.to_sql("programacao", engine, if_exists="append", index=False)
 
 
