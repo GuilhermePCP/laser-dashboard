@@ -50,24 +50,24 @@ def criar_tabela_usuarios():
 
     # cria tabela
     with engine.begin() as conn:
-        conn.execute(text(query))
+        conn.exec_driver_sql(query)
 
-    # verifica se existe usuário
-    query_check = "SELECT COUNT(*) FROM usuarios"
-
+    # verifica se já existe usuário
     with engine.begin() as conn:
-        total = conn.execute(text(query_check)).scalar()
+        total = conn.exec_driver_sql(
+            "SELECT COUNT(*) FROM usuarios"
+        ).scalar()
 
-    # cria usuário padrão se não existir
+    # cria usuário padrão
     if total == 0:
 
-        query_insert = """
-        INSERT INTO usuarios (usuario, senha)
-        VALUES ('admin','admin123')
-        """
-
         with engine.begin() as conn:
-            conn.execute(text(query_insert))
+            conn.exec_driver_sql(
+                """
+                INSERT INTO usuarios (usuario, senha)
+                VALUES ('admin','admin123')
+                """
+            )
 
 
 def verificar_login(usuario, senha):
@@ -86,7 +86,6 @@ def verificar_login(usuario, senha):
         ).fetchone()
 
     return result
-
 
 criar_tabela_usuarios()
 
