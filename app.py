@@ -421,7 +421,19 @@ if not df_tabela.empty:
 
                 with col2:
 
-                    st.markdown("### Controle da OP")
+                    st.markdown(
+                        """
+                        <div style="
+                            background-color:#1e1e1e;
+                            padding:20px;
+                            border-radius:12px;
+                            border:1px solid #333;
+                        ">
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                    st.markdown("### ⚙ Controle da OP")
 
                     st.write(f"**Produto:** {linha['produto']}")
                     st.write(f"**Quantidade:** {linha['quantidade']}")
@@ -429,6 +441,77 @@ if not df_tabela.empty:
                     st.write(f"**Status:** {linha['status']}")
 
                     st.write("")
+
+                    status = linha["status"]
+
+                    if status == "Programado":
+
+                        if st.button("▶ Iniciar", use_container_width=True, key=f"iniciar_{linha['id']}"):
+                            atualizar_status()
+
+                    elif status == "Em produção":
+
+                        col1, col2 = st.columns(2)
+
+                        with col1:
+                            if st.button("⏸ Pausar", use_container_width=True, key=f"pausar_{linha['id']}"):
+                                pausar()
+
+                        with col2:
+                            if st.button("✔ Finalizar", use_container_width=True, key=f"finalizar_{linha['id']}"):
+                                finalizar()
+
+                    elif status == "Parado":
+
+                        if st.button("▶ Retomar", use_container_width=True, key=f"retomar_{linha['id']}"):
+                            retomar()
+
+                    with st.expander("📅 Ajustar cronograma"):
+
+                        nova_inicio = st.date_input(
+                            "Início",
+                            pd.to_datetime(linha["inicio"]),
+                            key=f"inicio_{linha['id']}"
+                        )
+
+                        novo_fim = st.date_input(
+                            "Fim",
+                            pd.to_datetime(linha["fim"]),
+                            key=f"fim_{linha['id']}"
+                        )
+
+                        novo_prazo = st.date_input(
+                            "Prazo limite",
+                            pd.to_datetime(linha["prazo_limite"]),
+                            key=f"prazo_{linha['id']}"
+                        )
+
+                        if st.button("💾 Salvar datas", use_container_width=True):
+
+                            query = """
+                            UPDATE programacao
+                            SET inicio = :inicio,
+                                fim = :fim,
+                                prazo_limite = :prazo
+                            WHERE id = :id
+                            """
+
+                            with engine.connect() as conn:
+                                conn.execute(
+                                    text(query),
+                                    {
+                                        "inicio": nova_inicio,
+                                        "fim": novo_fim,
+                                        "prazo": novo_prazo,
+                                        "id": int(linha["id"])
+                                    }
+                                )
+                                conn.commit()
+
+                            st.success("Cronograma atualizado")
+                            st.rerun()
+
+                        st.markdown("</div>", unsafe_allow_html=True)
 
                     # -------------------------
                     # BOTÕES DINÂMICOS
