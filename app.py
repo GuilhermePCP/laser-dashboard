@@ -233,51 +233,36 @@ if st.session_state.nivel in ["admin", "pcp"]:
             type=["png","jpg","jpeg","pdf"]
         )
 
-        salvar = st.form_submit_button("Salvar")
+salvar = st.form_submit_button("Salvar")
 
-        if salvar:
+if salvar:
 
-            nome_arquivo = None
+    nome_arquivo = None
+    desenho_bytes = None
 
-            if desenho is not None:
+    if desenho is not None:
 
-                os.makedirs("desenhos", exist_ok=True)
+        timestamp = datetime.now().timestamp()
 
-                timestamp = datetime.now().timestamp()
+        if desenho.type == "application/pdf":
 
-                if desenho.type == "application/pdf":
+            pdf = fitz.open(stream=desenho.read(), filetype="pdf")
+            pagina = pdf.load_page(0)
+            pix = pagina.get_pixmap()
 
-                    pdf = fitz.open(stream=desenho.read(), filetype="pdf")
-                    pagina = pdf.load_page(0)
-                    pix = pagina.get_pixmap()
+            img_bytes = pix.tobytes("png")
+            img = Image.open(io.BytesIO(img_bytes))
 
-                    img_bytes = pix.tobytes("png")
-                    img = Image.open(io.BytesIO(img_bytes))
+            buffer = io.BytesIO()
+            img.save(buffer, format="JPEG")
 
-                    nome_arquivo = f"{produto}_{timestamp}.jpg"
-                    caminho = os.path.join("desenhos", nome_arquivo)
+            desenho_bytes = buffer.getvalue()
+            nome_arquivo = f"{produto}_{timestamp}.jpg"
 
-                    img.save(caminho, "JPEG")
+        else:
 
-                else:
-
-                    nome_arquivo = f"{produto}_{timestamp}.png"
-                    caminho = os.path.join("desenhos", nome_arquivo)
-
-                    with open(caminho, "wb") as f:
-                        f.write(desenho.getbuffer())
-
-            nova = dict(
-                produto=produto,
-                quantidade=quantidade,
-                operador=operador,
-                inicio=str(inicio),
-                fim=str(fim),
-                prazo_limite=str(prazo),
-                status=status,
-                desenho=nome_arquivo,
-                data_finalizado=None
-            )
+            desenho_bytes = desenho.read()
+            nome_arquivo = f"{produto}_{timestamp}.png"
 
             salvar_programacao(nova)
 
@@ -398,6 +383,9 @@ if not df_tabela.empty:
                 "fim",
                 "prazo_limite",
             ]
+
+            if "nivel" not in st.session_state:
+                st.session_state.nivel = None
 
             if st.session_state.nivel in ["admin", "pcp"]:
                 df_operador = df_operador[colunas_base + colunas_data]
