@@ -233,41 +233,48 @@ if st.session_state.nivel in ["admin", "pcp"]:
             type=["png","jpg","jpeg","pdf"]
         )
 
-salvar = st.form_submit_button("Salvar")
+        # ✅ BOTÃO TEM QUE FICAR DENTRO DO FORM
+        salvar = st.form_submit_button("Salvar")
 
-if salvar:
 
-    nome_arquivo = None
-    desenho_bytes = None
+    # ------------------------------------------
+    # AQUI FICA FORA DO FORM
+    # ------------------------------------------
 
-    if desenho is not None:
+    if salvar:
 
-        timestamp = datetime.now().timestamp()
+        nome_arquivo = None
+        desenho_bytes = None
 
-        if desenho.type == "application/pdf":
+        if desenho is not None:
 
-            pdf = fitz.open(stream=desenho.read(), filetype="pdf")
-            pagina = pdf.load_page(0)
-            pix = pagina.get_pixmap()
+            timestamp = datetime.now().timestamp()
 
-            img_bytes = pix.tobytes("png")
-            img = Image.open(io.BytesIO(img_bytes))
+            if desenho.type == "application/pdf":
 
-            buffer = io.BytesIO()
-            img.save(buffer, format="JPEG")
+                pdf = fitz.open(stream=desenho.read(), filetype="pdf")
+                pagina = pdf.load_page(0)
+                pix = pagina.get_pixmap()
 
-            desenho_bytes = buffer.getvalue()
-            nome_arquivo = f"{produto}_{timestamp}.jpg"
+                img_bytes = pix.tobytes("png")
+                img = Image.open(io.BytesIO(img_bytes))
 
-        else:
+                buffer = io.BytesIO()
+                img.save(buffer, format="JPEG")
 
-            desenho_bytes = desenho.read()
-            nome_arquivo = f"{produto}_{timestamp}.png"
+                desenho_bytes = buffer.getvalue()
+                nome_arquivo = f"{produto}_{timestamp}.jpg"
 
-            salvar_programacao(nova)
+            else:
 
-            st.success("Programação criada")
-            st.rerun()
+                desenho_bytes = desenho.read()
+                nome_arquivo = f"{produto}_{timestamp}.png"
+
+
+        salvar_programacao(nova)
+
+        st.success("Programação criada")
+        st.rerun()
 
     # -------------------------------------------------
     # GERENCIAR OPERADORES
