@@ -22,8 +22,7 @@ from src.database import (
 )
 
 from sqlalchemy import text
-import fitz  # PyMuPDF
-from PIL import Image
+import fitz
 import io
 
 # -------------------------------------------------
@@ -34,6 +33,83 @@ st.set_page_config(
     page_title="Programação Laser",
     layout="wide"
 )
+
+# -------------------------------------------------
+# SISTEMA DE LOGIN
+# -------------------------------------------------
+
+def criar_tabela_usuarios():
+
+    query = """
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario TEXT UNIQUE,
+        senha TEXT
+    )
+    """
+
+    with engine.connect() as conn:
+        conn.execute(text(query))
+        conn.commit()
+
+    query_check = "SELECT COUNT(*) as total FROM usuarios"
+
+    with engine.connect() as conn:
+        total = conn.execute(text(query_check)).fetchone()[0]
+
+    if total == 0:
+
+        query_insert = """
+        INSERT INTO usuarios (usuario, senha)
+        VALUES ('admin','admin123')
+        """
+
+        with engine.connect() as conn:
+            conn.execute(text(query_insert))
+            conn.commit()
+
+
+def verificar_login(usuario, senha):
+
+    query = """
+    SELECT * FROM usuarios
+    WHERE usuario = :usuario
+    AND senha = :senha
+    """
+
+    with engine.connect() as conn:
+
+        result = conn.execute(
+            text(query),
+            {"usuario": usuario, "senha": senha}
+        ).fetchone()
+
+    return result
+
+
+criar_tabela_usuarios()
+
+if "logado" not in st.session_state:
+    st.session_state.logado = False
+
+if not st.session_state.logado:
+
+    st.title("🔐 Login do Sistema")
+
+    usuario = st.text_input("Usuário")
+    senha = st.text_input("Senha", type="password")
+
+    if st.button("Entrar"):
+
+        if verificar_login(usuario, senha):
+
+            st.session_state.logado = True
+            st.rerun()
+
+        else:
+            st.error("Usuário ou senha inválidos")
+
+    st.stop()
 
 # -------------------------------------------------
 # CRIAR TABELA
@@ -65,6 +141,14 @@ def carregar():
 
 
 df = carregar()
+
+# -------------------------------------------------
+# BOTÃO LOGOUT
+# -------------------------------------------------
+
+if st.sidebar.button("🚪 Sair"):
+    st.session_state.logado = False
+    st.rerun()
 
 # -------------------------------------------------
 # FOOTER
@@ -137,10 +221,6 @@ with st.sidebar.form("nova_op"):
         ["Programado","Em produção","Finalizado"]
     )
 
-    # -----------------------------
-    # UPLOAD DO DESENHO
-    # -----------------------------
-
     desenho = st.file_uploader(
         "Desenho da peça (PNG, JPG ou PDF)",
         type=["png","jpg","jpeg","pdf"]
@@ -158,36 +238,23 @@ with st.sidebar.form("nova_op"):
 
             timestamp = datetime.now().timestamp()
 
-            # -----------------------------
-            # SE FOR PDF -> CONVERTE
-            # -----------------------------
-
             if desenho.type == "application/pdf":
 
                 pdf = fitz.open(stream=desenho.read(), filetype="pdf")
-
                 pagina = pdf.load_page(0)
-
                 pix = pagina.get_pixmap()
 
                 img_bytes = pix.tobytes("png")
-
                 img = Image.open(io.BytesIO(img_bytes))
 
                 nome_arquivo = f"{produto}_{timestamp}.jpg"
-
                 caminho = os.path.join("desenhos", nome_arquivo)
 
                 img.save(caminho, "JPEG")
 
             else:
 
-                # -----------------------------
-                # SE FOR IMAGEM NORMAL
-                # -----------------------------
-
                 nome_arquivo = f"{produto}_{timestamp}.png"
-
                 caminho = os.path.join("desenhos", nome_arquivo)
 
                 with open(caminho, "wb") as f:
