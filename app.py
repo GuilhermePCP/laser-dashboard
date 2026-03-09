@@ -22,6 +22,8 @@ from src.database import (
 )
 
 from sqlalchemy import text
+from pdf2image import convert_from_bytes
+from PIL import Image
 
 # -------------------------------------------------
 # CONFIGURAÇÃO DA PÁGINA
@@ -139,8 +141,8 @@ with st.sidebar.form("nova_op"):
     # -----------------------------
 
     desenho = st.file_uploader(
-        "Desenho da peça (PNG ou JPG)",
-        type=["png","jpg","jpeg"]
+        "Desenho da peça (PNG, JPG ou PDF)",
+        type=["png","jpg","jpeg","pdf"]
     )
 
     salvar = st.form_submit_button("Salvar")
@@ -153,12 +155,36 @@ with st.sidebar.form("nova_op"):
 
             os.makedirs("desenhos", exist_ok=True)
 
-            nome_arquivo = f"{produto}_{datetime.now().timestamp()}.png"
+            timestamp = datetime.now().timestamp()
 
-            caminho = os.path.join("desenhos", nome_arquivo)
+            # -----------------------------
+            # SE FOR PDF -> CONVERTE
+            # -----------------------------
 
-            with open(caminho, "wb") as f:
-                f.write(desenho.getbuffer())
+            if desenho.type == "application/pdf":
+
+                imagens = convert_from_bytes(desenho.read())
+
+                img = imagens[0]  # pega a primeira página
+
+                nome_arquivo = f"{produto}_{timestamp}.jpg"
+
+                caminho = os.path.join("desenhos", nome_arquivo)
+
+                img.save(caminho, "JPEG")
+
+            else:
+
+                # -----------------------------
+                # SE FOR IMAGEM NORMAL
+                # -----------------------------
+
+                nome_arquivo = f"{produto}_{timestamp}.png"
+
+                caminho = os.path.join("desenhos", nome_arquivo)
+
+                with open(caminho, "wb") as f:
+                    f.write(desenho.getbuffer())
 
         nova = dict(
             produto=produto,
