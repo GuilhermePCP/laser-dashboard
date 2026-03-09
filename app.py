@@ -386,9 +386,20 @@ if not df_tabela.empty:
 
             # -------------------------
 
-            df_operador["inicio"] = pd.to_datetime(df_operador["inicio"], errors="coerce").dt.strftime("%d/%m/%Y")
-            df_operador["fim"] = pd.to_datetime(df_operador["fim"], errors="coerce").dt.strftime("%d/%m/%Y")
-            df_operador["prazo_limite"] = pd.to_datetime(df_operador["prazo_limite"], errors="coerce").dt.strftime("%d/%m/%Y")
+            if "inicio" in df_operador.columns:
+                df_operador["inicio"] = pd.to_datetime(
+                    df_operador["inicio"], errors="coerce"
+                ).dt.strftime("%d/%m/%Y")
+
+            if "fim" in df_operador.columns:
+                df_operador["fim"] = pd.to_datetime(
+                    df_operador["fim"], errors="coerce"
+                ).dt.strftime("%d/%m/%Y")
+
+            if "prazo_limite" in df_operador.columns:
+                df_operador["prazo_limite"] = pd.to_datetime(
+                    df_operador["prazo_limite"], errors="coerce"
+    ).dt.strftime("%d/%m/%Y")
 
             # -------------------------
             # STATUS COM ÍCONE
