@@ -343,48 +343,50 @@ if not df_tabela.empty:
 
                 nome_img = desenhos.iloc[index]
 
-                st.divider()
-                st.markdown("### Ajuste de cronograma")
+                with st.expander("📅 Ajustar cronograma"):
 
-                nova_inicio = st.date_input(
-                    "Data início",
-                    pd.to_datetime(linha["inicio"])
-                )
+                    nova_inicio = st.date_input(
+                        "Data início",
+                        pd.to_datetime(linha["inicio"]),
+                        key=f"inicio_{linha['id']}"
+                    )
 
-                novo_fim = st.date_input(
-                    "Data fim",
-                    pd.to_datetime(linha["fim"])
-                )
+                    novo_fim = st.date_input(
+                        "Data fim",
+                        pd.to_datetime(linha["fim"]),
+                        key=f"fim_{linha['id']}"
+                    )
 
-                novo_prazo = st.date_input(
-                    "Prazo limite",
-                    pd.to_datetime(linha["prazo_limite"])
-                )
+                    novo_prazo = st.date_input(
+                        "Prazo limite",
+                        pd.to_datetime(linha["prazo_limite"]),
+                        key=f"prazo_{linha['id']}"
+                    )
 
-                if st.button("💾 Salvar novas datas", key=f"editar_datas_{linha['id']}"):
+                    if st.button("💾 Salvar novas datas", key=f"editar_datas_{linha['id']}"):
 
-                    query = """
-                    UPDATE programacao
-                    SET inicio = :inicio,
-                        fim = :fim,
-                        prazo_limite = :prazo
-                    WHERE id = :id
-                    """
+                        query = """
+                        UPDATE programacao
+                        SET inicio = :inicio,
+                            fim = :fim,
+                            prazo_limite = :prazo
+                        WHERE id = :id
+                        """
 
-                    with engine.connect() as conn:
-                        conn.execute(
-                            text(query),
-                            {
-                                "inicio": nova_inicio,
-                                "fim": novo_fim,
-                                "prazo": novo_prazo,
-                                "id": int(linha["id"])
-                            }
-                        )
-                        conn.commit()
+                        with engine.connect() as conn:
+                            conn.execute(
+                                text(query),
+                                {
+                                    "inicio": nova_inicio,
+                                    "fim": novo_fim,
+                                    "prazo": novo_prazo,
+                                    "id": int(linha["id"])
+                                }
+                            )
+                            conn.commit()
 
-                    st.success("Cronograma atualizado")
-                    st.rerun()
+                        st.success("Cronograma atualizado")
+                        st.rerun()
 
                 col1, col2 = st.columns([2,1])
 
