@@ -388,10 +388,16 @@ if not df_tabela.empty:
                     st.write("")
 
                     # -------------------------
-                    # BOTÃO DINÂMICO
+                    # BOTÕES DINÂMICOS
                     # -------------------------
 
-                    if linha["status"] != "Em produção":
+                    status = linha["status"]
+
+                    # -------------------------
+                    # PROGRAMADO → INICIAR
+                    # -------------------------
+
+                    if status == "Programado":
 
                         if st.button("▶ Iniciar produção", key=f"iniciar_{linha['id']}"):
 
@@ -414,14 +420,75 @@ if not df_tabela.empty:
                             st.success("Produção iniciada")
                             st.rerun()
 
-                    else:
 
-                        if st.button("✅ Finalizar produção", key=f"finalizar_{linha['id']}"):
+                    # -------------------------
+                    # EM PRODUÇÃO → PAUSAR / FINALIZAR
+                    # -------------------------
+
+                    elif status == "Em produção":
+
+                        col1, col2 = st.columns(2)
+
+                        with col1:
+
+                            if st.button("⏸ Pausar produção", key=f"pausar_{linha['id']}"):
+
+                                query = """
+                                UPDATE programacao
+                                SET status = :status
+                                WHERE id = :id
+                                """
+
+                                with engine.connect() as conn:
+                                    conn.execute(
+                                        text(query),
+                                        {
+                                            "status": "Parado",
+                                            "id": int(linha["id"])
+                                        }
+                                    )
+                                    conn.commit()
+
+                                st.warning("Produção pausada")
+                                st.rerun()
+
+                        with col2:
+
+                            if st.button("✅ Finalizar produção", key=f"finalizar_{linha['id']}"):
+
+                                query = """
+                                UPDATE programacao
+                                SET status = :status,
+                                    data_finalizado = :data
+                                WHERE id = :id
+                                """
+
+                                with engine.connect() as conn:
+                                    conn.execute(
+                                        text(query),
+                                        {
+                                            "status": "Finalizado",
+                                            "data": datetime.now(),
+                                            "id": int(linha["id"])
+                                        }
+                                    )
+                                    conn.commit()
+
+                                st.success("Produção finalizada")
+                                st.rerun()
+
+
+                    # -------------------------
+                    # PARADO → RETOMAR
+                    # -------------------------
+
+                    elif status == "Parado":
+
+                        if st.button("▶ Retomar produção", key=f"retomar_{linha['id']}"):
 
                             query = """
                             UPDATE programacao
-                            SET status = :status,
-                                data_finalizado = :data
+                            SET status = :status
                             WHERE id = :id
                             """
 
@@ -429,14 +496,13 @@ if not df_tabela.empty:
                                 conn.execute(
                                     text(query),
                                     {
-                                        "status": "Finalizado",
-                                        "data": datetime.now(),
+                                        "status": "Em produção",
                                         "id": int(linha["id"])
                                     }
                                 )
                                 conn.commit()
 
-                            st.success("Produção finalizada")
+                            st.success("Produção retomada")
                             st.rerun()
 
 else:
@@ -459,10 +525,11 @@ df_grafico["fim"] = pd.to_datetime(df_grafico["fim"])
 # -------------------------
 
 cores_status = {
-    "Programado": "#f1c40f",     # amarelo
-    "Em produção": "#2ecc71"     # verde
+    "Programado": "#f1c40f",
+    "Em produção": "#2ecc71",
+    "Parado": "#e67e22",
+    "Finalizado": "#95a5a6"
 }
-
 fig = grafico_gantt(
     df_grafico.sort_values("inicio"),
     cores_status
