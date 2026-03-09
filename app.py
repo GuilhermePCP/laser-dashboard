@@ -43,7 +43,8 @@ def verificar_login(usuario, senha):
     try:
 
         query = """
-        SELECT * FROM usuarios
+        SELECT usuario, senha, nivel
+        FROM usuarios
         WHERE usuario = :usuario
         AND senha = :senha
         """
@@ -65,6 +66,10 @@ def verificar_login(usuario, senha):
 if "logado" not in st.session_state:
     st.session_state.logado = False
 
+if "nivel" not in st.session_state:
+    st.session_state.nivel = None
+
+
 # tela de login
 if not st.session_state.logado:
 
@@ -80,7 +85,9 @@ if not st.session_state.logado:
         if login:
 
             st.session_state.logado = True
-            st.session_state.usuario = usuario
+            st.session_state.usuario = login.usuario
+            st.session_state.nivel = login.nivel
+
             st.rerun()
 
         else:
@@ -171,133 +178,141 @@ Auxiliar PCP
 # SIDEBAR NOVA PROGRAMAÇÃO
 # -------------------------------------------------
 
-st.sidebar.subheader("➕ Nova Programação")
+if st.session_state.nivel in ["admin", "pcp"]:
 
-with st.sidebar.form("nova_op"):
+    st.sidebar.subheader("➕ Nova Programação")
 
-    operadores = carregar_operadores()
+    with st.sidebar.form("nova_op"):
 
-    operador = st.selectbox(
-        "Operador",
-        operadores["nome"] if not operadores.empty else []
-    )
+        operadores = carregar_operadores()
 
-    produto = st.text_input("Produto")
-
-    quantidade = st.number_input(
-        "Quantidade",
-        min_value=1,
-        step=1
-    )
-
-    inicio = st.date_input("Início")
-    fim = st.date_input("Fim")
-    prazo = st.date_input("Prazo limite")
-
-    status = st.selectbox(
-        "Status",
-        ["Programado","Em produção","Finalizado"]
-    )
-
-    desenho = st.file_uploader(
-        "Desenho da peça (PNG, JPG ou PDF)",
-        type=["png","jpg","jpeg","pdf"]
-    )
-
-    salvar = st.form_submit_button("Salvar")
-
-    if salvar:
-
-        nome_arquivo = None
-
-        if desenho is not None:
-
-            os.makedirs("desenhos", exist_ok=True)
-
-            timestamp = datetime.now().timestamp()
-
-            if desenho.type == "application/pdf":
-
-                pdf = fitz.open(stream=desenho.read(), filetype="pdf")
-                pagina = pdf.load_page(0)
-                pix = pagina.get_pixmap()
-
-                img_bytes = pix.tobytes("png")
-                img = Image.open(io.BytesIO(img_bytes))
-
-                nome_arquivo = f"{produto}_{timestamp}.jpg"
-                caminho = os.path.join("desenhos", nome_arquivo)
-
-                img.save(caminho, "JPEG")
-
-            else:
-
-                nome_arquivo = f"{produto}_{timestamp}.png"
-                caminho = os.path.join("desenhos", nome_arquivo)
-
-                with open(caminho, "wb") as f:
-                    f.write(desenho.getbuffer())
-
-        nova = dict(
-            produto=produto,
-            quantidade=quantidade,
-            operador=operador,
-            inicio=str(inicio),
-            fim=str(fim),
-            prazo_limite=str(prazo),
-            status=status,
-            desenho=nome_arquivo,
-            data_finalizado=None
+        operador = st.selectbox(
+            "Operador",
+            operadores["nome"] if not operadores.empty else []
         )
 
-        salvar_programacao(nova)
+        produto = st.text_input("Produto")
 
-        st.success("Programação criada")
-        st.rerun()
+        quantidade = st.number_input(
+            "Quantidade",
+            min_value=1,
+            step=1
+        )
 
-# -------------------------------------------------
-# GERENCIAR OPERADORES
-# -------------------------------------------------
+        inicio = st.date_input("Início")
+        fim = st.date_input("Fim")
+        prazo = st.date_input("Prazo limite")
 
-st.sidebar.divider()
-st.sidebar.subheader("⚙️ Operadores")
+        status = st.selectbox(
+            "Status",
+            ["Programado","Em produção","Finalizado"]
+        )
 
-novo = st.sidebar.text_input("Novo operador")
+        desenho = st.file_uploader(
+            "Desenho da peça (PNG, JPG ou PDF)",
+            type=["png","jpg","jpeg","pdf"]
+        )
 
-if st.sidebar.button("Adicionar operador"):
-    if novo:
-        adicionar_operador(novo)
-        st.rerun()
+        salvar = st.form_submit_button("Salvar")
 
-ops = carregar_operadores()
+        if salvar:
 
-if not ops.empty:
+            nome_arquivo = None
 
-    remover = st.sidebar.selectbox(
-        "Remover operador",
-        ops["nome"]
+            if desenho is not None:
+
+                os.makedirs("desenhos", exist_ok=True)
+
+                timestamp = datetime.now().timestamp()
+
+                if desenho.type == "application/pdf":
+
+                    pdf = fitz.open(stream=desenho.read(), filetype="pdf")
+                    pagina = pdf.load_page(0)
+                    pix = pagina.get_pixmap()
+
+                    img_bytes = pix.tobytes("png")
+                    img = Image.open(io.BytesIO(img_bytes))
+
+                    nome_arquivo = f"{produto}_{timestamp}.jpg"
+                    caminho = os.path.join("desenhos", nome_arquivo)
+
+                    img.save(caminho, "JPEG")
+
+                else:
+
+                    nome_arquivo = f"{produto}_{timestamp}.png"
+                    caminho = os.path.join("desenhos", nome_arquivo)
+
+                    with open(caminho, "wb") as f:
+                        f.write(desenho.getbuffer())
+
+            nova = dict(
+                produto=produto,
+                quantidade=quantidade,
+                operador=operador,
+                inicio=str(inicio),
+                fim=str(fim),
+                prazo_limite=str(prazo),
+                status=status,
+                desenho=nome_arquivo,
+                data_finalizado=None
+            )
+
+            salvar_programacao(nova)
+
+            st.success("Programação criada")
+            st.rerun()
+
+    # -------------------------------------------------
+    # GERENCIAR OPERADORES
+    # -------------------------------------------------
+
+    st.sidebar.divider()
+    st.sidebar.subheader("⚙️ Operadores")
+
+    novo = st.sidebar.text_input("Novo operador")
+
+    if st.sidebar.button("Adicionar operador"):
+        if novo:
+            adicionar_operador(novo)
+            st.rerun()
+
+    ops = carregar_operadores()
+
+    if not ops.empty:
+
+        remover = st.sidebar.selectbox(
+            "Remover operador",
+            ops["nome"]
+        )
+
+        if st.sidebar.button("Remover operador"):
+            remover_operador(remover)
+            st.rerun()
+
+    # -------------------------------------------------
+    # FILTROS
+    # -------------------------------------------------
+
+    st.sidebar.divider()
+    st.sidebar.subheader("Filtros")
+
+    maquina = st.sidebar.selectbox(
+        "Operador",
+        ["Todas"] + list(df["operador"].dropna().unique())
     )
 
-    if st.sidebar.button("Remover operador"):
-        remover_operador(remover)
-        st.rerun()
+    status = st.sidebar.selectbox(
+        "Status",
+        ["Todos"] + list(df["status"].dropna().unique())
+    )
 
-# -------------------------------------------------
-# FILTROS
-# -------------------------------------------------
+else:
 
-st.sidebar.divider()
-st.sidebar.subheader("Filtros")
-
-maquina = st.sidebar.selectbox(
-    "Operador",
-    ["Todas"] + list(df["operador"].dropna().unique())
-)
-
-status = st.sidebar.selectbox(
-    "Status",
-    ["Todos"] + list(df["status"].dropna().unique())
-)
+    # operador ainda consegue usar filtros simples
+    maquina = "Todas"
+    status = "Todos"
 
 df_filtrado = filtrar_dados(df, maquina, status)
 
