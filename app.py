@@ -471,22 +471,26 @@ if not df_tabela.empty:
                         nova_inicio = st.date_input(
                             "Início",
                             pd.to_datetime(linha["inicio"]),
-                            key=f"inicio_{linha['id']}"
+                            key=f"editar_inicio_{linha['id']}"
                         )
 
                         novo_fim = st.date_input(
                             "Fim",
                             pd.to_datetime(linha["fim"]),
-                            key=f"fim_{linha['id']}"
+                            key=f"editar_fim_{linha['id']}"
                         )
 
                         novo_prazo = st.date_input(
                             "Prazo limite",
                             pd.to_datetime(linha["prazo_limite"]),
-                            key=f"prazo_{linha['id']}"
+                            key=f"editar_prazo_{linha['id']}"
                         )
 
-                        if st.button("💾 Salvar datas", use_container_width=True):
+                        if st.button(
+                            "💾 Salvar datas",
+                            use_container_width=True,
+                            key=f"salvar_datas_{linha['id']}"
+                        ):
 
                             query = """
                             UPDATE programacao
