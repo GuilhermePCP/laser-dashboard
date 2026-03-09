@@ -323,13 +323,55 @@ if not df_tabela.empty:
             # TABELA
             # -------------------------
 
-            tabela = st.dataframe(
+            tabela = st.data_editor(
                 df_operador,
                 use_container_width=True,
-                selection_mode="single-row",
-                on_select="rerun",
-                hide_index=True
+                hide_index=True,
+                disabled=[
+                    "id",
+                    "produto",
+                    "quantidade",
+                    "operador",
+                    "status"
+                ]
             )
+
+            # -------------------------
+            # SALVAR ALTERAÇÃO DE DATAS
+            # -------------------------
+
+            if not tabela.equals(df_operador):
+
+                for i in range(len(tabela)):
+
+                    if (
+                        tabela.loc[i, "inicio"] != df_operador.loc[i, "inicio"]
+                        or tabela.loc[i, "fim"] != df_operador.loc[i, "fim"]
+                        or tabela.loc[i, "prazo_limite"] != df_operador.loc[i, "prazo_limite"]
+                    ):
+
+                        query = """
+                        UPDATE programacao
+                        SET inicio = :inicio,
+                            fim = :fim,
+                            prazo_limite = :prazo
+                        WHERE id = :id
+                        """
+
+                        with engine.connect() as conn:
+                            conn.execute(
+                                text(query),
+                                {
+                                    "inicio": pd.to_datetime(tabela.loc[i, "inicio"], dayfirst=True),
+                                    "fim": pd.to_datetime(tabela.loc[i, "fim"], dayfirst=True),
+                                    "prazo": pd.to_datetime(tabela.loc[i, "prazo_limite"], dayfirst=True),
+                                    "id": int(df_operador.loc[i, "id"])
+                                }
+                            )
+                            conn.commit()
+
+                st.success("Cronograma atualizado")
+                st.rerun()
 
             # -------------------------
             # SELEÇÃO DA OP
