@@ -38,60 +38,34 @@ st.set_page_config(
 # SISTEMA DE LOGIN
 # -------------------------------------------------
 
-def criar_tabela_usuarios():
-
-    query = """
-    CREATE TABLE IF NOT EXISTS usuarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        usuario TEXT UNIQUE,
-        senha TEXT
-    )
-    """
-
-    # cria tabela
-    with engine.begin() as conn:
-        conn.exec_driver_sql(query)
-
-    # verifica se já existe usuário
-    with engine.begin() as conn:
-        total = conn.exec_driver_sql(
-            "SELECT COUNT(*) FROM usuarios"
-        ).scalar()
-
-    # cria usuário padrão
-    if total == 0:
-
-        with engine.begin() as conn:
-            conn.exec_driver_sql(
-                """
-                INSERT INTO usuarios (usuario, senha)
-                VALUES ('admin','admin123')
-                """
-            )
-
-
 def verificar_login(usuario, senha):
 
-    query = """
-    SELECT * FROM usuarios
-    WHERE usuario = :usuario
-    AND senha = :senha
-    """
+    try:
 
-    with engine.begin() as conn:
+        query = """
+        SELECT * FROM usuarios
+        WHERE usuario = :usuario
+        AND senha = :senha
+        """
 
-        result = conn.execute(
-            text(query),
-            {"usuario": usuario, "senha": senha}
-        ).fetchone()
+        with engine.begin() as conn:
 
-    return result
+            result = conn.execute(
+                text(query),
+                {"usuario": usuario, "senha": senha}
+            ).fetchone()
 
-criar_tabela_usuarios()
+        return result
 
+    except:
+        return None
+
+
+# estado da sessão
 if "logado" not in st.session_state:
     st.session_state.logado = False
 
+# tela de login
 if not st.session_state.logado:
 
     st.title("🔐 Login do Sistema")
@@ -101,12 +75,16 @@ if not st.session_state.logado:
 
     if st.button("Entrar"):
 
-        if verificar_login(usuario, senha):
+        login = verificar_login(usuario, senha)
+
+        if login:
 
             st.session_state.logado = True
+            st.session_state.usuario = usuario
             st.rerun()
 
         else:
+
             st.error("Usuário ou senha inválidos")
 
     st.stop()
@@ -493,7 +471,7 @@ if not df_tabela.empty:
                             WHERE id = :id
                             """
 
-                            with engine.connect() as conn:
+                            with engine.begin() as conn:
                                 conn.execute(
                                     text(query),
                                     {
@@ -524,7 +502,7 @@ if not df_tabela.empty:
                                 WHERE id = :id
                                 """
 
-                                with engine.connect() as conn:
+                                with engine.begin() as conn:
                                     conn.execute(
                                         text(query),
                                         {
@@ -552,7 +530,7 @@ if not df_tabela.empty:
                                 WHERE id = :id
                                 """
 
-                                with engine.connect() as conn:
+                                with engine.begin() as conn:
                                     conn.execute(
                                         text(query),
                                         {
@@ -580,7 +558,7 @@ if not df_tabela.empty:
                             WHERE id = :id
                             """
 
-                            with engine.connect() as conn:
+                            with engine.begin() as conn:
                                 conn.execute(
                                     text(query),
                                     {
@@ -631,7 +609,7 @@ if not df_tabela.empty:
                             WHERE id = :id
                             """
 
-                            with engine.connect() as conn:
+                            with engine.begin() as conn:
                                 conn.execute(
                                     text(query),
                                     {
