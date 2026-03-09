@@ -135,7 +135,7 @@ df = carregar()
 # USUÁRIO LOGADO
 # -------------------------------------------------
 
-st.sidebar.image("assets/logo.png", use_container_width=True)
+st.sidebar.image("assets/logo2.png", use_container_width=True)
 
 st.sidebar.markdown("---")
 
