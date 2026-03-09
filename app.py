@@ -365,142 +365,404 @@ df_filtrado = filtrar_dados(
     status
 )
 
-
-# ------------------------------------------------
-# MÉTRICAS
-# ------------------------------------------------
+# -------------------------------------------------
+# KPIs
+# -------------------------------------------------
 
 metricas = calcular_metricas(df_filtrado)
 
-c1, c2, c3 = st.columns(3)
+c1,c2,c3 = st.columns(3)
 
-c1.metric(
-    "Total OPs",
-    metricas["total_ops"]
-)
-
-c2.metric(
-    "Operadores ativos",
-    metricas["maquinas_ocupadas"]
-)
-
-c3.metric(
-    "Próxima máquina",
-    metricas["proxima_maquina"]
-)
-
+c1.metric("Total OPs", metricas["total_ops"])
+c2.metric("Operadores ativos", metricas["maquinas_ocupadas"])
+c3.metric("Próxima máquina", metricas["proxima_maquina"])
 
 st.divider()
 
+# -------------------------------------------------
+# TABELA DE FABRICAÇÃO
+# -------------------------------------------------
 
-# ------------------------------------------------
-# TABELA
-# ------------------------------------------------
+st.subheader("Sequência de fabricação")
 
-st.subheader("Programação")
+df_tabela = df_ativos.copy()
 
-df_ativos = df_filtrado[
-    df_filtrado["status"]
-    != "Finalizado"
-]
+if not df_tabela.empty:
 
-if not df_ativos.empty:
+    df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"], errors="coerce")
+    df_tabela["fim"] = pd.to_datetime(df_tabela["fim"], errors="coerce")
+    df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"], errors="coerce")
 
-    tabela = df_ativos.copy()
+    operadores = df_tabela["operador"].unique()
 
-    if is_operador:
+    abas = st.tabs(list(operadores))
 
-        tabela = tabela[
-            [
+    for i, operador in enumerate(operadores):
+
+        with abas[i]:
+
+            df_operador = df_tabela[df_tabela["operador"] == operador].copy()
+            df_operador = df_operador.reset_index(drop=True)
+
+            desenhos = df_operador["desenho"]
+            df_operador = df_operador.drop(columns=["desenho"], errors="ignore")
+
+            # -------------------------
+            # CONTROLE DE COLUNAS POR NÍVEL
+            # -------------------------
+
+            colunas_base = [
+                "id",
                 "produto",
                 "quantidade",
                 "operador",
-                "status"
+                "status",
             ]
-        ]
 
-    else:
-
-        tabela = tabela[
-            [
-                "produto",
-                "quantidade",
-                "operador",
+            colunas_data = [
                 "inicio",
                 "fim",
                 "prazo_limite",
-                "status"
             ]
-        ]
 
-    st.dataframe(
-        tabela,
-        use_container_width=True,
-        hide_index=True
-    )
+            if "nivel" not in st.session_state:
+                st.session_state.nivel = None
+
+            if st.session_state.nivel in ["admin", "pcp"]:
+                df_operador = df_operador[colunas_base + colunas_data]
+            else:
+                df_operador = df_operador[colunas_base]
+
+            # -------------------------
+
+            if "inicio" in df_operador.columns:
+                df_operador["inicio"] = pd.to_datetime(
+                    df_operador["inicio"], errors="coerce"
+                ).dt.strftime("%d/%m/%Y")
+
+            if "fim" in df_operador.columns:
+                df_operador["fim"] = pd.to_datetime(
+                    df_operador["fim"], errors="coerce"
+                ).dt.strftime("%d/%m/%Y")
+
+            if "prazo_limite" in df_operador.columns:
+                df_operador["prazo_limite"] = pd.to_datetime(
+                    df_operador["prazo_limite"], errors="coerce"
+    ).dt.strftime("%d/%m/%Y")
+
+            # -------------------------
+            # STATUS COM ÍCONE
+            # -------------------------
+
+            def icone_status(status):
+
+                if status == "Programado":
+                    return "🟡 Programado"
+
+                elif status == "Em produção":
+                    return "🟢 Em produção"
+
+                elif status == "Finalizado":
+                    return "🔵 Finalizado"
+
+                elif status == "Atrasado":
+                    return "🔴 Atrasado"
+
+                elif status == "Parado":
+                    return "🟠 Parado"
+
+                return status
+
+            df_operador["status"] = df_operador["status"].apply(icone_status)
+
+            # -------------------------
+            # TABELA
+            # -------------------------
+
+            tabela = st.dataframe(
+                df_operador,
+                use_container_width=True,
+                selection_mode="single-row",
+                on_select="rerun",
+                hide_index=True
+            )
+
+            # -------------------------
+            # SELEÇÃO DA OP
+            # -------------------------
+
+            if tabela["selection"]["rows"]:
+
+                index = tabela["selection"]["rows"][0]
+
+                linha = df_tabela[df_tabela["operador"] == operador].iloc[index]
+                nome_img = desenhos.iloc[index]
+
+                col1, col2 = st.columns([2,1])
+
+                # -------------------------
+                # IMAGEM
+                # -------------------------
+
+                with col1:
+
+                    if nome_img:
+
+                        caminho_img = os.path.join("desenhos", nome_img)
+
+                        if os.path.exists(caminho_img):
+
+                            st.markdown(f"### 🖼️ Desenho da peça — {linha['produto']}")
+
+                            st.image(
+                                caminho_img,
+                                use_container_width=True
+                            )
+
+                        else:
+                            st.warning("Imagem não encontrada")
+
+                    else:
+                        st.info("Essa OP não possui desenho")
+
+                # -------------------------
+                # CONTROLE DA PRODUÇÃO
+                # -------------------------
+
+                with col2:
+
+                    st.markdown("### ⚙ Controle da OP")
+
+                    st.write(f"**Produto:** {linha['produto']}")
+                    st.write(f"**Quantidade:** {linha['quantidade']}")
+                    st.write(f"**Operador:** {linha['operador']}")
+                    st.write(f"**Status:** {linha['status']}")
+
+                    status = linha["status"]
+
+                    # -------------------------
+                    # BOTÕES DE PRODUÇÃO
+                    # -------------------------
+
+                    if status == "Programado":
+
+                        if st.button(
+                            "▶ Iniciar produção",
+                            use_container_width=True,
+                            key=f"iniciar_{operador}_{linha['id']}"
+                        ):
+
+                            query = """
+                            UPDATE programacao
+                            SET status = :status
+                            WHERE id = :id
+                            """
+
+                            with engine.begin() as conn:
+                                conn.execute(
+                                    text(query),
+                                    {
+                                        "status": "Em produção",
+                                        "id": int(linha["id"])
+                                    }
+                                )
+                                conn.commit()
+
+                            st.success("Produção iniciada")
+                            st.rerun()
+
+                    elif status == "Em produção":
+
+                        b1, b2 = st.columns(2)
+
+                        with b1:
+
+                            if st.button(
+                                "⏸ Pausar",
+                                use_container_width=True,
+                                key=f"pausar_{operador}_{linha['id']}"
+                            ):
+
+                                query = """
+                                UPDATE programacao
+                                SET status = :status
+                                WHERE id = :id
+                                """
+
+                                with engine.begin() as conn:
+                                    conn.execute(
+                                        text(query),
+                                        {
+                                            "status": "Parado",
+                                            "id": int(linha["id"])
+                                        }
+                                    )
+                                    conn.commit()
+
+                                st.warning("Produção pausada")
+                                st.rerun()
+
+                        with b2:
+
+                            if st.button(
+                                "✔ Finalizar",
+                                use_container_width=True,
+                                key=f"finalizar_{operador}_{linha['id']}"
+                            ):
+
+                                query = """
+                                UPDATE programacao
+                                SET status = :status,
+                                    data_finalizado = :data
+                                WHERE id = :id
+                                """
+
+                                with engine.begin() as conn:
+                                    conn.execute(
+                                        text(query),
+                                        {
+                                            "status": "Finalizado",
+                                            "data": datetime.now(),
+                                            "id": int(linha["id"])
+                                        }
+                                    )
+                                    conn.commit()
+
+                                st.success("Produção finalizada")
+                                st.rerun()
+
+                    elif status == "Parado":
+
+                        if st.button(
+                            "▶ Retomar produção",
+                            use_container_width=True,
+                            key=f"retomar_{operador}_{linha['id']}"
+                        ):
+
+                            query = """
+                            UPDATE programacao
+                            SET status = :status
+                            WHERE id = :id
+                            """
+
+                            with engine.begin() as conn:
+                                conn.execute(
+                                    text(query),
+                                    {
+                                        "status": "Em produção",
+                                        "id": int(linha["id"])
+                                    }
+                                )
+                                conn.commit()
+
+                            st.success("Produção retomada")
+                            st.rerun()
+
+                    # -------------------------
+                    # AJUSTE DE CRONOGRAMA
+                    # -------------------------
+
+                    if st.session_state.nivel in ["admin", "pcp"]:
+
+                        with st.expander("📅 Ajustar cronograma"):
+
+                            nova_inicio = st.date_input(
+                                "Início",
+                                pd.to_datetime(linha["inicio"]),
+                                key=f"inicio_{operador}_{linha['id']}"
+                            )
+
+                            novo_fim = st.date_input(
+                                "Fim",
+                                pd.to_datetime(linha["fim"]),
+                                key=f"fim_{operador}_{linha['id']}"
+                            )
+
+                            novo_prazo = st.date_input(
+                                "Prazo limite",
+                                pd.to_datetime(linha["prazo_limite"]),
+                                key=f"prazo_{operador}_{linha['id']}"
+                            )
+
+                            if st.button(
+                                "💾 Salvar datas",
+                                use_container_width=True,
+                                key=f"salvar_datas_{operador}_{linha['id']}"
+                            ):
+
+                                query = """
+                                UPDATE programacao
+                                SET inicio = :inicio,
+                                    fim = :fim,
+                                    prazo_limite = :prazo
+                                WHERE id = :id
+                                """
+
+                                with engine.begin() as conn:
+                                    conn.execute(
+                                        text(query),
+                                        {
+                                            "inicio": nova_inicio,
+                                            "fim": novo_fim,
+                                            "prazo": novo_prazo,
+                                            "id": int(linha["id"])
+                                        }
+                                    )
+                                    conn.commit()
+
+                                st.success("Cronograma atualizado")
+                                st.rerun()
 
 else:
 
-    st.info(
-        "Nenhuma programação ativa"
-    )
+    st.info("Nenhuma programação ativa")
 
-
-# ------------------------------------------------
+# -------------------------------------------------
 # GANTT
-# ------------------------------------------------
+# -------------------------------------------------
 
 st.divider()
 
-if not df_ativos.empty:
+df_grafico = df_ativos.copy()
 
-    df_grafico = df_ativos.copy()
+df_grafico["inicio"] = pd.to_datetime(df_grafico["inicio"])
+df_grafico["fim"] = pd.to_datetime(df_grafico["fim"])
 
-    cores = {
+# -------------------------
+# CORES DOS STATUS
+# -------------------------
 
-        "Programado": "#f1c40f",
-        "Em produção": "#2ecc71",
-        "Finalizado": "#95a5a6"
-    }
-
-    fig = grafico_gantt(
-        df_grafico,
-        cores
-    )
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
-
-
-# ------------------------------------------------
-# HISTÓRICO
-# ------------------------------------------------
-
-st.divider()
-
-st.subheader(
-    "Histórico"
+cores_status = {
+    "Programado": "#f1c40f",
+    "Em produção": "#2ecc71",
+    "Parado": "#e67e22",
+    "Finalizado": "#95a5a6"
+}
+fig = grafico_gantt(
+    df_grafico.sort_values("inicio"),
+    cores_status
 )
 
-df_finalizados = df_filtrado[
-    df_filtrado["status"]
-    == "Finalizado"
-]
+st.plotly_chart(fig, use_container_width=True)
+
+# -------------------------------------------------
+# HISTÓRICO
+# -------------------------------------------------
+
+st.divider()
+st.subheader("Programações finalizadas")
 
 if not df_finalizados.empty:
 
-    hist = df_finalizados.copy()
+    df_hist = df_finalizados.copy()
 
-    hist["inicio"] = hist["inicio"].dt.date
-    hist["fim"] = hist["fim"].dt.date
-    hist["prazo_limite"] = hist["prazo_limite"].dt.date
-    hist["data_finalizado"] = hist["data_finalizado"].dt.date
+    df_hist["inicio"] = df_hist["inicio"].dt.date
+    df_hist["fim"] = df_hist["fim"].dt.date
+    df_hist["prazo_limite"] = df_hist["prazo_limite"].dt.date
+    df_hist["data_finalizado"] = df_hist["data_finalizado"].dt.date
 
     st.dataframe(
-
-        hist[
+        df_hist[
             [
                 "produto",
                 "operador",
@@ -510,12 +772,9 @@ if not df_finalizados.empty:
                 "data_finalizado"
             ]
         ],
-
         use_container_width=True
     )
 
 else:
 
-    st.info(
-        "Nenhuma finalizada"
-    )
+    st.info("Nenhuma finalizada")
