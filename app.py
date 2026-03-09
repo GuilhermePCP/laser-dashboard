@@ -1,42 +1,38 @@
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 import streamlit as st
 import pandas as pd
 import base64
-from datetime import datetime
-from PIL import Image
-import fitz
 import io
+import fitz
+from PIL import Image
+from datetime import datetime
+from sqlalchemy import text
 
-from src.analytics import calcular_metricas, filtrar_dados
-from src.visuals import grafico_gantt
 from src.database import (
+    engine,
     criar_tabela,
     carregar_dados,
     salvar_programacao,
     carregar_operadores,
     adicionar_operador,
-    remover_operador,
-    finalizar_programacao,
-    engine
+    remover_operador
 )
 
-from sqlalchemy import text
+from src.analytics import calcular_metricas, filtrar_dados
+from src.visuals import grafico_gantt
 
-# -------------------------------------------------
+
+# ------------------------------------------------
 # CONFIGURAÇÃO DA PÁGINA
-# -------------------------------------------------
+# ------------------------------------------------
 
 st.set_page_config(
     page_title="Programação Laser",
     layout="wide"
 )
 
-# -------------------------------------------------
-# INICIALIZAR SESSION STATE
-# -------------------------------------------------
+# ------------------------------------------------
+# SESSION STATE
+# ------------------------------------------------
 
 if "logado" not in st.session_state:
     st.session_state.logado = False
@@ -47,32 +43,28 @@ if "usuario" not in st.session_state:
 if "nivel" not in st.session_state:
     st.session_state.nivel = None
 
-# -------------------------------------------------
-# SISTEMA DE LOGIN
-# -------------------------------------------------
+
+# ------------------------------------------------
+# LOGIN
+# ------------------------------------------------
 
 def verificar_login(usuario, senha):
 
-    try:
+    query = """
+    SELECT usuario, senha, nivel
+    FROM usuarios
+    WHERE usuario = :usuario
+    AND senha = :senha
+    """
 
-        query = """
-        SELECT usuario, senha, nivel
-        FROM usuarios
-        WHERE usuario = :usuario
-        AND senha = :senha
-        """
+    with engine.begin() as conn:
 
-        with engine.begin() as conn:
+        result = conn.execute(
+            text(query),
+            {"usuario": usuario, "senha": senha}
+        ).fetchone()
 
-            result = conn.execute(
-                text(query),
-                {"usuario": usuario, "senha": senha}
-            ).fetchone()
-
-        return result
-
-    except:
-        return None
+    return result
 
 
 if not st.session_state.logado:
@@ -100,27 +92,33 @@ if not st.session_state.logado:
 
     st.stop()
 
-# -------------------------------------------------
+
+# ------------------------------------------------
 # PERMISSÕES
-# -------------------------------------------------
+# ------------------------------------------------
 
 is_admin = st.session_state.nivel == "admin"
 is_pcp = st.session_state.nivel == "pcp"
 is_operador = st.session_state.nivel == "operador"
 
-# -------------------------------------------------
-# CRIAR TABELA
-# -------------------------------------------------
+
+# ------------------------------------------------
+# BANCO
+# ------------------------------------------------
 
 criar_tabela()
 
-# -------------------------------------------------
+
+# ------------------------------------------------
 # CARREGAR DADOS
-# -------------------------------------------------
+# ------------------------------------------------
 
 def carregar():
 
     df = carregar_dados()
+
+    if df.empty:
+        return df
 
     df.columns = (
         df.columns
@@ -129,30 +127,38 @@ def carregar():
         .str.replace(" ", "_")
     )
 
-    datas = ["inicio", "fim", "prazo_limite", "data_finalizado"]
+    datas = [
+        "inicio",
+        "fim",
+        "prazo_limite",
+        "data_finalizado"
+    ]
 
     for col in datas:
+
         if col in df.columns:
-            df[col] = pd.to_datetime(df[col], errors="coerce")
+
+            df[col] = pd.to_datetime(
+                df[col],
+                errors="coerce"
+            )
 
     return df
 
 
 df = carregar()
 
-# -------------------------------------------------
+
+# ------------------------------------------------
 # SIDEBAR
-# -------------------------------------------------
+# ------------------------------------------------
 
-st.sidebar.image("assets/logo2.png", use_container_width=True)
-
-st.sidebar.markdown("---")
-
-st.sidebar.markdown("### 👤 Usuário logado")
-st.sidebar.write(f"**Nome:** {st.session_state.usuario}")
-st.sidebar.write(f"**Função:** {st.session_state.nivel.upper()}")
+st.sidebar.title("Programação Laser")
 
 st.sidebar.markdown("---")
+
+st.sidebar.write("👤 **Usuário:**", st.session_state.usuario)
+st.sidebar.write("🔑 **Perfil:**", st.session_state.nivel.upper())
 
 if st.sidebar.button("🚪 Sair"):
 
@@ -162,52 +168,16 @@ if st.sidebar.button("🚪 Sair"):
 
     st.rerun()
 
-# -------------------------------------------------
-# FOOTER
-# -------------------------------------------------
+st.sidebar.markdown("---")
 
-def get_base64_image(path):
-    with open(path, "rb") as img:
-        return base64.b64encode(img.read()).decode()
 
-logo = get_base64_image("assets/logo2.png")
-
-st.markdown(f"""
-<style>
-.footer {{
-position: fixed;
-bottom: 15px;
-right: 20px;
-display: flex;
-align-items: center;
-gap: 10px;
-background: rgba(20,20,20,0.8);
-padding: 8px 12px;
-border-radius: 10px;
-font-size:12px;
-}}
-
-.footer img {{
-height:32px;
-}}
-</style>
-
-<div class="footer">
-<img src="data:image/png;base64,{logo}">
-<div>
-<b>Guilherme Luiz</b><br>
-Auxiliar PCP
-</div>
-</div>
-""", unsafe_allow_html=True)
-
-# -------------------------------------------------
+# ------------------------------------------------
 # NOVA PROGRAMAÇÃO
-# -------------------------------------------------
+# ------------------------------------------------
 
-if st.session_state.nivel in ["admin", "pcp"]:
+if is_admin or is_pcp:
 
-    st.sidebar.subheader("➕ Nova Programação")
+    st.sidebar.subheader("Nova programação")
 
     with st.sidebar.form("nova_op"):
 
@@ -215,15 +185,16 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
         operador = st.selectbox(
             "Operador",
-            operadores["nome"] if not operadores.empty else []
+            operadores["nome"]
+            if not operadores.empty
+            else []
         )
 
         produto = st.text_input("Produto")
 
         quantidade = st.number_input(
             "Quantidade",
-            min_value=1,
-            step=1
+            min_value=1
         )
 
         inicio = st.date_input("Início")
@@ -232,11 +203,15 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
         status = st.selectbox(
             "Status",
-            ["Programado", "Em produção", "Finalizado"]
+            [
+                "Programado",
+                "Em produção",
+                "Finalizado"
+            ]
         )
 
         desenho = st.file_uploader(
-            "Desenho da peça (PNG, JPG ou PDF)",
+            "Desenho",
             type=["png", "jpg", "jpeg", "pdf"]
         )
 
@@ -247,31 +222,49 @@ if st.session_state.nivel in ["admin", "pcp"]:
             nome_arquivo = None
             desenho_bytes = None
 
-            if desenho is not None:
+            if desenho:
 
                 timestamp = datetime.now().timestamp()
 
                 if desenho.type == "application/pdf":
 
-                    pdf = fitz.open(stream=desenho.read(), filetype="pdf")
+                    pdf = fitz.open(
+                        stream=desenho.read(),
+                        filetype="pdf"
+                    )
+
                     pagina = pdf.load_page(0)
                     pix = pagina.get_pixmap()
 
                     img_bytes = pix.tobytes("png")
-                    img = Image.open(io.BytesIO(img_bytes))
+
+                    img = Image.open(
+                        io.BytesIO(img_bytes)
+                    )
 
                     buffer = io.BytesIO()
-                    img.save(buffer, format="JPEG")
+
+                    img.save(
+                        buffer,
+                        format="JPEG"
+                    )
 
                     desenho_bytes = buffer.getvalue()
-                    nome_arquivo = f"{produto}_{timestamp}.jpg"
+
+                    nome_arquivo = (
+                        f"{produto}_{timestamp}.jpg"
+                    )
 
                 else:
 
                     desenho_bytes = desenho.read()
-                    nome_arquivo = f"{produto}_{timestamp}.png"
+
+                    nome_arquivo = (
+                        f"{produto}_{timestamp}.png"
+                    )
 
             nova = dict(
+
                 produto=produto,
                 quantidade=quantidade,
                 operador=operador,
@@ -287,22 +280,32 @@ if st.session_state.nivel in ["admin", "pcp"]:
             salvar_programacao(nova)
 
             st.success("Programação criada")
+
             st.rerun()
 
-# -------------------------------------------------
+
+# ------------------------------------------------
 # GERENCIAR OPERADORES
-# -------------------------------------------------
+# ------------------------------------------------
 
 if is_admin or is_pcp:
 
-    st.sidebar.divider()
-    st.sidebar.subheader("⚙️ Operadores")
+    st.sidebar.markdown("---")
 
-    novo = st.sidebar.text_input("Novo operador")
+    st.sidebar.subheader("Operadores")
 
-    if st.sidebar.button("Adicionar operador"):
+    novo = st.sidebar.text_input(
+        "Novo operador"
+    )
+
+    if st.sidebar.button(
+        "Adicionar operador"
+    ):
+
         if novo:
+
             adicionar_operador(novo)
+
             st.rerun()
 
     ops = carregar_operadores()
@@ -314,140 +317,190 @@ if is_admin or is_pcp:
             ops["nome"]
         )
 
-        if st.sidebar.button("Remover operador"):
+        if st.sidebar.button(
+            "Remover operador"
+        ):
+
             remover_operador(remover)
+
             st.rerun()
 
-# -------------------------------------------------
-# FILTROS
-# -------------------------------------------------
 
-st.sidebar.divider()
+# ------------------------------------------------
+# FILTROS
+# ------------------------------------------------
+
+st.sidebar.markdown("---")
+
 st.sidebar.subheader("Filtros")
 
 maquina = st.sidebar.selectbox(
+
     "Operador",
-    ["Todas"] + list(df["operador"].dropna().unique())
+
+    ["Todos"]
+    + list(
+        df["operador"].dropna().unique()
+    )
+    if not df.empty
+    else ["Todos"]
 )
 
 status = st.sidebar.selectbox(
+
     "Status",
-    ["Todos"] + list(df["status"].dropna().unique())
+
+    ["Todos"]
+    + list(
+        df["status"].dropna().unique()
+    )
+    if not df.empty
+    else ["Todos"]
 )
 
-df_filtrado = filtrar_dados(df, maquina, status)
 
-df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
-df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
+df_filtrado = filtrar_dados(
+    df,
+    maquina,
+    status
+)
 
-# -------------------------------------------------
-# KPIs
-# -------------------------------------------------
+
+# ------------------------------------------------
+# MÉTRICAS
+# ------------------------------------------------
 
 metricas = calcular_metricas(df_filtrado)
 
 c1, c2, c3 = st.columns(3)
 
-c1.metric("Total OPs", metricas["total_ops"])
-c2.metric("Operadores ativos", metricas["maquinas_ocupadas"])
-c3.metric("Próxima máquina", metricas["proxima_maquina"])
+c1.metric(
+    "Total OPs",
+    metricas["total_ops"]
+)
+
+c2.metric(
+    "Operadores ativos",
+    metricas["maquinas_ocupadas"]
+)
+
+c3.metric(
+    "Próxima máquina",
+    metricas["proxima_maquina"]
+)
+
 
 st.divider()
 
-# -------------------------------------------------
-# TABELA DE FABRICAÇÃO
-# -------------------------------------------------
 
-st.subheader("Sequência de fabricação")
+# ------------------------------------------------
+# TABELA
+# ------------------------------------------------
 
-df_tabela = df_ativos.copy()
+st.subheader("Programação")
 
-if not df_tabela.empty:
+df_ativos = df_filtrado[
+    df_filtrado["status"]
+    != "Finalizado"
+]
 
-    operadores = df_tabela["operador"].unique()
-    abas = st.tabs(list(operadores))
+if not df_ativos.empty:
 
-    for i, operador in enumerate(operadores):
+    tabela = df_ativos.copy()
 
-        with abas[i]:
+    if is_operador:
 
-            df_operador = df_tabela[df_tabela["operador"] == operador].copy()
-            df_operador = df_operador.reset_index(drop=True)
-
-            colunas_base = [
-                "id",
+        tabela = tabela[
+            [
                 "produto",
                 "quantidade",
                 "operador",
                 "status"
             ]
+        ]
 
-            colunas_data = [
+    else:
+
+        tabela = tabela[
+            [
+                "produto",
+                "quantidade",
+                "operador",
                 "inicio",
                 "fim",
-                "prazo_limite"
+                "prazo_limite",
+                "status"
             ]
+        ]
 
-            if st.session_state.nivel in ["admin", "pcp"]:
-                df_operador = df_operador[colunas_base + colunas_data]
-            else:
-                df_operador = df_operador[colunas_base]
-
-            tabela = st.dataframe(
-                df_operador,
-                use_container_width=True,
-                hide_index=True
-            )
+    st.dataframe(
+        tabela,
+        use_container_width=True,
+        hide_index=True
+    )
 
 else:
 
-    st.info("Nenhuma programação ativa")
+    st.info(
+        "Nenhuma programação ativa"
+    )
 
-# -------------------------------------------------
+
+# ------------------------------------------------
 # GANTT
-# -------------------------------------------------
+# ------------------------------------------------
 
 st.divider()
 
-df_grafico = df_ativos.copy()
+if not df_ativos.empty:
 
-if not df_grafico.empty:
+    df_grafico = df_ativos.copy()
 
-    df_grafico["inicio"] = pd.to_datetime(df_grafico["inicio"])
-    df_grafico["fim"] = pd.to_datetime(df_grafico["fim"])
+    cores = {
 
-    cores_status = {
         "Programado": "#f1c40f",
         "Em produção": "#2ecc71",
-        "Parado": "#e67e22",
         "Finalizado": "#95a5a6"
     }
 
     fig = grafico_gantt(
-        df_grafico.sort_values("inicio"),
-        cores_status
+        df_grafico,
+        cores
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
 
-# -------------------------------------------------
+
+# ------------------------------------------------
 # HISTÓRICO
-# -------------------------------------------------
+# ------------------------------------------------
 
 st.divider()
-st.subheader("Programações finalizadas")
+
+st.subheader(
+    "Histórico"
+)
+
+df_finalizados = df_filtrado[
+    df_filtrado["status"]
+    == "Finalizado"
+]
 
 if not df_finalizados.empty:
 
-    df_hist = df_finalizados.copy()
+    hist = df_finalizados.copy()
 
-    df_hist["inicio"] = df_hist["inicio"].dt.date
-    df_hist["fim"] = df_hist["fim"].dt.date
-    df_hist["prazo_limite"] = df_hist["prazo_limite"].dt.date
-    df_hist["data_finalizado"] = df_hist["data_finalizado"].dt.date
+    hist["inicio"] = hist["inicio"].dt.date
+    hist["fim"] = hist["fim"].dt.date
+    hist["prazo_limite"] = hist["prazo_limite"].dt.date
+    hist["data_finalizado"] = hist["data_finalizado"].dt.date
 
     st.dataframe(
-        df_hist[
+
+        hist[
             [
                 "produto",
                 "operador",
@@ -457,9 +510,12 @@ if not df_finalizados.empty:
                 "data_finalizado"
             ]
         ],
+
         use_container_width=True
     )
 
 else:
 
-    st.info("Nenhuma finalizada")
+    st.info(
+        "Nenhuma finalizada"
+    )
