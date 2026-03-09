@@ -276,7 +276,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
             "quantidade": [quantidade],
             "inicio": [inicio],
             "fim": [fim],
-            "prazo": [prazo],
+            "prazo_limite": [prazo],
             "status": [status],
             "desenho": [desenho_bytes],
             "nome_arquivo": [nome_arquivo]
