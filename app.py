@@ -48,15 +48,17 @@ def criar_tabela_usuarios():
     )
     """
 
-    with engine.connect() as conn:
+    # cria tabela
+    with engine.begin() as conn:
         conn.execute(text(query))
-        conn.commit()
 
-    query_check = "SELECT COUNT(*) as total FROM usuarios"
+    # verifica se existe usuário
+    query_check = "SELECT COUNT(*) FROM usuarios"
 
-    with engine.connect() as conn:
-        total = conn.execute(text(query_check)).fetchone()[0]
+    with engine.begin() as conn:
+        total = conn.execute(text(query_check)).scalar()
 
+    # cria usuário padrão se não existir
     if total == 0:
 
         query_insert = """
@@ -64,9 +66,8 @@ def criar_tabela_usuarios():
         VALUES ('admin','admin123')
         """
 
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             conn.execute(text(query_insert))
-            conn.commit()
 
 
 def verificar_login(usuario, senha):
@@ -77,7 +78,7 @@ def verificar_login(usuario, senha):
     AND senha = :senha
     """
 
-    with engine.connect() as conn:
+    with engine.begin() as conn:
 
         result = conn.execute(
             text(query),
