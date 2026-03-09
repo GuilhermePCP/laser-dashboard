@@ -34,6 +34,10 @@ st.set_page_config(
     layout="wide"
 )
 
+is_admin = st.session_state.nivel == "admin"
+is_pcp = st.session_state.nivel == "pcp"
+is_operador = st.session_state.nivel == "operador"
+
 # -------------------------------------------------
 # SISTEMA DE LOGIN
 # -------------------------------------------------
@@ -126,6 +130,22 @@ def carregar():
 
 
 df = carregar()
+
+# -------------------------------------------------
+# USUÁRIO LOGADO
+# -------------------------------------------------
+
+st.sidebar.image("logo.png", use_container_width=True)
+
+st.sidebar.markdown("---")
+
+st.sidebar.markdown("### 👤 Usuário logado")
+
+st.sidebar.write(f"**Nome:** {st.session_state.usuario}")
+
+st.sidebar.write(f"**Função:** {st.session_state.nivel.upper()}")
+
+st.sidebar.markdown("---")
 
 # -------------------------------------------------
 # BOTÃO LOGOUT
