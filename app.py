@@ -22,8 +22,9 @@ from src.database import (
 )
 
 from sqlalchemy import text
-from pdf2image import convert_from_bytes
+import fitz  # PyMuPDF
 from PIL import Image
+import io
 
 # -------------------------------------------------
 # CONFIGURAÇÃO DA PÁGINA
@@ -163,9 +164,15 @@ with st.sidebar.form("nova_op"):
 
             if desenho.type == "application/pdf":
 
-                imagens = convert_from_bytes(desenho.read())
+                pdf = fitz.open(stream=desenho.read(), filetype="pdf")
 
-                img = imagens[0]  # pega a primeira página
+                pagina = pdf.load_page(0)
+
+                pix = pagina.get_pixmap()
+
+                img_bytes = pix.tobytes("png")
+
+                img = Image.open(io.BytesIO(img_bytes))
 
                 nome_arquivo = f"{produto}_{timestamp}.jpg"
 
