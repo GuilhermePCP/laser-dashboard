@@ -7,6 +7,8 @@ import pandas as pd
 import base64
 from datetime import datetime
 from PIL import Image
+import fitz
+import io
 
 from src.analytics import calcular_metricas, filtrar_dados
 from src.visuals import grafico_gantt
@@ -22,8 +24,6 @@ from src.database import (
 )
 
 from sqlalchemy import text
-import fitz
-import io
 
 # -------------------------------------------------
 # CONFIGURAÇÃO DA PÁGINA
@@ -34,9 +34,18 @@ st.set_page_config(
     layout="wide"
 )
 
-is_admin = st.session_state.nivel == "admin"
-is_pcp = st.session_state.nivel == "pcp"
-is_operador = st.session_state.nivel == "operador"
+# -------------------------------------------------
+# INICIALIZAR SESSION STATE
+# -------------------------------------------------
+
+if "logado" not in st.session_state:
+    st.session_state.logado = False
+
+if "usuario" not in st.session_state:
+    st.session_state.usuario = None
+
+if "nivel" not in st.session_state:
+    st.session_state.nivel = None
 
 # -------------------------------------------------
 # SISTEMA DE LOGIN
@@ -66,15 +75,6 @@ def verificar_login(usuario, senha):
         return None
 
 
-# estado da sessão
-if "logado" not in st.session_state:
-    st.session_state.logado = False
-
-if "nivel" not in st.session_state:
-    st.session_state.nivel = None
-
-
-# tela de login
 if not st.session_state.logado:
 
     st.title("🔐 Login do Sistema")
@@ -101,16 +101,25 @@ if not st.session_state.logado:
     st.stop()
 
 # -------------------------------------------------
+# PERMISSÕES
+# -------------------------------------------------
+
+is_admin = st.session_state.nivel == "admin"
+is_pcp = st.session_state.nivel == "pcp"
+is_operador = st.session_state.nivel == "operador"
+
+# -------------------------------------------------
 # CRIAR TABELA
 # -------------------------------------------------
 
 criar_tabela()
 
 # -------------------------------------------------
-# FUNÇÃO CARREGAR DADOS
+# CARREGAR DADOS
 # -------------------------------------------------
 
 def carregar():
+
     df = carregar_dados()
 
     df.columns = (
@@ -132,7 +141,7 @@ def carregar():
 df = carregar()
 
 # -------------------------------------------------
-# USUÁRIO LOGADO
+# SIDEBAR
 # -------------------------------------------------
 
 st.sidebar.image("assets/logo2.png", use_container_width=True)
@@ -140,19 +149,17 @@ st.sidebar.image("assets/logo2.png", use_container_width=True)
 st.sidebar.markdown("---")
 
 st.sidebar.markdown("### 👤 Usuário logado")
-
 st.sidebar.write(f"**Nome:** {st.session_state.usuario}")
-
 st.sidebar.write(f"**Função:** {st.session_state.nivel.upper()}")
 
 st.sidebar.markdown("---")
 
-# -------------------------------------------------
-# BOTÃO LOGOUT
-# -------------------------------------------------
-
 if st.sidebar.button("🚪 Sair"):
+
     st.session_state.logado = False
+    st.session_state.usuario = None
+    st.session_state.nivel = None
+
     st.rerun()
 
 # -------------------------------------------------
@@ -195,7 +202,7 @@ Auxiliar PCP
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------
-# SIDEBAR NOVA PROGRAMAÇÃO
+# NOVA PROGRAMAÇÃO
 # -------------------------------------------------
 
 if st.session_state.nivel in ["admin", "pcp"]:
@@ -225,53 +232,68 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
         status = st.selectbox(
             "Status",
-            ["Programado","Em produção","Finalizado"]
+            ["Programado", "Em produção", "Finalizado"]
         )
 
         desenho = st.file_uploader(
             "Desenho da peça (PNG, JPG ou PDF)",
-            type=["png","jpg","jpeg","pdf"]
+            type=["png", "jpg", "jpeg", "pdf"]
         )
 
-salvar = st.form_submit_button("Salvar")
+        salvar = st.form_submit_button("Salvar")
 
-if salvar:
+        if salvar:
 
-    nome_arquivo = None
-    desenho_bytes = None
+            nome_arquivo = None
+            desenho_bytes = None
 
-    if desenho is not None:
+            if desenho is not None:
 
-        timestamp = datetime.now().timestamp()
+                timestamp = datetime.now().timestamp()
 
-        if desenho.type == "application/pdf":
+                if desenho.type == "application/pdf":
 
-            pdf = fitz.open(stream=desenho.read(), filetype="pdf")
-            pagina = pdf.load_page(0)
-            pix = pagina.get_pixmap()
+                    pdf = fitz.open(stream=desenho.read(), filetype="pdf")
+                    pagina = pdf.load_page(0)
+                    pix = pagina.get_pixmap()
 
-            img_bytes = pix.tobytes("png")
-            img = Image.open(io.BytesIO(img_bytes))
+                    img_bytes = pix.tobytes("png")
+                    img = Image.open(io.BytesIO(img_bytes))
 
-            buffer = io.BytesIO()
-            img.save(buffer, format="JPEG")
+                    buffer = io.BytesIO()
+                    img.save(buffer, format="JPEG")
 
-            desenho_bytes = buffer.getvalue()
-            nome_arquivo = f"{produto}_{timestamp}.jpg"
+                    desenho_bytes = buffer.getvalue()
+                    nome_arquivo = f"{produto}_{timestamp}.jpg"
 
-        else:
+                else:
 
-            desenho_bytes = desenho.read()
-            nome_arquivo = f"{produto}_{timestamp}.png"
+                    desenho_bytes = desenho.read()
+                    nome_arquivo = f"{produto}_{timestamp}.png"
+
+            nova = dict(
+                produto=produto,
+                quantidade=quantidade,
+                operador=operador,
+                inicio=str(inicio),
+                fim=str(fim),
+                prazo_limite=str(prazo),
+                status=status,
+                desenho=desenho_bytes,
+                nome_desenho=nome_arquivo,
+                data_finalizado=None
+            )
 
             salvar_programacao(nova)
 
             st.success("Programação criada")
             st.rerun()
 
-    # -------------------------------------------------
-    # GERENCIAR OPERADORES
-    # -------------------------------------------------
+# -------------------------------------------------
+# GERENCIAR OPERADORES
+# -------------------------------------------------
+
+if is_admin or is_pcp:
 
     st.sidebar.divider()
     st.sidebar.subheader("⚙️ Operadores")
@@ -296,28 +318,22 @@ if salvar:
             remover_operador(remover)
             st.rerun()
 
-    # -------------------------------------------------
-    # FILTROS
-    # -------------------------------------------------
+# -------------------------------------------------
+# FILTROS
+# -------------------------------------------------
 
-    st.sidebar.divider()
-    st.sidebar.subheader("Filtros")
+st.sidebar.divider()
+st.sidebar.subheader("Filtros")
 
-    maquina = st.sidebar.selectbox(
-        "Operador",
-        ["Todas"] + list(df["operador"].dropna().unique())
-    )
+maquina = st.sidebar.selectbox(
+    "Operador",
+    ["Todas"] + list(df["operador"].dropna().unique())
+)
 
-    status = st.sidebar.selectbox(
-        "Status",
-        ["Todos"] + list(df["status"].dropna().unique())
-    )
-
-else:
-
-    # operador ainda consegue usar filtros simples
-    maquina = "Todas"
-    status = "Todos"
+status = st.sidebar.selectbox(
+    "Status",
+    ["Todos"] + list(df["status"].dropna().unique())
+)
 
 df_filtrado = filtrar_dados(df, maquina, status)
 
@@ -330,7 +346,7 @@ df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
 
 metricas = calcular_metricas(df_filtrado)
 
-c1,c2,c3 = st.columns(3)
+c1, c2, c3 = st.columns(3)
 
 c1.metric("Total OPs", metricas["total_ops"])
 c2.metric("Operadores ativos", metricas["maquinas_ocupadas"])
@@ -348,12 +364,7 @@ df_tabela = df_ativos.copy()
 
 if not df_tabela.empty:
 
-    df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"], errors="coerce")
-    df_tabela["fim"] = pd.to_datetime(df_tabela["fim"], errors="coerce")
-    df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"], errors="coerce")
-
     operadores = df_tabela["operador"].unique()
-
     abas = st.tabs(list(operadores))
 
     for i, operador in enumerate(operadores):
@@ -363,314 +374,30 @@ if not df_tabela.empty:
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
             df_operador = df_operador.reset_index(drop=True)
 
-            desenhos = df_operador["desenho"]
-            df_operador = df_operador.drop(columns=["desenho"], errors="ignore")
-
-            # -------------------------
-            # CONTROLE DE COLUNAS POR NÍVEL
-            # -------------------------
-
             colunas_base = [
                 "id",
                 "produto",
                 "quantidade",
                 "operador",
-                "status",
+                "status"
             ]
 
             colunas_data = [
                 "inicio",
                 "fim",
-                "prazo_limite",
+                "prazo_limite"
             ]
-
-            if "nivel" not in st.session_state:
-                st.session_state.nivel = None
 
             if st.session_state.nivel in ["admin", "pcp"]:
                 df_operador = df_operador[colunas_base + colunas_data]
             else:
                 df_operador = df_operador[colunas_base]
 
-            # -------------------------
-
-            if "inicio" in df_operador.columns:
-                df_operador["inicio"] = pd.to_datetime(
-                    df_operador["inicio"], errors="coerce"
-                ).dt.strftime("%d/%m/%Y")
-
-            if "fim" in df_operador.columns:
-                df_operador["fim"] = pd.to_datetime(
-                    df_operador["fim"], errors="coerce"
-                ).dt.strftime("%d/%m/%Y")
-
-            if "prazo_limite" in df_operador.columns:
-                df_operador["prazo_limite"] = pd.to_datetime(
-                    df_operador["prazo_limite"], errors="coerce"
-    ).dt.strftime("%d/%m/%Y")
-
-            # -------------------------
-            # STATUS COM ÍCONE
-            # -------------------------
-
-            def icone_status(status):
-
-                if status == "Programado":
-                    return "🟡 Programado"
-
-                elif status == "Em produção":
-                    return "🟢 Em produção"
-
-                elif status == "Finalizado":
-                    return "🔵 Finalizado"
-
-                elif status == "Atrasado":
-                    return "🔴 Atrasado"
-
-                elif status == "Parado":
-                    return "🟠 Parado"
-
-                return status
-
-            df_operador["status"] = df_operador["status"].apply(icone_status)
-
-            # -------------------------
-            # TABELA
-            # -------------------------
-
             tabela = st.dataframe(
                 df_operador,
                 use_container_width=True,
-                selection_mode="single-row",
-                on_select="rerun",
                 hide_index=True
             )
-
-            # -------------------------
-            # SELEÇÃO DA OP
-            # -------------------------
-
-            if tabela["selection"]["rows"]:
-
-                index = tabela["selection"]["rows"][0]
-
-                linha = df_tabela[df_tabela["operador"] == operador].iloc[index]
-                nome_img = desenhos.iloc[index]
-
-                col1, col2 = st.columns([2,1])
-
-                # -------------------------
-                # IMAGEM
-                # -------------------------
-
-                with col1:
-
-                    if nome_img:
-
-                        caminho_img = os.path.join("desenhos", nome_img)
-
-                        if os.path.exists(caminho_img):
-
-                            st.markdown(f"### 🖼️ Desenho da peça — {linha['produto']}")
-
-                            st.image(
-                                caminho_img,
-                                use_container_width=True
-                            )
-
-                        else:
-                            st.warning("Imagem não encontrada")
-
-                    else:
-                        st.info("Essa OP não possui desenho")
-
-                # -------------------------
-                # CONTROLE DA PRODUÇÃO
-                # -------------------------
-
-                with col2:
-
-                    st.markdown("### ⚙ Controle da OP")
-
-                    st.write(f"**Produto:** {linha['produto']}")
-                    st.write(f"**Quantidade:** {linha['quantidade']}")
-                    st.write(f"**Operador:** {linha['operador']}")
-                    st.write(f"**Status:** {linha['status']}")
-
-                    status = linha["status"]
-
-                    # -------------------------
-                    # BOTÕES DE PRODUÇÃO
-                    # -------------------------
-
-                    if status == "Programado":
-
-                        if st.button(
-                            "▶ Iniciar produção",
-                            use_container_width=True,
-                            key=f"iniciar_{operador}_{linha['id']}"
-                        ):
-
-                            query = """
-                            UPDATE programacao
-                            SET status = :status
-                            WHERE id = :id
-                            """
-
-                            with engine.begin() as conn:
-                                conn.execute(
-                                    text(query),
-                                    {
-                                        "status": "Em produção",
-                                        "id": int(linha["id"])
-                                    }
-                                )
-                                conn.commit()
-
-                            st.success("Produção iniciada")
-                            st.rerun()
-
-                    elif status == "Em produção":
-
-                        b1, b2 = st.columns(2)
-
-                        with b1:
-
-                            if st.button(
-                                "⏸ Pausar",
-                                use_container_width=True,
-                                key=f"pausar_{operador}_{linha['id']}"
-                            ):
-
-                                query = """
-                                UPDATE programacao
-                                SET status = :status
-                                WHERE id = :id
-                                """
-
-                                with engine.begin() as conn:
-                                    conn.execute(
-                                        text(query),
-                                        {
-                                            "status": "Parado",
-                                            "id": int(linha["id"])
-                                        }
-                                    )
-                                    conn.commit()
-
-                                st.warning("Produção pausada")
-                                st.rerun()
-
-                        with b2:
-
-                            if st.button(
-                                "✔ Finalizar",
-                                use_container_width=True,
-                                key=f"finalizar_{operador}_{linha['id']}"
-                            ):
-
-                                query = """
-                                UPDATE programacao
-                                SET status = :status,
-                                    data_finalizado = :data
-                                WHERE id = :id
-                                """
-
-                                with engine.begin() as conn:
-                                    conn.execute(
-                                        text(query),
-                                        {
-                                            "status": "Finalizado",
-                                            "data": datetime.now(),
-                                            "id": int(linha["id"])
-                                        }
-                                    )
-                                    conn.commit()
-
-                                st.success("Produção finalizada")
-                                st.rerun()
-
-                    elif status == "Parado":
-
-                        if st.button(
-                            "▶ Retomar produção",
-                            use_container_width=True,
-                            key=f"retomar_{operador}_{linha['id']}"
-                        ):
-
-                            query = """
-                            UPDATE programacao
-                            SET status = :status
-                            WHERE id = :id
-                            """
-
-                            with engine.begin() as conn:
-                                conn.execute(
-                                    text(query),
-                                    {
-                                        "status": "Em produção",
-                                        "id": int(linha["id"])
-                                    }
-                                )
-                                conn.commit()
-
-                            st.success("Produção retomada")
-                            st.rerun()
-
-                    # -------------------------
-                    # AJUSTE DE CRONOGRAMA
-                    # -------------------------
-
-                    if st.session_state.nivel in ["admin", "pcp"]:
-
-                        with st.expander("📅 Ajustar cronograma"):
-
-                            nova_inicio = st.date_input(
-                                "Início",
-                                pd.to_datetime(linha["inicio"]),
-                                key=f"inicio_{operador}_{linha['id']}"
-                            )
-
-                            novo_fim = st.date_input(
-                                "Fim",
-                                pd.to_datetime(linha["fim"]),
-                                key=f"fim_{operador}_{linha['id']}"
-                            )
-
-                            novo_prazo = st.date_input(
-                                "Prazo limite",
-                                pd.to_datetime(linha["prazo_limite"]),
-                                key=f"prazo_{operador}_{linha['id']}"
-                            )
-
-                            if st.button(
-                                "💾 Salvar datas",
-                                use_container_width=True,
-                                key=f"salvar_datas_{operador}_{linha['id']}"
-                            ):
-
-                                query = """
-                                UPDATE programacao
-                                SET inicio = :inicio,
-                                    fim = :fim,
-                                    prazo_limite = :prazo
-                                WHERE id = :id
-                                """
-
-                                with engine.begin() as conn:
-                                    conn.execute(
-                                        text(query),
-                                        {
-                                            "inicio": nova_inicio,
-                                            "fim": novo_fim,
-                                            "prazo": novo_prazo,
-                                            "id": int(linha["id"])
-                                        }
-                                    )
-                                    conn.commit()
-
-                                st.success("Cronograma atualizado")
-                                st.rerun()
 
 else:
 
@@ -684,25 +411,24 @@ st.divider()
 
 df_grafico = df_ativos.copy()
 
-df_grafico["inicio"] = pd.to_datetime(df_grafico["inicio"])
-df_grafico["fim"] = pd.to_datetime(df_grafico["fim"])
+if not df_grafico.empty:
 
-# -------------------------
-# CORES DOS STATUS
-# -------------------------
+    df_grafico["inicio"] = pd.to_datetime(df_grafico["inicio"])
+    df_grafico["fim"] = pd.to_datetime(df_grafico["fim"])
 
-cores_status = {
-    "Programado": "#f1c40f",
-    "Em produção": "#2ecc71",
-    "Parado": "#e67e22",
-    "Finalizado": "#95a5a6"
-}
-fig = grafico_gantt(
-    df_grafico.sort_values("inicio"),
-    cores_status
-)
+    cores_status = {
+        "Programado": "#f1c40f",
+        "Em produção": "#2ecc71",
+        "Parado": "#e67e22",
+        "Finalizado": "#95a5a6"
+    }
 
-st.plotly_chart(fig, use_container_width=True)
+    fig = grafico_gantt(
+        df_grafico.sort_values("inicio"),
+        cores_status
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 # -------------------------------------------------
 # HISTÓRICO
