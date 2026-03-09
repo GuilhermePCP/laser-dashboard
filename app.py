@@ -34,10 +34,6 @@ st.set_page_config(
     layout="wide"
 )
 
-is_admin = st.session_state.nivel == "admin"
-is_pcp = st.session_state.nivel == "pcp"
-is_operador = st.session_state.nivel == "operador"
-
 # -------------------------------------------------
 # SISTEMA DE LOGIN
 # -------------------------------------------------
@@ -73,6 +69,9 @@ if "logado" not in st.session_state:
 if "nivel" not in st.session_state:
     st.session_state.nivel = None
 
+is_admin = st.session_state.nivel == "admin"
+is_pcp = st.session_state.nivel == "pcp"
+is_operador = st.session_state.nivel == "operador"
 
 # tela de login
 if not st.session_state.logado:
