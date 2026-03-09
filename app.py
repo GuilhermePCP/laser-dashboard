@@ -6,6 +6,7 @@ import fitz
 from PIL import Image
 from datetime import datetime
 from sqlalchemy import text
+import os
 
 from src.database import (
     engine,
@@ -147,6 +148,8 @@ def carregar():
 
 
 df = carregar()
+if df is None:
+    df = pd.DataFrame()
 
 
 # ------------------------------------------------
@@ -364,6 +367,17 @@ df_filtrado = filtrar_dados(
     maquina,
     status
 )
+
+# separar ativos e finalizados
+if df_filtrado is None or df_filtrado.empty:
+
+    df_ativos = pd.DataFrame()
+    df_finalizados = pd.DataFrame()
+
+else:
+
+    df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
+    df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
 
 # -------------------------------------------------
 # KPIs
@@ -723,27 +737,34 @@ else:
 
 st.divider()
 
-df_grafico = df_ativos.copy()
+df_grafico = df_ativos.copy() if not df_ativos.empty else pd.DataFrame()
 
-df_grafico["inicio"] = pd.to_datetime(df_grafico["inicio"])
-df_grafico["fim"] = pd.to_datetime(df_grafico["fim"])
+if not df_grafico.empty:
 
-# -------------------------
-# CORES DOS STATUS
-# -------------------------
+    df_grafico["inicio"] = pd.to_datetime(df_grafico["inicio"], errors="coerce")
+    df_grafico["fim"] = pd.to_datetime(df_grafico["fim"], errors="coerce")
 
-cores_status = {
-    "Programado": "#f1c40f",
-    "Em produção": "#2ecc71",
-    "Parado": "#e67e22",
-    "Finalizado": "#95a5a6"
-}
-fig = grafico_gantt(
-    df_grafico.sort_values("inicio"),
-    cores_status
-)
+    # -------------------------
+    # CORES DOS STATUS
+    # -------------------------
 
-st.plotly_chart(fig, use_container_width=True)
+    cores_status = {
+        "Programado": "#f1c40f",
+        "Em produção": "#2ecc71",
+        "Parado": "#e67e22",
+        "Finalizado": "#95a5a6"
+    }
+
+    fig = grafico_gantt(
+        df_grafico.sort_values("inicio"),
+        cores_status
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+else:
+
+    st.info("Nenhuma programação para exibir no Gantt")
 
 # -------------------------------------------------
 # HISTÓRICO
