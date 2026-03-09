@@ -270,19 +270,19 @@ if st.session_state.nivel in ["admin", "pcp"]:
                 nome_arquivo = f"{produto}_{timestamp}.png"
 
 
-        nova = {
-            "operador": operador,
-            "produto": produto,
-            "quantidade": quantidade,
-            "inicio": inicio,
-            "fim": fim,
-            "prazo": prazo,
-            "status": status,
-            "desenho": desenho_bytes,
-            "nome_arquivo": nome_arquivo
-        }
+        df_nova = pd.DataFrame({
+            "operador": [operador],
+            "produto": [produto],
+            "quantidade": [quantidade],
+            "inicio": [inicio],
+            "fim": [fim],
+            "prazo": [prazo],
+            "status": [status],
+            "desenho": [desenho_bytes],
+            "nome_arquivo": [nome_arquivo]
+        })
 
-        salvar_programacao(nova)
+        salvar_programacao(df_nova)
 
         st.success("Programação criada")
         st.rerun()
