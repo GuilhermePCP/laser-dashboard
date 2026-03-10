@@ -187,7 +187,7 @@ height:32px;
 <div class="footer">
 <img src="data:image/png;base64,{logo}">
 <div>
-<b>Guilherme Luiz</b><br>
+<b>Guilherme</b><br>
 Auxiliar PCP
 </div>
 </div>
