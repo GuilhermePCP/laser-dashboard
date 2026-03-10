@@ -206,36 +206,36 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     if salvar:
 
-    nome_arquivo = None
-    caminho_desenho = None
+        nome_arquivo = None
+        caminho_desenho = None
 
-    if desenho is not None:
+        if desenho is not None:
 
-        timestamp = int(datetime.now().timestamp())
-        extensao = desenho.name.split(".")[-1]
+            timestamp = int(datetime.now().timestamp())
+            extensao = desenho.name.split(".")[-1]
 
-        nome_arquivo = f"{produto}_{timestamp}.{extensao}"
-        caminho_desenho = os.path.join(UPLOAD_DIR, nome_arquivo)
+            nome_arquivo = f"{produto}_{timestamp}.{extensao}"
+            caminho_desenho = os.path.join(UPLOAD_DIR, nome_arquivo)
 
-        with open(caminho_desenho, "wb") as f:
-            f.write(desenho.read())
+            with open(caminho_desenho, "wb") as f:
+                f.write(desenho.read())
 
-        df_nova = pd.DataFrame({
-            "operador": [operador],
-            "produto": [produto],
-            "quantidade": [quantidade],
-            "inicio": [inicio],
-            "fim": [fim],
-            "prazo_limite": [prazo],
-            "status": [status],
-            "caminho_desenho": [caminho_desenho],
-            "nome_arquivo": [nome_arquivo]
-        })
+            df_nova = pd.DataFrame({
+                "operador": [operador],
+                "produto": [produto],
+                "quantidade": [quantidade],
+                "inicio": [inicio],
+                "fim": [fim],
+                "prazo_limite": [prazo],
+                "status": [status],
+                "caminho_desenho": [caminho_desenho],
+                "nome_arquivo": [nome_arquivo]
+            })
 
-        salvar_programacao(df_nova)
+            salvar_programacao(df_nova)
 
-        st.success("Programação criada")
-        st.rerun()
+            st.success("Programação criada")
+            st.rerun()
 
     # -------------------------------------------------
     # GERENCIAR OPERADORES
