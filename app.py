@@ -285,6 +285,8 @@ if st.session_state.nivel in ["admin", "pcp"]:
             "nome_arquivo": [nome_arquivo]
         })
 
+        st.write(df_nova)
+
         salvar_programacao(df_nova)
 
         st.success("Programação criada")
@@ -384,7 +386,7 @@ if not df_tabela.empty:
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
             df_operador = df_operador.reset_index(drop=True)
 
-            desenhos = df_operador["desenho"]
+            desenhos = df_operador["desenho"].copy()
             df_operador = df_operador.drop(columns=["desenho"], errors="ignore")
 
             # -------------------------
@@ -486,23 +488,19 @@ if not df_tabela.empty:
 
                 with col1:
 
-                    if nome_img:
+                    img_bytes = desenhos.iloc[index]
 
-                        caminho_img = os.path.join("desenhos", nome_img)
+                    if img_bytes:
 
-                        if os.path.exists(caminho_img):
+                        st.markdown(f"### 🖼️ Desenho da peça — {linha['produto']}")
 
-                            st.markdown(f"### 🖼️ Desenho da peça — {linha['produto']}")
-
-                            st.image(
-                                caminho_img,
-                                use_container_width=True
-                            )
-
-                        else:
-                            st.warning("Imagem não encontrada")
+                        st.image(
+                            img_bytes,
+                            use_container_width=True
+                        )
 
                     else:
+
                         st.info("Essa OP não possui desenho")
 
                 # -------------------------
