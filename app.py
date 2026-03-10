@@ -515,12 +515,24 @@ if not df_tabela.empty:
 
                 with col2:
 
-                    st.write(f"**Produto:** {linha['produto']}")
-                    st.write(f"**Quantidade:** {linha['quantidade']}")
-                    st.write(f"**Operador:** {linha['operador']}")
-                    st.write(f"**Status:** {linha['status']}")
-
                     status = linha["status"]
+
+                    with st.container(border=True):
+
+                        st.subheader("⚙ Controle da OP")
+
+                        st.write(f"**Produto:** {linha['produto']}")
+                        st.write(f"**Quantidade:** {linha['quantidade']}")
+                        st.write(f"**Operador:** {linha['operador']}")
+
+                        cores = {
+                            "Programado": "🟡 Programado",
+                            "Em produção": "🟢 Em produção",
+                            "Parado": "🟠 Parado",
+                            "Finalizado": "⚪ Finalizado"
+                        }
+
+                        st.write(f"**Status:** {cores.get(status, status)}")
 
                     # -------------------------
                     # BOTÕES DE PRODUÇÃO
