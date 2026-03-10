@@ -488,12 +488,19 @@ if not df_tabela.empty:
 
                 with col1:
 
-                    img_bytes = desenhos.iloc[index]
+                    img_data = desenhos.iloc[index]
 
-                    if img_bytes:
+                    if img_data:
 
-                        img_bytes = bytes(img_bytes)
+                        st.markdown(f"### 🖼️ Desenho da peça — {linha['produto']}")
 
+                        # converter para bytes se vier como memoryview
+                        if isinstance(img_data, memoryview):
+                            img_bytes = img_data.tobytes()
+                        else:
+                            img_bytes = img_data
+
+                        # detectar PDF
                         if img_bytes[:4] == b"%PDF":
 
                             import base64
