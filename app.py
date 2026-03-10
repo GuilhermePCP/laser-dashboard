@@ -7,6 +7,7 @@ import pandas as pd
 import base64
 from datetime import datetime
 from PIL import Image
+import io
 
 from src.analytics import calcular_metricas, filtrar_dados
 from src.visuals import grafico_gantt
@@ -492,35 +493,24 @@ if not df_tabela.empty:
 
                     if img_data:
 
-                        st.markdown(f"### 🖼️ Desenho da peça — {linha['produto']}")
-
-                        # converter para bytes se vier como memoryview
                         if isinstance(img_data, memoryview):
                             img_bytes = img_data.tobytes()
                         else:
                             img_bytes = img_data
 
-                        # detectar PDF
-                        if img_bytes[:4] == b"%PDF":
+                        try:
 
-                            import base64
+                            img = Image.open(io.BytesIO(img_bytes))
 
-                            base64_pdf = base64.b64encode(img_bytes).decode()
+                            st.image(img, use_container_width=True)
 
-                            pdf_display = f"""
-                            <iframe src="data:application/pdf;base64,{base64_pdf}"
-                            width="100%" height="600"></iframe>
-                            """
+                        except:
 
-                            st.markdown(pdf_display, unsafe_allow_html=True)
-
-                        else:
-
-                            st.image(img_bytes, use_container_width=True)
+                            st.warning("⚠️ Arquivo salvo não é uma imagem válida")
 
                     else:
 
-                        st.info("Essa OP não possui desenho")
+                        st.info("Sem desenho para essa OP")
 
                 # -------------------------
                 # CONTROLE DA PRODUÇÃO
