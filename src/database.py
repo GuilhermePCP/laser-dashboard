@@ -2,27 +2,9 @@ from sqlalchemy import create_engine, text
 import pandas as pd
 import streamlit as st
 from datetime import datetime
-from sqlalchemy import text
-
-def finalizar_programacao(id_programacao):
-    with engine.connect() as conn:
-        conn.execute(
-            text("""
-                UPDATE programacao
-                SET status = 'Finalizado',
-                    data_finalizado = :data_finalizado
-                WHERE id = :id
-            """),
-            {
-                "id": id_programacao,
-                "data_finalizado": datetime.now()
-            }
-        )
-        conn.commit()
-
 
 # ----------------------------
-# CONEXÃO COM O BANCO (SUPABASE)
+# CONEXÃO COM O BANCO
 # ----------------------------
 
 DATABASE_URL = st.secrets["DATABASE_URL"]
@@ -30,33 +12,35 @@ engine = create_engine(DATABASE_URL)
 
 
 # ----------------------------
-# CRIAR TABELAS (caso não existam)
+# CRIAR TABELAS
 # ----------------------------
 
 def criar_tabela():
-    with engine.connect() as conn:
+
+    with engine.begin() as conn:
 
         conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS programacao (
-                id SERIAL PRIMARY KEY,
-                produto TEXT,
-                inicio TIMESTAMP,
-                fim TIMESTAMP,
-                prazo_limite TIMESTAMP,
-                status TEXT,
-                operador TEXT,
-                data_finalizado TIMESTAMP
-            )
+        CREATE TABLE IF NOT EXISTS programacao (
+            id SERIAL PRIMARY KEY,
+            produto TEXT,
+            quantidade INTEGER,
+            operador TEXT,
+            inicio TIMESTAMP,
+            fim TIMESTAMP,
+            prazo_limite TIMESTAMP,
+            status TEXT,
+            desenho BYTEA,
+            nome_arquivo TEXT,
+            data_finalizado TIMESTAMP
+        )
         """))
 
         conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS operadores (
-                id SERIAL PRIMARY KEY,
-                nome TEXT UNIQUE
-            )
+        CREATE TABLE IF NOT EXISTS operadores (
+            id SERIAL PRIMARY KEY,
+            nome TEXT UNIQUE
+        )
         """))
-
-        conn.commit()
 
 
 # ----------------------------
@@ -64,7 +48,9 @@ def criar_tabela():
 # ----------------------------
 
 def carregar_dados():
+
     query = "SELECT * FROM programacao"
+
     return pd.read_sql(query, engine)
 
 
@@ -84,8 +70,31 @@ def salvar_programacao(df):
         "programacao",
         engine,
         if_exists="append",
-        index=False
+        index=False,
+        method="multi"
     )
+
+
+# ----------------------------
+# FINALIZAR PROGRAMAÇÃO
+# ----------------------------
+
+def finalizar_programacao(id_programacao):
+
+    with engine.begin() as conn:
+
+        conn.execute(
+            text("""
+            UPDATE programacao
+            SET status = 'Finalizado',
+                data_finalizado = :data
+            WHERE id = :id
+            """),
+            {
+                "id": id_programacao,
+                "data": datetime.now()
+            }
+        )
 
 
 # ----------------------------
@@ -93,51 +102,66 @@ def salvar_programacao(df):
 # ----------------------------
 
 def carregar_operadores():
-    query = "SELECT * FROM operadores"
-    return pd.read_sql(query, engine)
+
+    return pd.read_sql("SELECT * FROM operadores", engine)
 
 
 def adicionar_operador(nome):
-    with engine.connect() as conn:
+
+    with engine.begin() as conn:
+
         conn.execute(
-            text("INSERT INTO operadores (nome) VALUES (:nome) ON CONFLICT DO NOTHING"),
+            text("""
+            INSERT INTO operadores (nome)
+            VALUES (:nome)
+            ON CONFLICT DO NOTHING
+            """),
             {"nome": nome}
         )
-        conn.commit()
 
 
 def remover_operador(nome):
-    with engine.connect() as conn:
+
+    with engine.begin() as conn:
+
         conn.execute(
             text("DELETE FROM operadores WHERE nome = :nome"),
             {"nome": nome}
         )
-        conn.commit()
+
+
+# ----------------------------
+# ATUALIZAR PROGRAMAÇÃO
+# ----------------------------
 
 def atualizar_programacao(df_editado):
-    with engine.connect() as conn:
+
+    with engine.begin() as conn:
+
         for _, row in df_editado.iterrows():
+
             conn.execute(
                 text("""
-                    UPDATE programacao
-                    SET produto = :produto,
-                        inicio = :inicio,
-                        fim = :fim,
-                        prazo_limite = :prazo_limite,
-                        status = :status,
-                        operador = :operador,
-                        data_finalizado = :data_finalizado
-                    WHERE id = :id
+                UPDATE programacao
+                SET produto = :produto,
+                    quantidade = :quantidade,
+                    inicio = :inicio,
+                    fim = :fim,
+                    prazo_limite = :prazo,
+                    status = :status,
+                    operador = :operador,
+                    data_finalizado = :data_finalizado
+                WHERE id = :id
                 """),
                 {
                     "id": row["id"],
                     "produto": row["produto"],
+                    "quantidade": row["quantidade"],
                     "inicio": row["inicio"],
                     "fim": row["fim"],
-                    "prazo_limite": row["prazo_limite"],
+                    "prazo": row["prazo_limite"],
                     "status": row["status"],
                     "operador": row["operador"],
                     "data_finalizado": row["data_finalizado"]
                 }
             )
-        conn.commit()
