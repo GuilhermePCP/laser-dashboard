@@ -436,6 +436,9 @@ if not df_tabela.empty:
 
                 with col1:
 
+                    if "caminho_desenho" not in df_operador.columns:
+                        df_operador["caminho_desenho"] = None 
+
                     caminho = df_operador.iloc[index]["caminho_desenho"]
 
                     if caminho and os.path.exists(caminho):
