@@ -526,6 +526,8 @@ if not df_tabela.empty:
 
                         st.write(f"**Status:** {cores.get(status, status)}")
 
+                        st.divider()
+
                         # -------------------------
                         # BOTÕES DE PRODUÇÃO
                         # -------------------------
@@ -558,9 +560,9 @@ if not df_tabela.empty:
 
                         elif status == "Em produção":
 
-                            b1, b2 = st.columns(2)
+                            col_pause, col_finish = st.columns(2)
 
-                            with b1:
+                            with col_pause:
 
                                 if st.button(
                                     "⏸ Pausar",
@@ -586,7 +588,7 @@ if not df_tabela.empty:
                                     st.warning("Produção pausada")
                                     st.rerun()
 
-                            with b2:
+                            with col_finish:
 
                                 if st.button(
                                     "✔ Finalizar",
