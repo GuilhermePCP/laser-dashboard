@@ -618,12 +618,26 @@ if not df_tabela.empty:
                             st.rerun()
 
                     # -------------------------
-                    # AJUSTE DE CRONOGRAMA
+                    # EDITAR OP
                     # -------------------------
 
                     if st.session_state.nivel in ["admin", "pcp"]:
 
-                        with st.expander("📅 Ajustar cronograma"):
+                        with st.expander("✏️ Editar OP"):
+
+                            novo_produto = st.text_input(
+                                "Produto",
+                                value=linha["produto"],
+                                key=f"produto_{operador}_{linha['id']}"
+                            )
+
+                            nova_quantidade = st.number_input(
+                                "Quantidade",
+                                min_value=1,
+                                step=1,
+                                value=int(linha["quantidade"]),
+                                key=f"quantidade_{operador}_{linha['id']}"
+                            )
 
                             nova_inicio = st.date_input(
                                 "Início",
@@ -647,14 +661,16 @@ if not df_tabela.empty:
                             )
 
                             if st.button(
-                                "💾 Salvar datas",
+                                "💾 Salvar alterações",
                                 use_container_width=True,
-                                key=f"salvar_datas_{operador}_{linha['id']}"
+                                key=f"salvar_op_{operador}_{linha['id']}"
                             ):
 
                                 query = """
                                 UPDATE programacao
-                                SET inicio = :inicio,
+                                SET produto = :produto,
+                                    quantidade = :quantidade,
+                                    inicio = :inicio,
                                     fim = :fim,
                                     prazo_limite = :prazo
                                 WHERE id = :id
@@ -664,6 +680,8 @@ if not df_tabela.empty:
                                     conn.execute(
                                         text(query),
                                         {
+                                            "produto": novo_produto,
+                                            "quantidade": nova_quantidade,
                                             "inicio": nova_inicio,
                                             "fim": novo_fim,
                                             "prazo": novo_prazo,
@@ -671,7 +689,7 @@ if not df_tabela.empty:
                                         }
                                     )
 
-                                st.success("Cronograma atualizado")
+                                st.success("OP atualizada com sucesso")
                                 st.rerun()
 # -------------------------------------------------
 # GANTT
