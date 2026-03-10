@@ -616,6 +616,55 @@ if not df_tabela.empty:
 
                             st.success("Produção retomada")
                             st.rerun()
+                    
+                    # -------------------------
+                    # EXCLUIR OP
+                    # -------------------------
+
+                    if st.button(
+                        "🗑 Excluir OP",
+                        use_container_width=True,
+                        key=f"excluir_{linha['id']}"
+                    ):
+
+                        st.session_state[f"confirmar_delete_{linha['id']}"] = True
+
+
+                    if st.session_state.get(f"confirmar_delete_{linha['id']}", False):
+
+                        st.warning("⚠️ Tem certeza que deseja excluir esta OP? Esta ação não pode ser desfeita.")
+
+                        col1, col2 = st.columns(2)
+
+                        with col1:
+                            if st.button(
+                                "✅ Sim, excluir",
+                                use_container_width=True,
+                                key=f"confirmar_{linha['id']}"
+                            ):
+
+                                query = "DELETE FROM programacao WHERE id = :id"
+
+                                with engine.begin() as conn:
+                                    conn.execute(
+                                        text(query),
+                                        {"id": int(linha["id"])}
+                                    )
+
+                                st.success("OP excluída com sucesso")
+
+                                st.session_state[f"confirmar_delete_{linha['id']}"] = False
+                                st.rerun()
+
+                        with col2:
+                            if st.button(
+                                "❌ Cancelar",
+                                use_container_width=True,
+                                key=f"cancelar_{linha['id']}"
+                            ):
+
+                                st.session_state[f"confirmar_delete_{linha['id']}"] = False
+                                st.rerun()
 
                     # -------------------------
                     # EDITAR OP
