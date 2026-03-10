@@ -7,7 +7,6 @@ import pandas as pd
 import base64
 from datetime import datetime
 from PIL import Image
-import io
 
 from src.analytics import calcular_metricas, filtrar_dados
 from src.visuals import grafico_gantt
@@ -339,7 +338,10 @@ if not df_tabela.empty:
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
             df_operador = df_operador.reset_index(drop=True)
 
-            desenhos = df_operador["desenho"].copy()
+            df_operador = df_operador.reset_index(drop=True)
+
+            desenhos = df_operador["desenho"]
+
             df_operador = df_operador.drop(columns=["desenho"], errors="ignore")
 
             # -------------------------
@@ -443,31 +445,29 @@ if not df_tabela.empty:
 
                     img_data = desenhos.iloc[index]
 
-                    if img_data:
+                    if img_data is not None:
 
-                        try:
+                        if isinstance(img_data, memoryview):
+                            img_bytes = img_data.tobytes()
 
-                            # garantir bytes corretos vindos do banco
-                            if isinstance(img_data, memoryview):
-                                img_bytes = img_data.tobytes()
+                        elif isinstance(img_data, bytes):
+                            img_bytes = img_data
 
-                            elif isinstance(img_data, bytes):
-                                img_bytes = img_data
+                        elif isinstance(img_data, str):
+                            import base64
+                            img_bytes = base64.b64decode(img_data)
 
-                            elif isinstance(img_data, str):
-                                img_bytes = base64.b64decode(img_data)
+                        else:
+                            img_bytes = None
 
-                            else:
-                                img_bytes = bytes(img_data)
+                        if img_bytes:
 
-                            img = Image.open(io.BytesIO(img_bytes))
+                            try:
+                                img = Image.open(io.BytesIO(img_bytes))
+                                st.image(img, use_container_width=True)
 
-                            st.image(img, use_container_width=True)
-
-                        except Exception as e:
-
-                            st.warning("⚠️ Arquivo salvo não é uma imagem válida")
-                            st.write("Tipo recebido:", type(img_data))
+                            except:
+                                st.warning("⚠️ Arquivo salvo não é uma imagem válida")
 
                     else:
 
