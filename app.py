@@ -182,9 +182,20 @@ if st.session_state.nivel in ["admin", "pcp"]:
             step=1
         )
 
-        inicio = st.date_input("Início")
-        fim = st.date_input("Fim")
-        prazo = st.date_input("Prazo limite")
+        inicio = st.date_input(
+            "Início",
+            format="DD/MM/YYYY"
+        )
+
+        fim = st.date_input(
+            "Fim",
+            format="DD/MM/YYYY"
+        )
+
+        prazo = st.date_input(
+            "Prazo limite",
+            format="DD/MM/YYYY"
+        )
 
         status = st.selectbox(
             "Status",
