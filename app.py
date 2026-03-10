@@ -253,22 +253,19 @@ if st.session_state.nivel in ["admin", "pcp"]:
             if desenho.type == "application/pdf":
 
                 pdf = fitz.open(stream=desenho.read(), filetype="pdf")
+
                 pagina = pdf.load_page(0)
+
                 pix = pagina.get_pixmap()
 
-                img_bytes = pix.tobytes("png")
-                img = Image.open(io.BytesIO(img_bytes))
+                desenho_bytes = pix.tobytes("png")
 
-                buffer = io.BytesIO()
-                img.save(buffer, format="JPEG")
-
-                desenho_bytes = buffer.getvalue()
-                nome_arquivo = f"{produto}_{timestamp}.jpg"
+                nome_arquivo = f"{produto}_{timestamp}.png"
 
             else:
 
                 desenho_bytes = desenho.read()
-                nome_arquivo = f"{produto}_{timestamp}.png"
+                nome_arquivo = f"{produto}_{timestamp}.{desenho.type.split('/')[-1]}"
 
 
         st.write("Desenho:", desenho)
