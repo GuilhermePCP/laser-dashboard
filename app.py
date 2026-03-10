@@ -156,45 +156,6 @@ if st.sidebar.button("🚪 Sair"):
     st.rerun()
 
 # -------------------------------------------------
-# FOOTER
-# -------------------------------------------------
-
-def get_base64_image(path):
-    with open(path, "rb") as img:
-        return base64.b64encode(img.read()).decode()
-
-logo = get_base64_image("assets/logo2.png")
-
-st.markdown(f"""
-<style>
-.footer {{
-position: fixed;
-bottom: 15px;
-right: 20px;
-display: flex;
-align-items: center;
-gap: 10px;
-background: rgba(20,20,20,0.8);
-padding: 8px 12px;
-border-radius: 10px;
-font-size:12px;
-}}
-
-.footer img {{
-height:32px;
-}}
-</style>
-
-<div class="footer">
-<img src="data:image/png;base64,{logo}">
-<div>
-<b>Guilherme</b><br>
-Auxiliar PCP
-</div>
-</div>
-""", unsafe_allow_html=True)
-
-# -------------------------------------------------
 # SIDEBAR NOVA PROGRAMAÇÃO
 # -------------------------------------------------
 
@@ -267,10 +228,6 @@ if st.session_state.nivel in ["admin", "pcp"]:
                 desenho_bytes = desenho.read()
                 nome_arquivo = f"{produto}_{timestamp}.{desenho.type.split('/')[-1]}"
 
-
-        st.write("Desenho:", desenho)
-        st.write("Bytes do desenho:", desenho_bytes)
-
         df_nova = pd.DataFrame({
             "operador": [operador],
             "produto": [produto],
@@ -282,8 +239,6 @@ if st.session_state.nivel in ["admin", "pcp"]:
             "desenho": [desenho_bytes],
             "nome_arquivo": [nome_arquivo]
         })
-
-        st.write(df_nova)
 
         salvar_programacao(df_nova)
 
@@ -490,20 +445,29 @@ if not df_tabela.empty:
 
                     if img_data:
 
-                        if isinstance(img_data, memoryview):
-                            img_bytes = img_data.tobytes()
-                        else:
-                            img_bytes = img_data
-
                         try:
+
+                            # garantir bytes corretos vindos do banco
+                            if isinstance(img_data, memoryview):
+                                img_bytes = img_data.tobytes()
+
+                            elif isinstance(img_data, bytes):
+                                img_bytes = img_data
+
+                            elif isinstance(img_data, str):
+                                img_bytes = base64.b64decode(img_data)
+
+                            else:
+                                img_bytes = bytes(img_data)
 
                             img = Image.open(io.BytesIO(img_bytes))
 
                             st.image(img, use_container_width=True)
 
-                        except:
+                        except Exception as e:
 
                             st.warning("⚠️ Arquivo salvo não é uma imagem válida")
+                            st.write("Tipo recebido:", type(img_data))
 
                     else:
 
