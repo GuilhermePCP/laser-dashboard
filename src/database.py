@@ -60,19 +60,49 @@ def carregar_dados():
 
 def salvar_programacao(df):
 
-    if "desenho" in df.columns:
+    with engine.begin() as conn:
 
-        df["desenho"] = df["desenho"].apply(
-            lambda x: bytes(x) if x is not None and not isinstance(x, bytes) else x
-        )
+        for _, row in df.iterrows():
 
-    df.to_sql(
-        "programacao",
-        engine,
-        if_exists="append",
-        index=False,
-        method="multi"
-    )
+            conn.execute(
+                text("""
+                INSERT INTO programacao
+                (
+                    produto,
+                    quantidade,
+                    operador,
+                    inicio,
+                    fim,
+                    prazo_limite,
+                    status,
+                    desenho,
+                    nome_arquivo
+                )
+                VALUES
+                (
+                    :produto,
+                    :quantidade,
+                    :operador,
+                    :inicio,
+                    :fim,
+                    :prazo_limite,
+                    :status,
+                    :desenho,
+                    :nome_arquivo
+                )
+                """),
+                {
+                    "produto": row["produto"],
+                    "quantidade": row["quantidade"],
+                    "operador": row["operador"],
+                    "inicio": row["inicio"],
+                    "fim": row["fim"],
+                    "prazo_limite": row["prazo_limite"],
+                    "status": row["status"],
+                    "desenho": row["desenho"],   # <- bytes reais
+                    "nome_arquivo": row["nome_arquivo"]
+                }
+            )
 
 
 # ----------------------------
