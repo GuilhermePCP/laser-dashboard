@@ -482,7 +482,7 @@ if not df_tabela.empty:
                     st.subheader(f"🖼 Desenho da peça — {linha['produto']}")
 
                 with col2_titulo:
-                    st.subheader("⚙ Controle da OP")
+                    st.subheader("")
 
                 # -------------------------
                 # CONTEÚDO
