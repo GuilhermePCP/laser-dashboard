@@ -75,7 +75,7 @@ def salvar_programacao(df):
                     fim,
                     prazo_limite,
                     status,
-                    desenho,
+                    caminho_desenho,
                     nome_arquivo
                 )
                 VALUES
@@ -87,7 +87,7 @@ def salvar_programacao(df):
                     :fim,
                     :prazo_limite,
                     :status,
-                    :desenho,
+                    :caminho_desenho,
                     :nome_arquivo
                 )
                 """),
@@ -99,7 +99,7 @@ def salvar_programacao(df):
                     "fim": row["fim"],
                     "prazo_limite": row["prazo_limite"],
                     "status": row["status"],
-                    "desenho": row["desenho"],   # <- bytes reais
+                    "caminho_desenho": row["caminho_desenho"],
                     "nome_arquivo": row["nome_arquivo"]
                 }
             )
