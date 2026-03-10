@@ -484,8 +484,6 @@ if not df_tabela.empty:
                 with col2_titulo:
                     st.subheader("⚙ Controle da OP")
 
-                st.divider()
-
                 # -------------------------
                 # CONTEÚDO
                 # -------------------------
