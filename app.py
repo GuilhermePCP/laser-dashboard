@@ -476,13 +476,7 @@ if not df_tabela.empty:
                 # TITULOS
                 # -------------------------
 
-                col1_titulo, col2_titulo = st.columns([2,1])
-
-                with col1_titulo:
-                    st.subheader(f"🖼 Desenho da peça — {linha['produto']}")
-
-                with col2_titulo:
-                    st.subheader("")
+                st.divider()
 
                 # -------------------------
                 # CONTEÚDO
