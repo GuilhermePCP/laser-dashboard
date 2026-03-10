@@ -73,7 +73,19 @@ def carregar_dados():
 # ----------------------------
 
 def salvar_programacao(df):
-    df.to_sql("programacao", engine, if_exists="append", index=False)
+
+    if "desenho" in df.columns:
+
+        df["desenho"] = df["desenho"].apply(
+            lambda x: bytes(x) if x is not None and not isinstance(x, bytes) else x
+        )
+
+    df.to_sql(
+        "programacao",
+        engine,
+        if_exists="append",
+        index=False
+    )
 
 
 # ----------------------------
