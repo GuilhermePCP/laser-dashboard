@@ -492,12 +492,24 @@ if not df_tabela.empty:
 
                     if img_bytes:
 
-                        st.markdown(f"### 🖼️ Desenho da peça — {linha['produto']}")
+                        img_bytes = bytes(img_bytes)
 
-                        st.image(
-                            img_bytes,
-                            use_container_width=True
-                        )
+                        if img_bytes[:4] == b"%PDF":
+
+                            import base64
+
+                            base64_pdf = base64.b64encode(img_bytes).decode()
+
+                            pdf_display = f"""
+                            <iframe src="data:application/pdf;base64,{base64_pdf}"
+                            width="100%" height="600"></iframe>
+                            """
+
+                            st.markdown(pdf_display, unsafe_allow_html=True)
+
+                        else:
+
+                            st.image(img_bytes, use_container_width=True)
 
                     else:
 
