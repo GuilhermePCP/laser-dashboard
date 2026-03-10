@@ -25,6 +25,9 @@ from sqlalchemy import text
 import fitz
 import io
 
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 # -------------------------------------------------
 # CONFIGURAÇÃO DA PÁGINA
 # -------------------------------------------------
@@ -203,29 +206,19 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     if salvar:
 
-        nome_arquivo = None
-        desenho_bytes = None
+    nome_arquivo = None
+    caminho_desenho = None
 
-        if desenho is not None:
+    if desenho is not None:
 
-            timestamp = datetime.now().timestamp()
+        timestamp = int(datetime.now().timestamp())
+        extensao = desenho.name.split(".")[-1]
 
-            if desenho.type == "application/pdf":
+        nome_arquivo = f"{produto}_{timestamp}.{extensao}"
+        caminho_desenho = os.path.join(UPLOAD_DIR, nome_arquivo)
 
-                pdf = fitz.open(stream=desenho.read(), filetype="pdf")
-
-                pagina = pdf.load_page(0)
-
-                pix = pagina.get_pixmap()
-
-                desenho_bytes = pix.tobytes("png")
-
-                nome_arquivo = f"{produto}_{timestamp}.png"
-
-            else:
-
-                desenho_bytes = desenho.read()
-                nome_arquivo = f"{produto}_{timestamp}.{desenho.type.split('/')[-1]}"
+        with open(caminho_desenho, "wb") as f:
+            f.write(desenho.read())
 
         df_nova = pd.DataFrame({
             "operador": [operador],
@@ -235,7 +228,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
             "fim": [fim],
             "prazo_limite": [prazo],
             "status": [status],
-            "desenho": [desenho_bytes],
+            "caminho_desenho": [caminho_desenho],
             "nome_arquivo": [nome_arquivo]
         })
 
@@ -443,31 +436,11 @@ if not df_tabela.empty:
 
                 with col1:
 
-                    img_data = desenhos.iloc[index]
+                    caminho = df_operador.iloc[index]["caminho_desenho"]
 
-                    if img_data is not None:
+                    if caminho and os.path.exists(caminho):
 
-                        if isinstance(img_data, memoryview):
-                            img_bytes = img_data.tobytes()
-
-                        elif isinstance(img_data, bytes):
-                            img_bytes = img_data
-
-                        elif isinstance(img_data, str):
-                            import base64
-                            img_bytes = base64.b64decode(img_data)
-
-                        else:
-                            img_bytes = None
-
-                        if img_bytes:
-
-                            try:
-                                img = Image.open(io.BytesIO(img_bytes))
-                                st.image(img, use_container_width=True)
-
-                            except:
-                                st.warning("⚠️ Arquivo salvo não é uma imagem válida")
+                        st.image(caminho, use_container_width=True)
 
                     else:
 
