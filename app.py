@@ -270,6 +270,9 @@ if st.session_state.nivel in ["admin", "pcp"]:
                 nome_arquivo = f"{produto}_{timestamp}.png"
 
 
+        st.write("Desenho:", desenho)
+        st.write("Bytes do desenho:", desenho_bytes)
+
         df_nova = pd.DataFrame({
             "operador": [operador],
             "produto": [produto],
