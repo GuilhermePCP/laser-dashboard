@@ -212,13 +212,37 @@ if st.session_state.nivel in ["admin", "pcp"]:
         if desenho is not None:
 
             timestamp = int(datetime.now().timestamp())
-            extensao = desenho.name.split(".")[-1]
 
-            nome_arquivo = f"{produto}_{timestamp}.{extensao}"
-            caminho_desenho = os.path.join(UPLOAD_DIR, nome_arquivo)
+            # -------------------------------------------------
+            # SE FOR PDF → CONVERTER PARA IMAGEM
+            # -------------------------------------------------
 
-            with open(caminho_desenho, "wb") as f:
-                f.write(desenho.read())
+            if desenho.type == "application/pdf":
+
+                pdf = fitz.open(stream=desenho.read(), filetype="pdf")
+
+                pagina = pdf.load_page(0)  # primeira página
+
+                pix = pagina.get_pixmap()
+
+                nome_arquivo = f"{produto}_{timestamp}.png"
+                caminho_desenho = os.path.join(UPLOAD_DIR, nome_arquivo)
+
+                pix.save(caminho_desenho)
+
+            # -------------------------------------------------
+            # SE FOR IMAGEM NORMAL
+            # -------------------------------------------------
+
+            else:
+
+                extensao = desenho.name.split(".")[-1]
+
+                nome_arquivo = f"{produto}_{timestamp}.{extensao}"
+                caminho_desenho = os.path.join(UPLOAD_DIR, nome_arquivo)
+
+                with open(caminho_desenho, "wb") as f:
+                    f.write(desenho.read())
 
             df_nova = pd.DataFrame({
                 "operador": [operador],
@@ -331,12 +355,6 @@ if not df_tabela.empty:
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
             df_operador = df_operador.reset_index(drop=True)
 
-            df_operador = df_operador.reset_index(drop=True)
-
-            desenhos = df_operador["desenho"]
-
-            df_operador = df_operador.drop(columns=["desenho"], errors="ignore")
-
             # -------------------------
             # CONTROLE DE COLUNAS POR NÍVEL
             # -------------------------
@@ -426,7 +444,6 @@ if not df_tabela.empty:
                 index = tabela["selection"]["rows"][0]
 
                 linha = df_tabela[df_tabela["operador"] == operador].iloc[index]
-                nome_img = desenhos.iloc[index]
 
                 col1, col2 = st.columns([2,1])
 
@@ -490,7 +507,6 @@ if not df_tabela.empty:
                                         "id": int(linha["id"])
                                     }
                                 )
-                                conn.commit()
 
                             st.success("Produção iniciada")
                             st.rerun()
@@ -521,7 +537,6 @@ if not df_tabela.empty:
                                             "id": int(linha["id"])
                                         }
                                     )
-                                    conn.commit()
 
                                 st.warning("Produção pausada")
                                 st.rerun()
@@ -550,7 +565,6 @@ if not df_tabela.empty:
                                             "id": int(linha["id"])
                                         }
                                     )
-                                    conn.commit()
 
                                 st.success("Produção finalizada")
                                 st.rerun()
@@ -577,7 +591,6 @@ if not df_tabela.empty:
                                         "id": int(linha["id"])
                                     }
                                 )
-                                conn.commit()
 
                             st.success("Produção retomada")
                             st.rerun()
@@ -632,7 +645,6 @@ if not df_tabela.empty:
                                             "id": int(linha["id"])
                                         }
                                     )
-                                    conn.commit()
 
                                 st.success("Cronograma atualizado")
                                 st.rerun()
