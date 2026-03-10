@@ -439,8 +439,21 @@ if not df_tabela.empty:
             # TABELA
             # -------------------------
 
+            df_exibicao = df_operador.drop(columns=["caminho_desenho"], errors="ignore")
+
+            df_exibicao = df_exibicao.rename(columns={
+                "id": "ID",
+                "produto": "Produto",
+                "quantidade": "Quantidade",
+                "operador": "Operador",
+                "status": "Status",
+                "inicio": "Início",
+                "fim": "Fim",
+                "prazo_limite": "Prazo"
+            })
+
             tabela = st.dataframe(
-                df_operador,
+                df_exibicao,
                 use_container_width=True,
                 selection_mode="single-row",
                 on_select="rerun",
