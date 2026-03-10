@@ -478,7 +478,11 @@ if not df_tabela.empty:
 
                 with col1:
 
-                    caminho = df_operador.iloc[index]["caminho_desenho"]
+                    linha = df_operador.iloc[index]
+                    caminho = linha["caminho_desenho"]
+
+                    # título do desenho
+                    st.subheader(f"🖼 Desenho da peça — {linha['produto']}")
 
                     if caminho and os.path.exists(caminho):
 
