@@ -473,6 +473,27 @@ if not df_tabela.empty:
                 col1, col2 = st.columns([2,1])
 
                 # -------------------------
+                # TITULOS
+                # -------------------------
+
+                col1_titulo, col2_titulo = st.columns([2,1])
+
+                with col1_titulo:
+                    st.subheader(f"🖼 Desenho da peça — {linha['produto']}")
+
+                with col2_titulo:
+                    st.subheader("⚙ Controle da OP")
+
+                st.divider()
+
+                # -------------------------
+                # CONTEÚDO
+                # -------------------------
+
+                col1, col2 = st.columns([2,1])
+
+
+                # -------------------------
                 # IMAGEM
                 # -------------------------
 
@@ -480,9 +501,6 @@ if not df_tabela.empty:
 
                     linha = df_operador.iloc[index]
                     caminho = linha["caminho_desenho"]
-
-                    # título do desenho
-                    st.subheader(f"🖼 Desenho da peça — {linha['produto']}")
 
                     if caminho and os.path.exists(caminho):
 
@@ -492,13 +510,12 @@ if not df_tabela.empty:
 
                         st.info("Sem desenho para essa OP")
 
+
                 # -------------------------
                 # CONTROLE DA PRODUÇÃO
                 # -------------------------
 
                 with col2:
-
-                    st.markdown("### ⚙ Controle da OP")
 
                     st.write(f"**Produto:** {linha['produto']}")
                     st.write(f"**Quantidade:** {linha['quantidade']}")
