@@ -618,61 +618,61 @@ if not df_tabela.empty:
                             st.rerun()
 
                     # -------------------------
-# AJUSTE DE CRONOGRAMA
-# -------------------------
+                    # AJUSTE DE CRONOGRAMA
+                    # -------------------------
 
-if st.session_state.nivel in ["admin", "pcp"]:
+                    if st.session_state.nivel in ["admin", "pcp"]:
 
-    with st.expander("📅 Ajustar cronograma"):
+                        with st.expander("📅 Ajustar cronograma"):
 
-        nova_inicio = st.date_input(
-            "Início",
-            pd.to_datetime(linha["inicio"]),
-            format="DD/MM/YYYY",
-            key=f"inicio_{operador}_{linha['id']}"
-        )
+                            nova_inicio = st.date_input(
+                                "Início",
+                                pd.to_datetime(linha["inicio"]),
+                                format="DD/MM/YYYY",
+                                key=f"inicio_{operador}_{linha['id']}"
+                            )
 
-        novo_fim = st.date_input(
-            "Fim",
-            pd.to_datetime(linha["fim"]),
-            format="DD/MM/YYYY",
-            key=f"fim_{operador}_{linha['id']}"
-        )
+                            novo_fim = st.date_input(
+                                "Fim",
+                                pd.to_datetime(linha["fim"]),
+                                format="DD/MM/YYYY",
+                                key=f"fim_{operador}_{linha['id']}"
+                            )
 
-        novo_prazo = st.date_input(
-            "Prazo limite",
-            pd.to_datetime(linha["prazo_limite"]),
-            format="DD/MM/YYYY",
-            key=f"prazo_{operador}_{linha['id']}"
-        )
+                            novo_prazo = st.date_input(
+                                "Prazo limite",
+                                pd.to_datetime(linha["prazo_limite"]),
+                                format="DD/MM/YYYY",
+                                key=f"prazo_{operador}_{linha['id']}"
+                            )
 
-        if st.button(
-            "💾 Salvar datas",
-            use_container_width=True,
-            key=f"salvar_datas_{operador}_{linha['id']}"
-        ):
+                            if st.button(
+                                "💾 Salvar datas",
+                                use_container_width=True,
+                                key=f"salvar_datas_{operador}_{linha['id']}"
+                            ):
 
-            query = """
-            UPDATE programacao
-            SET inicio = :inicio,
-                fim = :fim,
-                prazo_limite = :prazo
-            WHERE id = :id
-            """
+                                query = """
+                                UPDATE programacao
+                                SET inicio = :inicio,
+                                    fim = :fim,
+                                    prazo_limite = :prazo
+                                WHERE id = :id
+                                """
 
-            with engine.begin() as conn:
-                conn.execute(
-                    text(query),
-                    {
-                        "inicio": nova_inicio,
-                        "fim": novo_fim,
-                        "prazo": novo_prazo,
-                        "id": int(linha["id"])
-                    }
-                )
+                                with engine.begin() as conn:
+                                    conn.execute(
+                                        text(query),
+                                        {
+                                            "inicio": nova_inicio,
+                                            "fim": novo_fim,
+                                            "prazo": novo_prazo,
+                                            "id": int(linha["id"])
+                                        }
+                                    )
 
-            st.success("Cronograma atualizado")
-            st.rerun()
+                                st.success("Cronograma atualizado")
+                                st.rerun()
 # -------------------------------------------------
 # GANTT
 # -------------------------------------------------
