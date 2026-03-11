@@ -849,9 +849,6 @@ if not df_tabela.empty:
                                     st.success("OP atualizada com sucesso")
                                     st.rerun()
 
-
-st.divider()
-
 # -------------------------------------------------
 # FILTRAR APENAS PRODUÇÃO ATIVA
 # -------------------------------------------------
