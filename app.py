@@ -156,6 +156,18 @@ atrasadas = len(
     ]
 )
 
+# -------------------------------------------------
+# ALERTA DE ATRASOS
+# -------------------------------------------------
+
+if atrasadas > 0:
+
+    st.error(f"🔴 {atrasadas} OP(s) atrasada(s) na produção!")
+
+else:
+
+    st.success("🟢 Nenhuma OP atrasada no momento")
+
 c1, c2, c3, c4 = st.columns(4)
 
 c1.metric("🟡 Programadas", programadas)
