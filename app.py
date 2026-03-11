@@ -508,11 +508,13 @@ if not df_tabela.empty:
             # -------------------------
 
             def icone_status(status):
+                
+                status_op = str(linha["status"])
 
-                if status == "Programado":
+                if status_op == "Programado":
                     return "🟡 Programado"
 
-                elif status == "Em produção":
+                elif status_op == "Em produção":
                     return "🟢 Em produção"
 
                 elif status == "Finalizado":
@@ -521,7 +523,7 @@ if not df_tabela.empty:
                 elif status == "Atrasado":
                     return "🔴 Atrasado"
 
-                elif status == "Parado":
+                elif status_op == "Parado":
                     return "🟠 Parado"
 
                 return status
