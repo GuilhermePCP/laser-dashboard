@@ -798,31 +798,55 @@ st.plotly_chart(fig, use_container_width=True)
 # -------------------------------------------------
 
 st.divider()
-st.subheader("Programações finalizadas")
+st.subheader("📚 Programações finalizadas")
 
 if not df_finalizados.empty:
 
     df_hist = df_finalizados.copy()
 
-    df_hist["inicio"] = df_hist["inicio"].dt.date
-    df_hist["fim"] = df_hist["fim"].dt.date
-    df_hist["prazo_limite"] = df_hist["prazo_limite"].dt.date
-    df_hist["data_finalizado"] = df_hist["data_finalizado"].dt.date
+    # -------------------------
+    # FORMATAÇÃO DE DATAS
+    # -------------------------
+
+    df_hist["inicio"] = pd.to_datetime(df_hist["inicio"], errors="coerce").dt.strftime("%d/%m/%Y")
+    df_hist["fim"] = pd.to_datetime(df_hist["fim"], errors="coerce").dt.strftime("%d/%m/%Y")
+    df_hist["prazo_limite"] = pd.to_datetime(df_hist["prazo_limite"], errors="coerce").dt.strftime("%d/%m/%Y")
+    df_hist["data_finalizado"] = pd.to_datetime(df_hist["data_finalizado"], errors="coerce").dt.strftime("%d/%m/%Y")
+
+    # -------------------------
+    # RENOMEAR COLUNAS
+    # -------------------------
+
+    df_hist = df_hist.rename(columns={
+        "produto": "Produto",
+        "quantidade": "Quantidade",
+        "operador": "Operador",
+        "inicio": "Início",
+        "fim": "Fim",
+        "prazo_limite": "Prazo limite",
+        "data_finalizado": "Finalizado em"
+    })
+
+    # -------------------------
+    # MOSTRAR TABELA
+    # -------------------------
 
     st.dataframe(
         df_hist[
             [
-                "produto",
-                "operador",
-                "inicio",
-                "fim",
-                "prazo_limite",
-                "data_finalizado"
+                "Produto",
+                "Quantidade",
+                "Operador",
+                "Início",
+                "Fim",
+                "Prazo limite",
+                "Finalizado em"
             ]
         ],
-        use_container_width=True
+        use_container_width=True,
+        hide_index=True
     )
 
 else:
 
-    st.info("Nenhuma finalizada")
+    st.info("Nenhuma programação finalizada ainda")
