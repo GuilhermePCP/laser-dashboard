@@ -1011,7 +1011,17 @@ fig.update_layout(
     paper_bgcolor="rgba(0,0,0,0)"
 )
 
-fig.update_xaxes(showgrid=True, gridcolor="rgba(200,200,200,0.2)")
+fig.update_xaxes(
+    tickfont=dict(size=12)
+)
+
+fig.update_xaxes(
+    showgrid=True,
+    gridcolor="rgba(200,200,200,0.2)",
+    dtick="D1",              # um tick por dia
+    tickformat="%d/%m",      # mostra apenas dia/mês
+    ticklabelmode="period"
+)
 fig.update_yaxes(showgrid=False)
 
 # linha de HOJE
