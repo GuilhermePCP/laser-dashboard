@@ -440,7 +440,12 @@ if not df_tabela.empty:
         with abas[i]:
 
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
-            df_operador = df_operador.reset_index(drop=True)
+
+            # -------------------------
+            # ORDENAR PRIMEIRO (IMPORTANTE)
+            # -------------------------
+
+            df_operador = df_operador.sort_values("inicio").reset_index(drop=True)
 
             # -------------------------
             # CONTROLE DE COLUNAS POR NÍVEL
@@ -469,6 +474,8 @@ if not df_tabela.empty:
             else:
                 df_operador = df_operador[colunas_base]
 
+            # -------------------------
+            # FORMATAR DATAS
             # -------------------------
 
             if "inicio" in df_operador.columns:
@@ -527,12 +534,6 @@ if not df_tabela.empty:
                 "fim": "Fim",
                 "prazo_limite": "Prazo"
             })
-
-            # -------------------------
-            # ORDENAR PELO MAIS RECENTE
-            # -------------------------
-
-            df_operador = df_operador.sort_values("inicio").reset_index(drop=True)
 
             tabela = st.dataframe(
                 df_exibicao,
