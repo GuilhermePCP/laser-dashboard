@@ -974,7 +974,7 @@ fig.update_layout(
     showlegend=True,
     margin=dict(l=20, r=20, t=20, b=20),
     xaxis_title="Data",
-    yaxis_title="Operador"
+    yaxis_title="Operador",
     plot_bgcolor="#0e1117",
     paper_bgcolor="#0e1117"
 )
