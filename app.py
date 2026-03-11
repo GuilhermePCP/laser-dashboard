@@ -450,12 +450,10 @@ if not df_tabela.empty:
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
             # -------------------------
-            # ORDENAR PRIMEIRO (IMPORTANTE)
+            # ORDENAR PRIMEIRO
             # -------------------------
 
             df_operador = df_operador.sort_values("inicio").reset_index(drop=True)
-
-            df_operador = df_operador.reset_index(drop=True)
 
             # -------------------------
             # CONTROLE DE COLUNAS POR NÍVEL
@@ -508,13 +506,11 @@ if not df_tabela.empty:
             # -------------------------
 
             def icone_status(status):
-                
-                status_op = linha.get("status", "")
 
-                if status_op == "Programado":
+                if status == "Programado":
                     return "🟡 Programado"
 
-                elif status_op == "Em produção":
+                elif status == "Em produção":
                     return "🟢 Em produção"
 
                 elif status == "Finalizado":
@@ -523,7 +519,7 @@ if not df_tabela.empty:
                 elif status == "Atrasado":
                     return "🔴 Atrasado"
 
-                elif status_op == "Parado":
+                elif status == "Parado":
                     return "🟠 Parado"
 
                 return status
@@ -568,23 +564,11 @@ if not df_tabela.empty:
                 col1, col2 = st.columns([2,1])
 
                 # -------------------------
-                # TITULOS
-                # -------------------------
-
-                # -------------------------
-                # CONTEÚDO
-                # -------------------------
-
-                col1, col2 = st.columns([2,1])
-
-
-                # -------------------------
                 # IMAGEM
                 # -------------------------
 
                 with col1:
 
-                    linha = df_operador.iloc[index]
                     caminho = linha["caminho_desenho"]
 
                     if caminho and os.path.exists(caminho):
@@ -595,9 +579,7 @@ if not df_tabela.empty:
                             st.warning("Erro ao carregar imagem")
 
                     else:
-
                         st.info("Sem desenho para essa OP")
-
 
                 # -------------------------
                 # CONTROLE DA PRODUÇÃO
@@ -627,10 +609,10 @@ if not df_tabela.empty:
                         st.divider()
 
                         # -------------------------
-                        # BOTÕES DE PRODUÇÃO
+                        # BOTÕES
                         # -------------------------
 
-                        if status == "Programado":
+                        if status_op == "Programado":
 
                             if st.button(
                                 "▶ Iniciar produção",
@@ -656,7 +638,7 @@ if not df_tabela.empty:
                                 st.success("Produção iniciada")
                                 st.rerun()
 
-                        elif status == "Em produção":
+                        elif status_op == "Em produção":
 
                             col_pause, col_finish = st.columns(2)
 
@@ -714,7 +696,7 @@ if not df_tabela.empty:
                                     st.success("Produção finalizada")
                                     st.rerun()
 
-                        elif status == "Parado":
+                        elif status_op == "Parado":
 
                             if st.button(
                                 "▶ Retomar produção",
