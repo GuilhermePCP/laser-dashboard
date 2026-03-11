@@ -878,17 +878,31 @@ for i, operador in enumerate(operadores):
 
     with cols[i]:
 
-        df_op = df_producao[df_producao["operador"] == operador]
+        df_op = df_producao[df_producao["operador"] == operador].copy()
 
-        ordem_status = {
-            "Em produção": 0,
-            "Parado": 1,
-            "Programado": 2
-        }
+        hoje = pd.Timestamp.today()
 
-        df_op["ordem_status"] = df_op["status"].map(ordem_status)
+        # detectar atrasos
+        df_op["atrasado"] = (
+            (pd.to_datetime(df_op["fim"]) < hoje) &
+            (df_op["status"] != "Finalizado")
+        )
 
-        df_op = df_op.sort_values(["ordem_status", "inicio"])
+        # prioridade de exibição
+        def prioridade(row):
+
+            if row["atrasado"]:
+                return 0
+            if row["status"] == "Em produção":
+                return 1
+            if row["status"] == "Parado":
+                return 2
+            return 3
+
+        df_op["prioridade"] = df_op.apply(prioridade, axis=1)
+
+        # ordenar
+        df_op = df_op.sort_values(["prioridade", "inicio"])
 
         # Caixa principal do operador
         with st.container(border=True):
@@ -912,14 +926,18 @@ for i, operador in enumerate(operadores):
 
                     st.caption(f"{inicio} → {fim}")
 
-                    status_icon = status_cores.get(row["status"], "")
+                    # STATUS VISUAL
+                    if row["atrasado"]:
+                        st.error("🔴 ATRASADO")
 
-                    if row["status"] == "Em produção":
-                        st.success(f"{status_icon} {row['status']}")
+                    elif row["status"] == "Em produção":
+                        st.success("🟢 Em produção")
+
                     elif row["status"] == "Parado":
-                        st.warning(f"{status_icon} {row['status']}")
+                        st.warning("🟠 Parado")
+
                     else:
-                        st.write(f"{status_icon} {row['status']}")
+                        st.write("🟡 Programado")
 
 
 # -------------------------------------------------
@@ -934,14 +952,25 @@ df_gantt = df_producao.copy()
 
 df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"])
 df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
-
-# garantir quantidade inteira
 df_gantt["quantidade"] = df_gantt["quantidade"].astype(int)
+
+hoje = pd.Timestamp.today()
+
+# detectar atraso
+df_gantt["atrasado"] = (
+    (df_gantt["fim"] < hoje) &
+    (df_gantt["status"] != "Finalizado")
+)
+
+# status visual
+df_gantt["status_visual"] = df_gantt["status"]
+df_gantt.loc[df_gantt["atrasado"], "status_visual"] = "Atrasado"
 
 cores_status = {
     "Programado": "#f1c40f",
     "Em produção": "#2ecc71",
-    "Parado": "#e67e22"
+    "Parado": "#e67e22",
+    "Atrasado": "#e74c3c"
 }
 
 fig = px.timeline(
@@ -949,12 +978,11 @@ fig = px.timeline(
     x_start="inicio",
     x_end="fim",
     y="operador",
-    color="status",
+    color="status_visual",
     color_discrete_map=cores_status,
     text=df_gantt["produto"] + " • " + df_gantt["quantidade"].astype(str)
 )
 
-# estilo das barras
 fig.update_traces(
     textposition="inside",
     insidetextanchor="middle",
@@ -972,7 +1000,6 @@ fig.update_traces(
     )
 )
 
-# layout geral
 fig.update_layout(
     height=380,
     showlegend=True,
@@ -983,10 +1010,10 @@ fig.update_layout(
     paper_bgcolor="rgba(0,0,0,0)"
 )
 
-# grid mais suave
 fig.update_xaxes(showgrid=True, gridcolor="rgba(200,200,200,0.2)")
 fig.update_yaxes(showgrid=False)
 
+# linha de HOJE
 fig.add_vline(
     x=datetime.now(),
     line_width=3,
