@@ -399,7 +399,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     maquina = st.sidebar.selectbox(
         "Operador",
-        ["Todas"] + list(df["operador"].dropna().unique())
+        ["Todos"] + list(df["operador"].dropna().unique())
     )
 
     status = st.sidebar.selectbox(
@@ -848,6 +848,9 @@ if not df_tabela.empty:
 
                                     st.success("OP atualizada com sucesso")
                                     st.rerun()
+
+
+st.divider()
 
 # -------------------------------------------------
 # FILTRAR APENAS PRODUÇÃO ATIVA
