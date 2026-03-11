@@ -485,7 +485,7 @@ if not df_tabela.empty:
             if "prazo_limite" in df_operador.columns:
                 df_operador["prazo_limite"] = pd.to_datetime(
                     df_operador["prazo_limite"], errors="coerce"
-    ).dt.strftime("%d/%m/%Y")
+                ).dt.strftime("%d/%m/%Y")
 
             # -------------------------
             # STATUS COM ÍCONE
@@ -848,7 +848,7 @@ if not df_tabela.empty:
 
                                     st.success("OP atualizada com sucesso")
                                     st.rerun()
-                                    st.divider()
+                        
 
 # -------------------------------------------------
 # FILTRAR APENAS PRODUÇÃO ATIVA
@@ -860,6 +860,8 @@ df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"]
 # -------------------------------------------------
 # KANBAN DE PRODUÇÃO (VISUAL MELHORADO)
 # -------------------------------------------------
+
+st.divider()
 
 st.subheader("📋 Kanban de produção")
 
