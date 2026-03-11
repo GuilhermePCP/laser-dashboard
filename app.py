@@ -137,6 +137,8 @@ df = carregar()
 # KPIs
 # -------------------------------------------------
 
+st.subheader("📊 Visão geral da produção")
+
 metricas = calcular_metricas(df)
 
 # -------------------------
