@@ -596,7 +596,7 @@ if not df_tabela.empty:
                         st.subheader("⚙ Controle da OP")
 
                         st.write(f"**Produto:** {linha['produto']}")
-                        st.write(f"**Quantidade:** {linha['quantidade']}")
+                        st.write(f"**Quantidade:** {int(linha['quantidade'])}")
                         st.write(f"**Operador:** {linha['operador']}")
 
                         cores = {
