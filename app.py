@@ -883,6 +883,7 @@ for i, operador in enumerate(operadores):
 
             st.markdown(f"### ⚙ {operador}")
             st.caption(f"{len(df_op)} OP(s) programadas")
+            st.caption(f"📦 {int(df_op['quantidade'].sum())} peças totais")
 
             st.divider()
 
@@ -901,17 +902,12 @@ for i, operador in enumerate(operadores):
 
                     status_icon = status_cores.get(row["status"], "")
 
-                    st.write(f"{status_icon} {row['status']}")
-
-                    status_texto = status_cores.get(row["status"], row["status"])
-
-                    # destaque visual se estiver em produção
                     if row["status"] == "Em produção":
-                        st.success(status_texto)
+                        st.success(f"{status_icon} {row['status']}")
                     elif row["status"] == "Parado":
-                        st.warning(status_texto)
+                        st.warning(f"{status_icon} {row['status']}")
                     else:
-                        st.write(status_texto)
+                        st.write(f"{status_icon} {row['status']}")
 
 
 # -------------------------------------------------
