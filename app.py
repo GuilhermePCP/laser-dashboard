@@ -529,6 +529,12 @@ if not df_tabela.empty:
                 "prazo_limite": "Prazo"
             })
 
+            # -------------------------
+            # ORDENAR PELO MAIS RECENTE
+            # -------------------------
+
+            df_exibicao = df_exibicao.sort_values("Início", ascending=True)
+
             tabela = st.dataframe(
                 df_exibicao,
                 use_container_width=True,
