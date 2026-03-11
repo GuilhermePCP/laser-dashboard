@@ -125,15 +125,13 @@ def carregar():
     )
 
     datas = ["inicio", "fim", "prazo_limite", "data_finalizado"]
+    df["quantidade"] = df["quantidade"].astype(int)
 
     for col in datas:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce")
 
-    df["quantidade"] = df["quantidade"].astype(int)
-
     return df
-
 
 df = carregar()
 
