@@ -844,20 +844,26 @@ if not df_tabela.empty:
                                     st.rerun()
 
 # -------------------------------------------------
+# FILTRAR APENAS PRODUÇÃO ATIVA
+# -------------------------------------------------
+
+df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"]
+
+
+# -------------------------------------------------
 # KANBAN DE PRODUÇÃO
 # -------------------------------------------------
 
 st.subheader("📋 Kanban de produção")
 
-operadores = df_filtrado["operador"].unique()
+operadores = df_producao["operador"].unique()
 
 cols = st.columns(len(operadores))
 
 status_cores = {
     "Programado": "🟡",
     "Em produção": "🟢",
-    "Parado": "🟠",
-    "Finalizado": "⚪"
+    "Parado": "🟠"
 }
 
 for i, operador in enumerate(operadores):
@@ -866,7 +872,7 @@ for i, operador in enumerate(operadores):
 
         st.markdown(f"### ⚙ {operador}")
 
-        df_op = df_filtrado[df_filtrado["operador"] == operador]
+        df_op = df_producao[df_producao["operador"] == operador]
 
         for _, row in df_op.iterrows():
 
@@ -882,6 +888,7 @@ for i, operador in enumerate(operadores):
 
                 st.write(f"{status_icon} {row['status']}")
 
+
 # -------------------------------------------------
 # MINI GANTT (VISÃO GERAL)
 # -------------------------------------------------
@@ -890,7 +897,7 @@ st.divider()
 
 st.subheader("📊 Linha do tempo da produção")
 
-df_gantt = df_filtrado.copy()
+df_gantt = df_producao.copy()
 
 df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"])
 df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
@@ -898,8 +905,7 @@ df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
 cores_status = {
     "Programado": "#f1c40f",
     "Em produção": "#2ecc71",
-    "Parado": "#e67e22",
-    "Finalizado": "#95a5a6"
+    "Parado": "#e67e22"
 }
 
 fig = px.timeline(
