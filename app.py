@@ -960,7 +960,7 @@ fig.update_traces(
     insidetextanchor="middle",
     textfont=dict(
         color="black",
-        size=14,
+        size=13,
         family="Arial Black"
     ),
     width=0.4,
@@ -986,6 +986,22 @@ fig.update_layout(
 # grid mais suave
 fig.update_xaxes(showgrid=True, gridcolor="rgba(200,200,200,0.2)")
 fig.update_yaxes(showgrid=False)
+
+fig.add_vline(
+    x=datetime.now(),
+    line_width=3,
+    line_dash="dash",
+    line_color="red"
+)
+
+fig.add_annotation(
+    x=datetime.now(),
+    y=1.02,
+    yref="paper",
+    text="HOJE",
+    showarrow=False,
+    font=dict(size=12, color="red")
+)
 
 st.plotly_chart(fig, use_container_width=True)
 
