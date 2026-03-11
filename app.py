@@ -237,8 +237,6 @@ st.sidebar.write(f"**Nome:** {st.session_state.usuario}")
 
 st.sidebar.write(f"**Função:** {st.session_state.nivel.upper()}")
 
-st.sidebar.markdown("---")
-
 # -------------------------------------------------
 # BOTÃO LOGOUT
 # -------------------------------------------------
@@ -246,6 +244,8 @@ st.sidebar.markdown("---")
 if st.sidebar.button("🚪 Sair"):
     st.session_state.logado = False
     st.rerun()
+
+st.sidebar.markdown("---")
 
 # -------------------------------------------------
 # SIDEBAR NOVA PROGRAMAÇÃO
