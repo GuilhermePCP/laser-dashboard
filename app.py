@@ -168,7 +168,7 @@ else:
 
     st.success("🟢 Nenhuma OP atrasada no momento")
 
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3 = st.columns(3)
 
 c1.metric("🟡 Programadas", programadas)
 c2.metric("🟢 Em produção", em_producao)
