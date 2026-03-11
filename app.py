@@ -134,6 +134,37 @@ def carregar():
 df = carregar()
 
 # -------------------------------------------------
+# MÉTRICAS DA PRODUÇÃO
+# -------------------------------------------------
+
+st.subheader("📊 Visão geral da produção")
+
+col1, col2, col3, col4 = st.columns(4)
+
+programadas = len(df[df["status"] == "Programado"])
+em_producao = len(df[df["status"] == "Em produção"])
+finalizadas = len(df[df["status"] == "Finalizado"])
+
+atrasadas = len(
+    df[
+        (df["status"] != "Finalizado") &
+        (pd.to_datetime(df["prazo_limite"]) < pd.Timestamp.today())
+    ]
+)
+
+with col1:
+    st.metric("Programadas", programadas)
+
+with col2:
+    st.metric("Em produção", em_producao)
+
+with col3:
+    st.metric("Finalizadas", finalizadas)
+
+with col4:
+    st.metric("Atrasadas", atrasadas)
+
+# -------------------------------------------------
 # USUÁRIO LOGADO
 # -------------------------------------------------
 
