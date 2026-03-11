@@ -958,96 +958,94 @@ for i, operador in enumerate(operadores):
 # -------------------------------------------------
 # MINI GANTT (VISUAL MELHORADO)
 # -------------------------------------------------
-    st.divider()
 
-    st.subheader("📊 Linha do tempo da produção")
+st.divider()
 
-    df_gantt = df_producao.copy()
+st.subheader("📊 Linha do tempo da produção")
 
-    if df_gantt.empty:
-        st.info("Nenhuma produção ativa para exibir")
-    else:
-        df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"])
-        df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
-        df_gantt["quantidade"] = df_gantt["quantidade"].astype(int)
+df_gantt = df_producao.copy()
 
-        hoje = pd.Timestamp.today()
+df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"])
+df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
+df_gantt["quantidade"] = df_gantt["quantidade"].astype(int)
 
-        # detectar atraso
-        df_gantt["atrasado"] = (
-            (df_gantt["fim"] < hoje) &
-            (df_gantt["status"] != "Finalizado")
+hoje = pd.Timestamp.today()
+
+# detectar atraso
+df_gantt["atrasado"] = (
+    (df_gantt["fim"] < hoje) &
+    (df_gantt["status"] != "Finalizado")
+)
+
+# status visual
+df_gantt["status_visual"] = df_gantt["status"]
+df_gantt.loc[df_gantt["atrasado"], "status_visual"] = "Atrasado"
+
+cores_status = {
+    "Programado": "#f1c40f",
+    "Em produção": "#2ecc71",
+    "Parado": "#e67e22",
+    "Atrasado": "#e74c3c"
+}
+
+fig = px.timeline(
+    df_gantt,
+    x_start="inicio",
+    x_end="fim",
+    y="operador",
+    color="status_visual",
+    color_discrete_map=cores_status,
+    text=df_gantt["produto"] + " • " + df_gantt["quantidade"].astype(str)
+)
+
+fig.update_traces(
+    textposition="inside",
+    insidetextanchor="middle",
+    textfont=dict(
+        color="black",
+        size=13,
+        family="Arial Black"
+    ),
+    width=0.4,
+    marker=dict(
+        line=dict(
+            color="white",
+            width=2
         )
+    )
+)
 
-        # status visual
-        df_gantt["status_visual"] = df_gantt["status"]
-        df_gantt.loc[df_gantt["atrasado"], "status_visual"] = "Atrasado"
+fig.update_layout(
+    height=380,
+    showlegend=True,
+    margin=dict(l=20, r=20, t=20, b=20),
+    xaxis_title="Data",
+    yaxis_title="Operador",
+    plot_bgcolor="rgba(0,0,0,0)",
+    paper_bgcolor="rgba(0,0,0,0)"
+)
 
-        cores_status = {
-            "Programado": "#f1c40f",
-            "Em produção": "#2ecc71",
-            "Parado": "#e67e22",
-            "Atrasado": "#e74c3c"
-        }
+fig.update_xaxes(showgrid=True, gridcolor="rgba(200,200,200,0.2)")
+fig.update_yaxes(showgrid=False)
 
-        fig = px.timeline(
-            df_gantt,
-            x_start="inicio",
-            x_end="fim",
-            y="operador",
-            color="status_visual",
-            color_discrete_map=cores_status,
-            text=df_gantt["produto"] + " • " + df_gantt["quantidade"].astype(str)
-        )
+# linha de HOJE
+fig.add_vline(
+    x=pd.Timestamp.today().normalize(),
+    line_width=3,
+    line_dash="dash",
+    line_color="red"
+)
 
-        fig.update_traces(
-            textposition="inside",
-            insidetextanchor="middle",
-            textfont=dict(
-                color="black",
-                size=13,
-                family="Arial Black"
-            ),
-            width=0.4,
-            marker=dict(
-                line=dict(
-                    color="white",
-                    width=2
-                )
-            )
-        )
+fig.add_annotation(
+    x=pd.Timestamp.today().normalize(),
+    y=1.02,
+    yref="paper",
+    text="HOJE",
+    showarrow=False,
+    font=dict(size=12, color="red")
+)
 
-        fig.update_layout(
-            height=380,
-            showlegend=True,
-            margin=dict(l=20, r=20, t=20, b=20),
-            xaxis_title="Data",
-            yaxis_title="Operador",
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)"
-        )
-
-        fig.update_xaxes(showgrid=True, gridcolor="rgba(200,200,200,0.2)")
-        fig.update_yaxes(showgrid=False)
-
-        # linha de HOJE
-        fig.add_vline(
-            x=pd.Timestamp.today().normalize(),
-            line_width=3,
-            line_dash="dash",
-            line_color="red"
-        )
-
-        fig.add_annotation(
-            x=pd.Timestamp.today().normalize(),
-            y=1.02,
-            yref="paper",
-            text="HOJE",
-            showarrow=False,
-            font=dict(size=12, color="red")
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True)
 
 # -------------------------------------------------
 # HISTÓRICO
