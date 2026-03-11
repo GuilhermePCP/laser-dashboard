@@ -134,12 +134,14 @@ def carregar():
 df = carregar()
 
 # -------------------------------------------------
-# MÉTRICAS DA PRODUÇÃO
+# KPIs
 # -------------------------------------------------
 
-st.subheader("📊 Visão geral da produção")
+metricas = calcular_metricas(df)
 
-col1, col2, col3, col4 = st.columns(4)
+# -------------------------
+# STATUS DA PRODUÇÃO
+# -------------------------
 
 programadas = len(df[df["status"] == "Programado"])
 em_producao = len(df[df["status"] == "Em produção"])
@@ -152,17 +154,26 @@ atrasadas = len(
     ]
 )
 
-with col1:
-    st.metric("Programadas", programadas)
+c1, c2, c3, c4 = st.columns(4)
 
-with col2:
-    st.metric("Em produção", em_producao)
+c1.metric("🟡 Programadas", programadas)
+c2.metric("🟢 Em produção", em_producao)
+c3.metric("⚪ Finalizadas", finalizadas)
+c4.metric("🔴 Atrasadas", atrasadas)
 
-with col3:
-    st.metric("Finalizadas", finalizadas)
 
-with col4:
-    st.metric("Atrasadas", atrasadas)
+# -------------------------
+# VISÃO OPERACIONAL
+# -------------------------
+
+c5, c6, c7 = st.columns(3)
+
+c5.metric("📦 Total OPs", metricas["total_ops"])
+c6.metric("⚙ Operadores ativos", metricas["maquinas_ocupadas"])
+c7.metric("➡ Próxima máquina", metricas["proxima_maquina"])
+
+
+st.divider()
 
 # -------------------------------------------------
 # USUÁRIO LOGADO
@@ -357,20 +368,6 @@ df_filtrado = filtrar_dados(df, maquina, status)
 
 df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
 df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
-
-# -------------------------------------------------
-# KPIs
-# -------------------------------------------------
-
-metricas = calcular_metricas(df_filtrado)
-
-c1,c2,c3 = st.columns(3)
-
-c1.metric("Total OPs", metricas["total_ops"])
-c2.metric("Operadores ativos", metricas["maquinas_ocupadas"])
-c3.metric("Próxima máquina", metricas["proxima_maquina"])
-
-st.divider()
 
 # -------------------------------------------------
 # TABELA DE FABRICAÇÃO
