@@ -237,6 +237,8 @@ st.sidebar.write(f"**Nome:** {st.session_state.usuario}")
 
 st.sidebar.write(f"**Função:** {st.session_state.nivel.upper()}")
 
+st.sidebar.write("") #Espaço invisivel de proposito
+
 # -------------------------------------------------
 # BOTÃO LOGOUT
 # -------------------------------------------------
