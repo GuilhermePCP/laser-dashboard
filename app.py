@@ -509,7 +509,7 @@ if not df_tabela.empty:
 
             def icone_status(status):
                 
-                status_op = str(linha["status"])
+                status_op = linha.get("status", "")
 
                 if status_op == "Programado":
                     return "🟡 Programado"
