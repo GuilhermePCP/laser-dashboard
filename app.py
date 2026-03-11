@@ -130,6 +130,8 @@ def carregar():
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce")
 
+    df["quantidade"] = df["quantidade"].astype(int)
+
     return df
 
 
@@ -909,7 +911,7 @@ for i, operador in enumerate(operadores):
 
                     st.write(f"**{row['produto']}**")
 
-                    st.write(f"📦 Quantidade: {row['quantidade']}")
+                    st.write(f"📦 Quantidade: {int(row['quantidade'])}")
 
                     st.caption(f"{inicio} → {fim}")
 
@@ -949,7 +951,7 @@ fig = px.timeline(
     y="operador",
     color="status",
     color_discrete_map=cores_status,
-    text=df_gantt["produto"] + " • " + df_gantt["quantidade"].astype(str)
+    text=df_gantt["produto"] + " • " + df_gantt["quantidade"].astype(int).astype(str)
 )
 
 fig.update_traces(
