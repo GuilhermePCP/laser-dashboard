@@ -532,7 +532,7 @@ if not df_tabela.empty:
             # ORDENAR PELO MAIS RECENTE
             # -------------------------
 
-            df_exibicao = df_exibicao.sort_values("Início", ascending=True)
+            df_operador = df_operador.sort_values("inicio").reset_index(drop=True)
 
             tabela = st.dataframe(
                 df_exibicao,
@@ -550,7 +550,7 @@ if not df_tabela.empty:
 
                 index = tabela["selection"]["rows"][0]
 
-                linha = df_tabela[df_tabela["operador"] == operador].iloc[index]
+                linha = df_operador.iloc[index]
 
                 col1, col2 = st.columns([2,1])
 
