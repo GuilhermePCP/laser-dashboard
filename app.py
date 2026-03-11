@@ -857,7 +857,7 @@ df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"]
 
 
 # -------------------------------------------------
-# KANBAN DE PRODUÇÃO (VERSÃO PROFISSIONAL)
+# KANBAN DE PRODUÇÃO (VISUAL MELHORADO)
 # -------------------------------------------------
 
 st.subheader("📋 Kanban de produção")
@@ -867,9 +867,9 @@ operadores = df_producao["operador"].unique()
 cols = st.columns(len(operadores))
 
 status_cores = {
-    "Programado": "🟡 Programado",
-    "Em produção": "🟢 Em produção",
-    "Parado": "🟠 Parado"
+    "Programado": "🟡",
+    "Em produção": "🟢",
+    "Parado": "🟠"
 }
 
 for i, operador in enumerate(operadores):
@@ -878,17 +878,11 @@ for i, operador in enumerate(operadores):
 
         df_op = df_producao[df_producao["operador"] == operador]
 
-        total_ops = len(df_op)
-        total_pecas = df_op["quantidade"].sum()
-
+        # Caixa principal do operador
         with st.container(border=True):
 
             st.markdown(f"### ⚙ {operador}")
-
-            c1, c2 = st.columns(2)
-
-            c1.metric("OPs", total_ops)
-            c2.metric("Peças", int(total_pecas))
+            st.caption(f"{len(df_op)} OP(s) programadas")
 
             st.divider()
 
@@ -901,10 +895,13 @@ for i, operador in enumerate(operadores):
 
                     st.write(f"**{row['produto']}**")
 
-                    col1, col2 = st.columns(2)
+                    st.write(f"📦 Quantidade: {row['quantidade']}")
 
-                    col1.write(f"📦 {int(row['quantidade'])}")
-                    col2.write(f"{inicio} → {fim}")
+                    st.caption(f"{inicio} → {fim}")
+
+                    status_icon = status_cores.get(row["status"], "")
+
+                    st.write(f"{status_icon} {row['status']}")
 
                     status_texto = status_cores.get(row["status"], row["status"])
 
