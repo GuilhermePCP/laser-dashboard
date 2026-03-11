@@ -532,7 +532,7 @@ if not df_tabela.empty:
                         # BOTÕES DE PRODUÇÃO
                         # -------------------------
 
-                        if status == "Programado":
+                        if status == "🟡 Programado":
 
                             if st.button(
                                 "▶ Iniciar produção",
@@ -616,7 +616,7 @@ if not df_tabela.empty:
                                     st.success("Produção finalizada")
                                     st.rerun()
 
-                        elif status == "Parado":
+                        elif status == "🟠 Parado":
 
                             if st.button(
                                 "▶ Retomar produção",
