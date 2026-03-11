@@ -956,10 +956,17 @@ fig.update_traces(
     textposition="inside",
     insidetextanchor="middle",
     textfont=dict(
-        color="white",
-        size=14
+        color="black",
+        size=15,
+        family="Arial Black"
     ),
-    width=0.35
+    width=0.35,
+    marker=dict(
+        line=dict(
+            color="white",
+            width=2
+        )
+    )
 )
 
 fig.update_layout(
@@ -968,6 +975,8 @@ fig.update_layout(
     margin=dict(l=20, r=20, t=20, b=20),
     xaxis_title="Data",
     yaxis_title="Operador"
+    plot_bgcolor="#0e1117",
+    paper_bgcolor="#0e1117"
 )
 
 st.plotly_chart(fig, use_container_width=True)
