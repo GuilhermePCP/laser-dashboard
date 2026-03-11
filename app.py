@@ -878,6 +878,16 @@ for i, operador in enumerate(operadores):
 
         df_op = df_producao[df_producao["operador"] == operador]
 
+        ordem_status = {
+            "Em produção": 0,
+            "Parado": 1,
+            "Programado": 2
+        }
+
+        df_op["ordem_status"] = df_op["status"].map(ordem_status)
+
+        df_op = df_op.sort_values(["ordem_status", "inicio"])
+
         # Caixa principal do operador
         with st.container(border=True):
 
