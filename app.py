@@ -1065,7 +1065,7 @@ if not df_finalizados.empty:
     df_hist["inicio"] = pd.to_datetime(df_hist["inicio"], errors="coerce").dt.strftime("%d/%m/%Y")
     df_hist["fim"] = pd.to_datetime(df_hist["fim"], errors="coerce").dt.strftime("%d/%m/%Y")
     df_hist["prazo_limite"] = pd.to_datetime(df_hist["prazo_limite"], errors="coerce").dt.strftime("%d/%m/%Y")
-    df_hist = df_hist.sort_values("Finalizado em", ascending=False)
+    df_hist = df_hist.sort_values("data_finalizado", ascending=False)
     df_hist["data_finalizado"] = pd.to_datetime(df_hist["data_finalizado"], errors="coerce").dt.strftime("%d/%m/%Y")
 
     # -------------------------
