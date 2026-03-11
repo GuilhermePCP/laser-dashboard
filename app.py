@@ -851,7 +851,7 @@ df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"]
 
 
 # -------------------------------------------------
-# KANBAN DE PRODUÇÃO
+# KANBAN DE PRODUÇÃO (VISUAL MELHORADO)
 # -------------------------------------------------
 
 st.subheader("📋 Kanban de produção")
@@ -870,26 +870,32 @@ for i, operador in enumerate(operadores):
 
     with cols[i]:
 
-        st.markdown(f"### ⚙ {operador}")
-
         df_op = df_producao[df_producao["operador"] == operador]
 
-        for _, row in df_op.iterrows():
+        # Caixa principal do operador
+        with st.container(border=True):
 
-            inicio = pd.to_datetime(row["inicio"]).strftime("%d/%m")
-            fim = pd.to_datetime(row["fim"]).strftime("%d/%m")
+            st.markdown(f"### ⚙ {operador}")
+            st.caption(f"{len(df_op)} OP(s) programadas")
 
-            with st.container(border=True):
+            st.divider()
 
-                st.write(f"**{row['produto']}**")
+            for _, row in df_op.iterrows():
 
-                st.write(f"📦 Quantidade: {row['quantidade']}")
+                inicio = pd.to_datetime(row["inicio"]).strftime("%d/%m")
+                fim = pd.to_datetime(row["fim"]).strftime("%d/%m")
 
-                st.caption(f"{inicio} → {fim}")
+                with st.container(border=True):
 
-                status_icon = status_cores.get(row["status"], "")
+                    st.write(f"**{row['produto']}**")
 
-                st.write(f"{status_icon} {row['status']}")
+                    st.write(f"📦 Quantidade: {row['quantidade']}")
+
+                    st.caption(f"{inicio} → {fim}")
+
+                    status_icon = status_cores.get(row["status"], "")
+
+                    st.write(f"{status_icon} {row['status']}")
 
 
 # -------------------------------------------------
