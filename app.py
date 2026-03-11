@@ -798,21 +798,21 @@ if not df_tabela.empty:
 
                                 nova_inicio = st.date_input(
                                     "Início",
-                                    pd.to_datetime(linha["inicio"]),
+                                    pd.to_datetime(linha["inicio"], dayfirst= True),
                                     format="DD/MM/YYYY",
                                     key=f"inicio_{operador}_{linha['id']}"
                                 )
 
                                 novo_fim = st.date_input(
                                     "Fim",
-                                    pd.to_datetime(linha["fim"]),
+                                    pd.to_datetime(linha["fim"], dayfirst= True),
                                     format="DD/MM/YYYY",
                                     key=f"fim_{operador}_{linha['id']}"
                                 )
 
                                 novo_prazo = st.date_input(
                                     "Prazo limite",
-                                    pd.to_datetime(linha["prazo_limite"]),
+                                    pd.to_datetime(linha["prazo_limite"], dayfirst= True),
                                     format="DD/MM/YYYY",
                                     key=f"prazo_{operador}_{linha['id']}"
                                 )
