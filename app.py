@@ -24,6 +24,8 @@ from src.database import (
 from sqlalchemy import text
 import fitz
 import io
+import plotly.express as px
+
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
