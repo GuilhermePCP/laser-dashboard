@@ -840,16 +840,89 @@ if not df_tabela.empty:
 
                                     st.success("OP atualizada com sucesso")
                                     st.rerun()
+
 # -------------------------------------------------
-# GANTT
+# KANBAN DE PRODUÇÃO
+# -------------------------------------------------
+
+st.subheader("📋 Kanban de produção")
+
+operadores = df_filtrado["operador"].unique()
+
+cols = st.columns(len(operadores))
+
+status_cores = {
+    "Programado": "🟡",
+    "Em produção": "🟢",
+    "Parado": "🟠",
+    "Finalizado": "⚪"
+}
+
+for i, operador in enumerate(operadores):
+
+    with cols[i]:
+
+        st.markdown(f"### ⚙ {operador}")
+
+        df_op = df_filtrado[df_filtrado["operador"] == operador]
+
+        for _, row in df_op.iterrows():
+
+            inicio = pd.to_datetime(row["inicio"]).strftime("%d/%m")
+            fim = pd.to_datetime(row["fim"]).strftime("%d/%m")
+
+            with st.container(border=True):
+
+                st.write(f"**{row['produto']}**")
+                st.caption(f"{inicio} → {fim}")
+
+                status_icon = status_cores.get(row["status"], "")
+
+                st.write(f"{status_icon} {row['status']}")
+
+# -------------------------------------------------
+# MINI GANTT (VISÃO GERAL)
 # -------------------------------------------------
 
 st.divider()
 
-df_grafico = df_ativos.copy()
+st.subheader("📊 Linha do tempo da produção")
 
-df_grafico["inicio"] = pd.to_datetime(df_grafico["inicio"])
-df_grafico["fim"] = pd.to_datetime(df_grafico["fim"])
+df_gantt = df_filtrado.copy()
+
+df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"])
+df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
+
+cores_status = {
+    "Programado": "#f1c40f",
+    "Em produção": "#2ecc71",
+    "Parado": "#e67e22",
+    "Finalizado": "#95a5a6"
+}
+
+fig = px.timeline(
+    df_gantt,
+    x_start="inicio",
+    x_end="fim",
+    y="operador",
+    color="status",
+    color_discrete_map=cores_status,
+    text="produto"
+)
+
+fig.update_traces(
+    textposition="inside",
+    insidetextanchor="middle",
+    width=0.35
+)
+
+fig.update_layout(
+    height=350,
+    showlegend=True,
+    margin=dict(l=20, r=20, t=20, b=20)
+)
+
+st.plotly_chart(fig, use_container_width=True)
 
 # -------------------------
 # CORES DOS STATUS
