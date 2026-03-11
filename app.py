@@ -955,11 +955,11 @@ df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"])
 df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
 df_gantt["quantidade"] = df_gantt["quantidade"].astype(int)
 
-hoje = pd.Timestamp.today()
-
 # detectar atraso
+hoje = pd.Timestamp.today().normalize()
+
 df_gantt["atrasado"] = (
-    (df_gantt["fim"] < hoje) &
+    (df_gantt["fim"].dt.normalize() < hoje) &
     (df_gantt["status"] != "Finalizado")
 )
 
