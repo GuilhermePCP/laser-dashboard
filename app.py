@@ -169,14 +169,47 @@ c4.metric("📦 Total OPs", metricas["total_ops"])
 # ALERTA DE ATRASOS
 # -------------------------------------------------
 
+df_atrasadas = df[
+    (df["status"] != "Finalizado") &
+    (pd.to_datetime(df["prazo_limite"]) < pd.Timestamp.today())
+]
+
+atrasadas = len(df_atrasadas)
+
 if atrasadas > 0:
 
-    st.error(f"🔴 {atrasadas} OP(s) atrasada(s) na produção!")
+    with st.expander(f"🔴 {atrasadas} OP(s) atrasada(s) — clique para ver"):
+
+        df_alerta = df_atrasadas.copy()
+
+        df_alerta["prazo_limite"] = pd.to_datetime(
+            df_alerta["prazo_limite"], errors="coerce"
+        ).dt.strftime("%d/%m/%Y")
+
+        df_alerta = df_alerta.rename(columns={
+            "produto": "Produto",
+            "operador": "Operador",
+            "quantidade": "Quantidade",
+            "prazo_limite": "Prazo limite"
+        })
+
+        st.dataframe(
+            df_alerta[
+                [
+                    "Produto",
+                    "Quantidade",
+                    "Operador",
+                    "Prazo limite"
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True
+        )
 
 else:
 
-    st.success("🟢 Nenhuma OP atrasada no momento")
-    
+    st.caption("🟢 Nenhuma OP atrasada")
+
 # -------------------------
 # VISÃO OPERACIONAL
 # -------------------------
