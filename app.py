@@ -957,7 +957,7 @@ fig.update_traces(
     insidetextanchor="middle",
     textfont=dict(
         color="black",
-        size=15,
+        size=10,
         family="Arial Black"
     ),
     width=0.35,
