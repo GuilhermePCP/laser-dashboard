@@ -857,7 +857,7 @@ df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"]
 
 
 # -------------------------------------------------
-# KANBAN DE PRODUÇÃO (VISUAL MELHORADO)
+# KANBAN DE PRODUÇÃO (VERSÃO PROFISSIONAL)
 # -------------------------------------------------
 
 st.subheader("📋 Kanban de produção")
@@ -867,9 +867,9 @@ operadores = df_producao["operador"].unique()
 cols = st.columns(len(operadores))
 
 status_cores = {
-    "Programado": "🟡",
-    "Em produção": "🟢",
-    "Parado": "🟠"
+    "Programado": "🟡 Programado",
+    "Em produção": "🟢 Em produção",
+    "Parado": "🟠 Parado"
 }
 
 for i, operador in enumerate(operadores):
@@ -878,11 +878,17 @@ for i, operador in enumerate(operadores):
 
         df_op = df_producao[df_producao["operador"] == operador]
 
-        # Caixa principal do operador
+        total_ops = len(df_op)
+        total_pecas = df_op["quantidade"].sum()
+
         with st.container(border=True):
 
             st.markdown(f"### ⚙ {operador}")
-            st.caption(f"{len(df_op)} OP(s) programadas")
+
+            c1, c2 = st.columns(2)
+
+            c1.metric("OPs", total_ops)
+            c2.metric("Peças", int(total_pecas))
 
             st.divider()
 
@@ -895,13 +901,20 @@ for i, operador in enumerate(operadores):
 
                     st.write(f"**{row['produto']}**")
 
-                    st.write(f"📦 Quantidade: {row['quantidade']}")
+                    col1, col2 = st.columns(2)
 
-                    st.caption(f"{inicio} → {fim}")
+                    col1.write(f"📦 {int(row['quantidade'])}")
+                    col2.write(f"{inicio} → {fim}")
 
-                    status_icon = status_cores.get(row["status"], "")
+                    status_texto = status_cores.get(row["status"], row["status"])
 
-                    st.write(f"{status_icon} {row['status']}")
+                    # destaque visual se estiver em produção
+                    if row["status"] == "Em produção":
+                        st.success(status_texto)
+                    elif row["status"] == "Parado":
+                        st.warning(status_texto)
+                    else:
+                        st.write(status_texto)
 
 
 # -------------------------------------------------
