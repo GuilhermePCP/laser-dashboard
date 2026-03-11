@@ -455,6 +455,8 @@ if not df_tabela.empty:
 
             df_operador = df_operador.sort_values("inicio").reset_index(drop=True)
 
+            df_operador = df_operador.reset_index(drop=True)
+
             # -------------------------
             # CONTROLE DE COLUNAS POR NÍVEL
             # -------------------------
@@ -618,7 +620,7 @@ if not df_tabela.empty:
                             "Finalizado": "⚪ Finalizado"
                         }
 
-                        st.write(f"**Status:** {cores.get(status, status)}")
+                        st.write(f"**Status:** {cores.get(status_op, status_op)}")
 
                         st.divider()
 
@@ -899,7 +901,7 @@ for i, operador in enumerate(operadores):
 
         # detectar atrasos
         df_op["atrasado"] = (
-            (pd.to_datetime(df_op["prazo_limite"]) < hoje) &
+            (pd.to_datetime(df_op["prazo_limite"], errors="coerce") < hoje) &
             (df_op["status"] != "Finalizado")
         )
 
@@ -1062,11 +1064,14 @@ if not df_finalizados.empty:
     # FORMATAÇÃO DE DATAS
     # -------------------------
 
+    df_hist["data_finalizado"] = pd.to_datetime(df_hist["data_finalizado"], errors="coerce")
+
+    df_hist = df_hist.sort_values("data_finalizado", ascending=False)
+
     df_hist["inicio"] = pd.to_datetime(df_hist["inicio"], errors="coerce").dt.strftime("%d/%m/%Y")
     df_hist["fim"] = pd.to_datetime(df_hist["fim"], errors="coerce").dt.strftime("%d/%m/%Y")
     df_hist["prazo_limite"] = pd.to_datetime(df_hist["prazo_limite"], errors="coerce").dt.strftime("%d/%m/%Y")
-    df_hist = df_hist.sort_values("data_finalizado", ascending=False)
-    df_hist["data_finalizado"] = pd.to_datetime(df_hist["data_finalizado"], errors="coerce").dt.strftime("%d/%m/%Y")
+    df_hist["data_finalizado"] = df_hist["data_finalizado"].dt.strftime("%d/%m/%Y")
 
     # -------------------------
     # RENOMEAR COLUNAS
