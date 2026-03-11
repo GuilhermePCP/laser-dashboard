@@ -918,7 +918,7 @@ cores_status = {
     "Finalizado": "#95a5a6"
 }
 fig = grafico_gantt(
-    df_grafico.sort_values("inicio"),
+    df_gantt.sort_values("inicio"),
     cores_status
 )
 
