@@ -923,7 +923,7 @@ for i, operador in enumerate(operadores):
 
 
 # -------------------------------------------------
-# MINI GANTT (VISÃO GERAL)
+# MINI GANTT (VISUAL MELHORADO)
 # -------------------------------------------------
 
 st.divider()
@@ -934,6 +934,9 @@ df_gantt = df_producao.copy()
 
 df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"])
 df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
+
+# garantir quantidade inteira
+df_gantt["quantidade"] = df_gantt["quantidade"].astype(int)
 
 cores_status = {
     "Programado": "#f1c40f",
@@ -948,18 +951,19 @@ fig = px.timeline(
     y="operador",
     color="status",
     color_discrete_map=cores_status,
-    text=df_gantt["produto"] + " • " + df_gantt["quantidade"].astype(int).astype(str)
+    text=df_gantt["produto"] + " • " + df_gantt["quantidade"].astype(str)
 )
 
+# estilo das barras
 fig.update_traces(
     textposition="inside",
     insidetextanchor="middle",
     textfont=dict(
         color="black",
-        size=12,
+        size=14,
         family="Arial Black"
     ),
-    width=0.35,
+    width=0.4,
     marker=dict(
         line=dict(
             color="white",
@@ -968,15 +972,20 @@ fig.update_traces(
     )
 )
 
+# layout geral
 fig.update_layout(
     height=380,
     showlegend=True,
     margin=dict(l=20, r=20, t=20, b=20),
     xaxis_title="Data",
     yaxis_title="Operador",
-    plot_bgcolor="#0e1117",
-    paper_bgcolor="#0e1117"
+    plot_bgcolor="rgba(0,0,0,0)",
+    paper_bgcolor="rgba(0,0,0,0)"
 )
+
+# grid mais suave
+fig.update_xaxes(showgrid=True, gridcolor="rgba(200,200,200,0.2)")
+fig.update_yaxes(showgrid=False)
 
 st.plotly_chart(fig, use_container_width=True)
 
