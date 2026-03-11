@@ -156,6 +156,15 @@ atrasadas = len(
     ]
 )
 
+
+
+c1, c2, c3, c4 = st.columns(4)
+
+c1.metric("🟡 Programadas", programadas)
+c2.metric("🟢 Em produção", em_producao)
+c3.metric("⚪ Finalizadas", finalizadas)
+c4.metric("📦 Total OPs", metricas["total_ops"])
+
 # -------------------------------------------------
 # ALERTA DE ATRASOS
 # -------------------------------------------------
@@ -167,23 +176,15 @@ if atrasadas > 0:
 else:
 
     st.success("🟢 Nenhuma OP atrasada no momento")
-
-c1, c2, c3 = st.columns(3)
-
-c1.metric("🟡 Programadas", programadas)
-c2.metric("🟢 Em produção", em_producao)
-c3.metric("⚪ Finalizadas", finalizadas)
-
-
+    
 # -------------------------
 # VISÃO OPERACIONAL
 # -------------------------
 
-c5, c6, c7 = st.columns(3)
+c5, c6 = st.columns(2)
 
-c5.metric("📦 Total OPs", metricas["total_ops"])
-c6.metric("⚙ Operadores ativos", metricas["maquinas_ocupadas"])
-c7.metric("➡ Próxima máquina", metricas["proxima_maquina"])
+c5.metric("⚙ Operadores ativos", metricas["maquinas_ocupadas"])
+c6.metric("➡ Próxima máquina", metricas["proxima_maquina"])
 
 
 st.divider()
