@@ -883,10 +883,11 @@ for i, operador in enumerate(operadores):
                 st.write(f"{status_icon} {row['status']}")
 
 # -------------------------------------------------
-# MINI GANTT
+# MINI GANTT (VISÃO GERAL)
 # -------------------------------------------------
 
 st.divider()
+
 st.subheader("📊 Linha do tempo da produção")
 
 df_gantt = df_filtrado.copy()
@@ -894,16 +895,34 @@ df_gantt = df_filtrado.copy()
 df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"])
 df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
 
+cores_status = {
+    "Programado": "#f1c40f",
+    "Em produção": "#2ecc71",
+    "Parado": "#e67e22",
+    "Finalizado": "#95a5a6"
+}
+
 fig = px.timeline(
     df_gantt,
     x_start="inicio",
     x_end="fim",
     y="operador",
     color="status",
+    color_discrete_map=cores_status,
     text="produto"
 )
 
-fig.update_traces(width=0.35)
+fig.update_traces(
+    textposition="inside",
+    insidetextanchor="middle",
+    width=0.35
+)
+
+fig.update_layout(
+    height=350,
+    showlegend=True,
+    margin=dict(l=20, r=20, t=20, b=20)
+)
 
 st.plotly_chart(fig, use_container_width=True)
 
@@ -924,9 +943,9 @@ fig = grafico_gantt(
 
 st.plotly_chart(fig, use_container_width=True)
 
- #-------------------------------------------------
- #HISTÓRICO
- #-------------------------------------------------
+# -------------------------------------------------
+# HISTÓRICO
+# -------------------------------------------------
 
 st.divider()
 st.subheader("📚 Programações finalizadas")
