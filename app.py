@@ -911,22 +911,22 @@ st.plotly_chart(fig, use_container_width=True)
 # CORES DOS STATUS
 # -------------------------
 
-#cores_status = {
-   # "Programado": "#f1c40f",
-   # "Em produção": "#2ecc71",
-  #  "Parado": "#e67e22",
-  #  "Finalizado": "#95a5a6"
-#}
-#fig = grafico_gantt(
-  #  df_grafico.sort_values("inicio"),
-  #  cores_status
-#)
+cores_status = {
+    "Programado": "#f1c40f",
+    "Em produção": "#2ecc71",
+    "Parado": "#e67e22",
+    "Finalizado": "#95a5a6"
+}
+fig = grafico_gantt(
+    df_grafico.sort_values("inicio"),
+    cores_status
+)
 
-#st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True)
 
-# -------------------------------------------------
-# HISTÓRICO
-# -------------------------------------------------
+ #-------------------------------------------------
+ #HISTÓRICO
+ #-------------------------------------------------
 
 st.divider()
 st.subheader("📚 Programações finalizadas")
