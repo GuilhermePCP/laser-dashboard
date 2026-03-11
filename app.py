@@ -882,6 +882,9 @@ for i, operador in enumerate(operadores):
             with st.container(border=True):
 
                 st.write(f"**{row['produto']}**")
+
+                st.write(f"📦 Quantidade: {row['quantidade']}")
+
                 st.caption(f"{inicio} → {fim}")
 
                 status_icon = status_cores.get(row["status"], "")
@@ -915,19 +918,25 @@ fig = px.timeline(
     y="operador",
     color="status",
     color_discrete_map=cores_status,
-    text="produto"
+    text=df_gantt["produto"] + " • " + df_gantt["quantidade"].astype(str)
 )
 
 fig.update_traces(
     textposition="inside",
     insidetextanchor="middle",
+    textfont=dict(
+        color="white",
+        size=14
+    ),
     width=0.35
 )
 
 fig.update_layout(
-    height=350,
+    height=380,
     showlegend=True,
-    margin=dict(l=20, r=20, t=20, b=20)
+    margin=dict(l=20, r=20, t=20, b=20),
+    xaxis_title="Data",
+    yaxis_title="Operador"
 )
 
 st.plotly_chart(fig, use_container_width=True)
