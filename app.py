@@ -25,7 +25,11 @@ from sqlalchemy import text
 import fitz
 import io
 import plotly.express as px
+import re
 
+@st.cache_data
+def carregar_ops():
+    return carregar_operadores()
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -128,7 +132,7 @@ def carregar():
 
     for col in datas:
         if col in df.columns:
-            df[col] = pd.to_datetime(df[col], errors="coerce")
+            df[col] = pd.to_datetime(df[col], errors="coerce", dayfirst=True)
 
     return df
 
@@ -259,7 +263,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     with st.sidebar.form("nova_op"):
 
-        operadores = carregar_operadores()
+        operadores = carregar_ops()
 
         operador = st.selectbox(
             "Operador",
@@ -316,6 +320,8 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
             timestamp = int(datetime.now().timestamp())
 
+            produto_limpo = re.sub(r'[^a-zA-Z0-9_-]', '_', produto)
+
             # -------------------------------------------------
             # SE FOR PDF → CONVERTER PARA IMAGEM
             # -------------------------------------------------
@@ -328,7 +334,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
                 pix = pagina.get_pixmap()
 
-                nome_arquivo = f"{produto}_{timestamp}.png"
+                nome_arquivo = f"{produto_limpo}_{timestamp}.png"
                 caminho_desenho = os.path.join(UPLOAD_DIR, nome_arquivo)
 
                 pix.save(caminho_desenho)
@@ -518,7 +524,7 @@ if not df_tabela.empty:
 
                 return status
 
-            df_operador["status"] = df_operador["status"].apply(icone_status)
+            df_operador["status_visual"] = df_operador["status"].apply(icone_status)
 
             # -------------------------
             # TABELA
@@ -531,7 +537,7 @@ if not df_tabela.empty:
                 "produto": "Produto",
                 "quantidade": "Quantidade",
                 "operador": "Operador",
-                "status": "Status",
+                "status_visual": "Status",
                 "inicio": "Início",
                 "fim": "Fim",
                 "prazo_limite": "Prazo"
@@ -579,7 +585,10 @@ if not df_tabela.empty:
 
                     if caminho and os.path.exists(caminho):
 
-                        st.image(caminho, use_container_width=True)
+                        try:
+                            st.image(caminho, use_container_width=True)
+                        except:
+                            st.warning("Erro ao carregar imagem")
 
                     else:
 
@@ -592,7 +601,7 @@ if not df_tabela.empty:
 
                 with col2:
 
-                    status = linha["status"]
+                    status_op = linha["status"]
 
                     with st.container(border=True):
 
@@ -617,7 +626,7 @@ if not df_tabela.empty:
                         # BOTÕES DE PRODUÇÃO
                         # -------------------------
 
-                        if status == "🟡 Programado":
+                        if status == "Programado":
 
                             if st.button(
                                 "▶ Iniciar produção",
@@ -643,7 +652,7 @@ if not df_tabela.empty:
                                 st.success("Produção iniciada")
                                 st.rerun()
 
-                        elif status == "🟢 Em produção":
+                        elif status == "Em produção":
 
                             col_pause, col_finish = st.columns(2)
 
@@ -701,7 +710,7 @@ if not df_tabela.empty:
                                     st.success("Produção finalizada")
                                     st.rerun()
 
-                        elif status == "🟠 Parado":
+                        elif status == "Parado":
 
                             if st.button(
                                 "▶ Retomar produção",
@@ -746,7 +755,7 @@ if not df_tabela.empty:
 
                             col_confirmar, col_cancelar = st.columns(2)
 
-                            with col1:
+                            with col_confirmar:
                                 if st.button(
                                     "✅ Sim, excluir",
                                     use_container_width=True,
@@ -766,7 +775,7 @@ if not df_tabela.empty:
                                     st.session_state[f"confirmar_delete_{linha['id']}"] = False
                                     st.rerun()
 
-                            with col2:
+                            with col_cancelar:
                                 if st.button(
                                     "❌ Cancelar",
                                     use_container_width=True,
@@ -869,7 +878,10 @@ st.subheader("📋 Kanban de produção")
 
 operadores = df_producao["operador"].unique()
 
-cols = st.columns(len(operadores))
+if len(operadores) > 0:
+    cols = st.columns(len(operadores))
+else:
+    st.info("Nenhuma OP em produção")
 
 status_cores = {
     "Programado": "🟡",
@@ -887,7 +899,7 @@ for i, operador in enumerate(operadores):
 
         # detectar atrasos
         df_op["atrasado"] = (
-            (pd.to_datetime(df_op["fim"]) < hoje) &
+            (pd.to_datetime(df_op["prazo_limite"]) < hoje) &
             (df_op["status"] != "Finalizado")
         )
 
@@ -946,94 +958,96 @@ for i, operador in enumerate(operadores):
 # -------------------------------------------------
 # MINI GANTT (VISUAL MELHORADO)
 # -------------------------------------------------
+    st.divider()
 
-st.divider()
+    st.subheader("📊 Linha do tempo da produção")
 
-st.subheader("📊 Linha do tempo da produção")
+    df_gantt = df_producao.copy()
 
-df_gantt = df_producao.copy()
+    if df_gantt.empty:
+        st.info("Nenhuma produção ativa para exibir")
+    else:
+        df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"])
+        df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
+        df_gantt["quantidade"] = df_gantt["quantidade"].astype(int)
 
-df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"])
-df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
-df_gantt["quantidade"] = df_gantt["quantidade"].astype(int)
+        hoje = pd.Timestamp.today()
 
-hoje = pd.Timestamp.today()
-
-# detectar atraso
-df_gantt["atrasado"] = (
-    (df_gantt["fim"] < hoje) &
-    (df_gantt["status"] != "Finalizado")
-)
-
-# status visual
-df_gantt["status_visual"] = df_gantt["status"]
-df_gantt.loc[df_gantt["atrasado"], "status_visual"] = "Atrasado"
-
-cores_status = {
-    "Programado": "#f1c40f",
-    "Em produção": "#2ecc71",
-    "Parado": "#e67e22",
-    "Atrasado": "#e74c3c"
-}
-
-fig = px.timeline(
-    df_gantt,
-    x_start="inicio",
-    x_end="fim",
-    y="operador",
-    color="status_visual",
-    color_discrete_map=cores_status,
-    text=df_gantt["produto"] + " • " + df_gantt["quantidade"].astype(str)
-)
-
-fig.update_traces(
-    textposition="inside",
-    insidetextanchor="middle",
-    textfont=dict(
-        color="black",
-        size=13,
-        family="Arial Black"
-    ),
-    width=0.4,
-    marker=dict(
-        line=dict(
-            color="white",
-            width=2
+        # detectar atraso
+        df_gantt["atrasado"] = (
+            (df_gantt["fim"] < hoje) &
+            (df_gantt["status"] != "Finalizado")
         )
-    )
-)
 
-fig.update_layout(
-    height=380,
-    showlegend=True,
-    margin=dict(l=20, r=20, t=20, b=20),
-    xaxis_title="Data",
-    yaxis_title="Operador",
-    plot_bgcolor="rgba(0,0,0,0)",
-    paper_bgcolor="rgba(0,0,0,0)"
-)
+        # status visual
+        df_gantt["status_visual"] = df_gantt["status"]
+        df_gantt.loc[df_gantt["atrasado"], "status_visual"] = "Atrasado"
 
-fig.update_xaxes(showgrid=True, gridcolor="rgba(200,200,200,0.2)")
-fig.update_yaxes(showgrid=False)
+        cores_status = {
+            "Programado": "#f1c40f",
+            "Em produção": "#2ecc71",
+            "Parado": "#e67e22",
+            "Atrasado": "#e74c3c"
+        }
 
-# linha de HOJE
-fig.add_vline(
-    x=datetime.now(),
-    line_width=3,
-    line_dash="dash",
-    line_color="red"
-)
+        fig = px.timeline(
+            df_gantt,
+            x_start="inicio",
+            x_end="fim",
+            y="operador",
+            color="status_visual",
+            color_discrete_map=cores_status,
+            text=df_gantt["produto"] + " • " + df_gantt["quantidade"].astype(str)
+        )
 
-fig.add_annotation(
-    x=datetime.now(),
-    y=1.02,
-    yref="paper",
-    text="HOJE",
-    showarrow=False,
-    font=dict(size=12, color="red")
-)
+        fig.update_traces(
+            textposition="inside",
+            insidetextanchor="middle",
+            textfont=dict(
+                color="black",
+                size=13,
+                family="Arial Black"
+            ),
+            width=0.4,
+            marker=dict(
+                line=dict(
+                    color="white",
+                    width=2
+                )
+            )
+        )
 
-st.plotly_chart(fig, use_container_width=True)
+        fig.update_layout(
+            height=380,
+            showlegend=True,
+            margin=dict(l=20, r=20, t=20, b=20),
+            xaxis_title="Data",
+            yaxis_title="Operador",
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)"
+        )
+
+        fig.update_xaxes(showgrid=True, gridcolor="rgba(200,200,200,0.2)")
+        fig.update_yaxes(showgrid=False)
+
+        # linha de HOJE
+        fig.add_vline(
+            x=pd.Timestamp.today().normalize(),
+            line_width=3,
+            line_dash="dash",
+            line_color="red"
+        )
+
+        fig.add_annotation(
+            x=pd.Timestamp.today().normalize(),
+            y=1.02,
+            yref="paper",
+            text="HOJE",
+            showarrow=False,
+            font=dict(size=12, color="red")
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
 
 # -------------------------------------------------
 # HISTÓRICO
@@ -1053,6 +1067,7 @@ if not df_finalizados.empty:
     df_hist["inicio"] = pd.to_datetime(df_hist["inicio"], errors="coerce").dt.strftime("%d/%m/%Y")
     df_hist["fim"] = pd.to_datetime(df_hist["fim"], errors="coerce").dt.strftime("%d/%m/%Y")
     df_hist["prazo_limite"] = pd.to_datetime(df_hist["prazo_limite"], errors="coerce").dt.strftime("%d/%m/%Y")
+    df_hist = df_hist.sort_values("Finalizado em", ascending=False)
     df_hist["data_finalizado"] = pd.to_datetime(df_hist["data_finalizado"], errors="coerce").dt.strftime("%d/%m/%Y")
 
     # -------------------------
@@ -1072,8 +1087,6 @@ if not df_finalizados.empty:
     # -------------------------
     # ORDENAR PELO MAIS RECENTE
     # -------------------------
-
-    df_hist = df_hist.sort_values("Finalizado em", ascending=False)
 
     # -------------------------
     # MOSTRAR TABELA
