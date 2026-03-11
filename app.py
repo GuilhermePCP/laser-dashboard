@@ -813,6 +813,8 @@ if not df_finalizados.empty:
     df_hist["prazo_limite"] = pd.to_datetime(df_hist["prazo_limite"], errors="coerce").dt.strftime("%d/%m/%Y")
     df_hist["data_finalizado"] = pd.to_datetime(df_hist["data_finalizado"], errors="coerce").dt.strftime("%d/%m/%Y")
 
+    df_hist = df_hist.sort_values("Finalizado em", ascending=False)
+
     # -------------------------
     # RENOMEAR COLUNAS
     # -------------------------
