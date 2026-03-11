@@ -558,7 +558,7 @@ if not df_tabela.empty:
                                 st.success("Produção iniciada")
                                 st.rerun()
 
-                        elif status == "Em produção":
+                        elif status == "🟢 Em produção":
 
                             col_pause, col_finish = st.columns(2)
 
@@ -659,7 +659,7 @@ if not df_tabela.empty:
 
                             st.warning("⚠️ Tem certeza que deseja excluir esta OP? Esta ação não pode ser desfeita.")
 
-                            col1, col2 = st.columns(2)
+                            col_confirmar, col_cancelar = st.columns(2)
 
                             with col1:
                                 if st.button(
