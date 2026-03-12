@@ -39,6 +39,17 @@ def normalizar_texto(texto):
 
     return texto.lower()
 
+def nome_operador_bonito(usuario):
+
+    operadores = carregar_operadores()
+
+    for nome in operadores["nome"]:
+
+        if normalizar_texto(nome) == normalizar_texto(usuario):
+            return nome
+
+    return usuario
+
 @st.cache_data
 def carregar_ops():
     return carregar_operadores()
@@ -114,7 +125,7 @@ if not st.session_state.logado:
         if login:
 
             st.session_state.logado = True
-            st.session_state.usuario = login.usuario
+            st.session_state.usuario = nome_operador_bonito(login.usuario)
             st.session_state.nivel = login.nivel
 
             st.rerun()
