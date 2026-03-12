@@ -327,7 +327,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     with st.sidebar.form("nova_op"):
 
-        operadores = carregar_ops()
+        operadores = carregar_operadores()
 
         operador = st.selectbox(
             "Operador",
@@ -446,13 +446,13 @@ if st.session_state.nivel in ["admin", "pcp"]:
         else:
             st.warning("Digite um nome válido.")
 
-    ops = carregar_operadores()
+    operadores = carregar_operadores()
 
-    if not ops.empty:
+    if not operadores.empty:
 
         remover = st.sidebar.selectbox(
             "Remover operador",
-            ops["nome"]
+            operadores["nome"]
         )
 
         if st.sidebar.button("Remover operador"):
