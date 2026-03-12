@@ -519,8 +519,10 @@ if not df_tabela.empty:
             # TABELA
             # -------------------------
 
-            df_exibicao = df_operador.drop(columns=["desenho"], errors="ignore")
+            # remover colunas que não queremos mostrar
+            df_exibicao = df_operador.drop(columns=["desenho", "status"], errors="ignore")
 
+            # renomear colunas
             df_exibicao = df_exibicao.rename(columns={
                 "id": "ID",
                 "produto": "Produto",
@@ -531,6 +533,20 @@ if not df_tabela.empty:
                 "fim": "Fim",
                 "prazo_limite": "Prazo"
             })
+
+            # reorganizar ordem das colunas
+            ordem_colunas = [
+                "ID",
+                "Produto",
+                "Quantidade",
+                "Operador",
+                "Status",
+                "Início",
+                "Fim",
+                "Prazo"
+            ]
+
+            df_exibicao = df_exibicao[[col for col in ordem_colunas if col in df_exibicao.columns]]
 
             tabela = st.dataframe(
                 df_exibicao,
