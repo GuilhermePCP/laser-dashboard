@@ -27,6 +27,7 @@ import io
 import plotly.express as px
 import re
 import unicodedata
+from streamlit_cookies_manager import EncryptedCookieManager
 
 def normalizar_texto(texto):
     if texto is None:
@@ -66,6 +67,14 @@ st.set_page_config(
     layout="wide"
 )
 
+cookies = EncryptedCookieManager(
+    prefix="laser_app",
+    password="senha_super_secreta"
+)
+
+if not cookies.ready():
+    st.stop()
+
 # -------------------------------------------------
 # SISTEMA DE LOGIN
 # -------------------------------------------------
@@ -100,8 +109,18 @@ def verificar_login(usuario, senha):
 
 
 # estado da sessão
+# estado da sessão
 if "logado" not in st.session_state:
-    st.session_state.logado = False
+
+    if cookies.get("usuario"):
+
+        st.session_state.logado = True
+        st.session_state.usuario = cookies.get("usuario")
+        st.session_state.nivel = cookies.get("nivel")
+
+    else:
+
+        st.session_state.logado = False
 
 if "nivel" not in st.session_state:
     st.session_state.nivel = None
@@ -127,6 +146,10 @@ if not st.session_state.logado:
             st.session_state.logado = True
             st.session_state.usuario = nome_operador_bonito(login.usuario)
             st.session_state.nivel = login.nivel
+
+            cookies["usuario"] = login.usuario
+            cookies["nivel"] = login.nivel
+            cookies.save()
 
             st.rerun()
 
@@ -281,6 +304,11 @@ st.sidebar.write("") #Espaço invisivel de proposito
 # -------------------------------------------------
 
 if st.sidebar.button("🚪 Sair"):
+
+    cookies["usuario"] = ""
+    cookies["nivel"] = ""
+    cookies.save()
+
     st.session_state.logado = False
     st.rerun()
 
