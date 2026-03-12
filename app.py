@@ -872,11 +872,11 @@ for i, operador in enumerate(operadores):
 
         df_op = df_producao[df_producao["operador"] == operador].copy()
 
-        hoje = pd.Timestamp.today()
+        hoje = pd.Timestamp.today().normalize()
 
         # detectar atrasos
         df_op["atrasado"] = (
-            (pd.to_datetime(df_op["prazo_limite"], errors="coerce") < hoje) &
+            (pd.to_datetime(df_op["prazo_limite"], errors="coerce").dt.normalize() < hoje) &
             (df_op["status"] != "Finalizado")
         )
 
