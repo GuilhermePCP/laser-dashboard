@@ -26,6 +26,18 @@ import fitz
 import io
 import plotly.express as px
 import re
+import unicodedata
+
+def normalizar_texto(texto):
+    if texto is None:
+        return ""
+
+    texto = str(texto)
+
+    texto = unicodedata.normalize("NFKD", texto)
+    texto = texto.encode("ASCII", "ignore").decode("utf-8")
+
+    return texto.lower()
 
 @st.cache_data
 def carregar_ops():
@@ -91,6 +103,8 @@ if not st.session_state.logado:
     senha = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
+
+        usuario = normalizar_texto(usuario)
 
         login = verificar_login(usuario, senha)
 
@@ -349,7 +363,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
                 imagem_bytes = desenho.read()
 
         df_nova = pd.DataFrame({
-            "operador": [operador],
+            "operador": [normalizar_texto(operador)],
             "produto": [produto],
             "quantidade": [quantidade],
             "inicio": [inicio],
@@ -392,6 +406,47 @@ if st.session_state.nivel in ["admin", "pcp"]:
             st.rerun()
 
     # -------------------------------------------------
+    # GERENCIAR USUÁRIOS
+    # -------------------------------------------------
+
+    if st.session_state.nivel == "admin":
+
+        st.sidebar.divider()
+        st.sidebar.subheader("👤 Usuários")
+
+        novo_usuario = st.sidebar.text_input("Usuário")
+
+        nova_senha = st.sidebar.text_input("Senha", type="password")
+
+        nivel_usuario = st.sidebar.selectbox(
+            "Nível",
+            ["admin", "pcp", "operador"]
+        )
+
+        if st.sidebar.button("Criar usuário"):
+
+            if novo_usuario and nova_senha:
+
+                query = """
+                INSERT INTO usuarios (usuario, senha, nivel)
+                VALUES (:usuario, :senha, :nivel)
+                """
+
+                with engine.begin() as conn:
+                    conn.execute(
+                        text(query),
+                        {
+                            "usuario": novo_usuario,
+                            "senha": nova_senha,
+                            "nivel": nivel_usuario
+                        }
+                    )
+
+                st.sidebar.success("Usuário criado")
+
+                st.rerun()
+
+    # -------------------------------------------------
     # FILTROS
     # -------------------------------------------------
 
@@ -421,7 +476,11 @@ df_filtrado = filtrar_dados(df, maquina, status)
 # -------------------------------------------------
 
 if st.session_state.nivel == "operador":
-    df_filtrado = df_filtrado[df_filtrado["operador"] == st.session_state.usuario]
+
+    df_filtrado = df_filtrado[
+        df_filtrado["operador"].apply(normalizar_texto)
+        == normalizar_texto(st.session_state.usuario)
+    ]
 
 df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
 df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
