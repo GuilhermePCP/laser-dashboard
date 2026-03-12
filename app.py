@@ -66,18 +66,23 @@ def verificar_login(usuario, senha):
         query = """
         SELECT usuario, senha, nivel
         FROM usuarios
-        WHERE usuario = :usuario
-        AND senha = :senha
         """
 
         with engine.begin() as conn:
 
-            result = conn.execute(
-                text(query),
-                {"usuario": usuario, "senha": senha}
-            ).fetchone()
+            result = conn.execute(text(query)).fetchall()
 
-        return result
+        usuario_digitado = normalizar_texto(usuario)
+
+        for row in result:
+
+            if (
+                normalizar_texto(row.usuario) == usuario_digitado
+                and row.senha == senha
+            ):
+                return row
+
+        return None
 
     except:
         return None
@@ -103,8 +108,6 @@ if not st.session_state.logado:
     senha = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
-
-        usuario = normalizar_texto(usuario)
 
         login = verificar_login(usuario, senha)
 
