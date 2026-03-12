@@ -395,7 +395,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     maquina = st.sidebar.selectbox(
         "Operador",
-        ["Todos operadores"] + list(df["operador"].dropna().unique())
+        ["Todas"] + list(df["operador"].dropna().unique())
     )
 
     status = st.sidebar.selectbox(
@@ -406,7 +406,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 else:
 
     # operador ainda consegue usar filtros simples
-    maquina = "Todos operadores"
+    maquina = "Todas"
     status = "Todos"
 
 df_filtrado = filtrar_dados(df, maquina, status)
