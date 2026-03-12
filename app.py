@@ -560,12 +560,14 @@ if not df_tabela.empty:
 
                     imagem = linha.get("desenho")
 
-                    if imagem:
+                    if imagem is not None:
 
                         try:
-                            st.image(imagem, use_container_width=True)
-                        except:
-                            st.warning("Erro ao carregar imagem")
+                            image = Image.open(io.BytesIO(imagem))
+                            st.image(image, use_container_width=True)
+
+                        except Exception as e:
+                            st.warning(f"Erro ao carregar imagem: {e}")
 
                     else:
                         st.info("Sem desenho para essa OP")
