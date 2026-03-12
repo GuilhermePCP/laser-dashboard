@@ -959,7 +959,8 @@ for i, operador in enumerate(operadores):
 
                     st.write(f"📦 Quantidade: {int(row['quantidade'])}")
 
-                    st.caption(f"{inicio} → {fim}")
+                    if st.session_state.nivel in ["admin", "pcp"]:
+                        st.caption(f"{inicio} → {fim}")
 
                     # STATUS VISUAL
                     if row["atrasado"]:
