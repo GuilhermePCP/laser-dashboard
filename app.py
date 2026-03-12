@@ -174,9 +174,14 @@ c4.metric("📦 Total OPs", metricas["total_ops"])
 # ALERTA DE ATRASOS
 # -------------------------------------------------
 
+hoje = pd.Timestamp.today().normalize()
+
 df_atrasadas = df[
     (df["status"] != "Finalizado") &
-    (pd.to_datetime(df["prazo_limite"]) < pd.Timestamp.today())
+    (
+        pd.to_datetime(df["prazo_limite"], errors="coerce")
+        .dt.normalize() < hoje
+    )
 ]
 
 atrasadas = len(df_atrasadas)
