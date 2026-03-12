@@ -28,6 +28,7 @@ import plotly.express as px
 import re
 import unicodedata
 from streamlit_cookies_manager import EncryptedCookieManager
+from streamlit_autorefresh import st_autorefresh
 
 def normalizar_texto(texto):
     if texto is None:
@@ -158,6 +159,8 @@ if not st.session_state.logado:
             st.error("Usuário ou senha inválidos")
 
     st.stop()
+
+st_autorefresh(interval=10000, key="auto_refresh")
 
 # -------------------------------------------------
 # CRIAR TABELA
