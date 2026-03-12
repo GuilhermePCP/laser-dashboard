@@ -313,8 +313,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     if salvar:
 
-        nome_arquivo = None
-        caminho_desenho = None
+        imagem_bytes = None
 
         if desenho is not None:
 
@@ -330,14 +329,11 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
                 pdf = fitz.open(stream=desenho.read(), filetype="pdf")
 
-                pagina = pdf.load_page(0)  # primeira página
+                pagina = pdf.load_page(0)
 
                 pix = pagina.get_pixmap()
 
-                nome_arquivo = f"{produto_limpo}_{timestamp}.png"
-                caminho_desenho = os.path.join(UPLOAD_DIR, nome_arquivo)
-
-                pix.save(caminho_desenho)
+                imagem_bytes = pix.tobytes("png")
 
             # -------------------------------------------------
             # SE FOR IMAGEM NORMAL
@@ -345,30 +341,23 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
             else:
 
-                extensao = desenho.name.split(".")[-1]
+                imagem_bytes = desenho.read()
 
-                nome_arquivo = f"{produto}_{timestamp}.{extensao}"
-                caminho_desenho = os.path.join(UPLOAD_DIR, nome_arquivo)
+        df_nova = pd.DataFrame({
+            "operador": [operador],
+            "produto": [produto],
+            "quantidade": [quantidade],
+            "inicio": [inicio],
+            "fim": [fim],
+            "prazo_limite": [prazo],
+            "status": [status],
+            "desenho": [imagem_bytes]   # AGORA SALVA NO BANCO
+        })
 
-                with open(caminho_desenho, "wb") as f:
-                    f.write(desenho.read())
+        salvar_programacao(df_nova)
 
-            df_nova = pd.DataFrame({
-                "operador": [operador],
-                "produto": [produto],
-                "quantidade": [quantidade],
-                "inicio": [inicio],
-                "fim": [fim],
-                "prazo_limite": [prazo],
-                "status": [status],
-                "caminho_desenho": [caminho_desenho],
-                "nome_arquivo": [nome_arquivo]
-            })
-
-            salvar_programacao(df_nova)
-
-            st.success("Programação criada")
-            st.rerun()
+        st.success("Programação criada")
+        st.rerun()
 
     # -------------------------------------------------
     # GERENCIAR OPERADORES
@@ -569,12 +558,12 @@ if not df_tabela.empty:
 
                 with col1:
 
-                    caminho = linha["caminho_desenho"]
+                    imagem = linha["desenho"]
 
-                    if caminho and os.path.exists(caminho):
+                    if imagem:
 
                         try:
-                            st.image(caminho, use_container_width=True)
+                            st.image(imagem, use_container_width=True)
                         except:
                             st.warning("Erro ao carregar imagem")
 
