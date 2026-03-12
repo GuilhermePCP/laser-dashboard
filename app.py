@@ -149,85 +149,85 @@ metricas = calcular_metricas(df)
 # -------------------------
 # STATUS DA PRODUÇÃO
 # -------------------------
+if st.session_state.nivel in ["admin", "pcp"]:
+    programadas = len(df[df["status"] == "Programado"])
+    em_producao = len(df[df["status"] == "Em produção"])
+    finalizadas = len(df[df["status"] == "Finalizado"])
 
-programadas = len(df[df["status"] == "Programado"])
-em_producao = len(df[df["status"] == "Em produção"])
-finalizadas = len(df[df["status"] == "Finalizado"])
-
-atrasadas = len(
-    df[
-        (df["status"] != "Finalizado") &
-        (pd.to_datetime(df["prazo_limite"]) < pd.Timestamp.today())
-    ]
-)
-
-
-
-c1, c2, c3, c4 = st.columns(4)
-
-c1.metric("🟡 Programadas", programadas)
-c2.metric("🟢 Em produção", em_producao)
-c3.metric("⚪ Finalizadas", finalizadas)
-c4.metric("📦 Total OPs", metricas["total_ops"])
-
-# -------------------------------------------------
-# ALERTA DE ATRASOS
-# -------------------------------------------------
-
-hoje = pd.Timestamp.today().normalize()
-
-df_atrasadas = df[
-    (df["status"] != "Finalizado") &
-    (
-        pd.to_datetime(df["prazo_limite"], errors="coerce")
-        .dt.normalize() < hoje
+    atrasadas = len(
+        df[
+            (df["status"] != "Finalizado") &
+            (pd.to_datetime(df["prazo_limite"]) < pd.Timestamp.today())
+        ]
     )
-]
 
-atrasadas = len(df_atrasadas)
 
-if atrasadas > 0:
 
-    with st.expander(f"🔴 {atrasadas} OP(s) atrasada(s) — clique para ver"):
+    c1, c2, c3, c4 = st.columns(4)
 
-        df_alerta = df_atrasadas.copy()
+    c1.metric("🟡 Programadas", programadas)
+    c2.metric("🟢 Em produção", em_producao)
+    c3.metric("⚪ Finalizadas", finalizadas)
+    c4.metric("📦 Total OPs", metricas["total_ops"])
 
-        df_alerta["prazo_limite"] = pd.to_datetime(
-            df_alerta["prazo_limite"], errors="coerce"
-        ).dt.strftime("%d/%m/%Y")
+    # -------------------------------------------------
+    # ALERTA DE ATRASOS
+    # -------------------------------------------------
 
-        df_alerta = df_alerta.rename(columns={
-            "produto": "Produto",
-            "operador": "Operador",
-            "quantidade": "Quantidade",
-            "prazo_limite": "Prazo limite"
-        })
+    hoje = pd.Timestamp.today().normalize()
 
-        st.dataframe(
-            df_alerta[
-                [
-                    "Produto",
-                    "Quantidade",
-                    "Operador",
-                    "Prazo limite"
-                ]
-            ],
-            use_container_width=True,
-            hide_index=True
+    df_atrasadas = df[
+        (df["status"] != "Finalizado") &
+        (
+            pd.to_datetime(df["prazo_limite"], errors="coerce")
+            .dt.normalize() < hoje
         )
+    ]
 
-else:
+    atrasadas = len(df_atrasadas)
 
-    st.caption("🟢 Nenhuma OP atrasada")
+    if atrasadas > 0:
 
-# -------------------------
-# VISÃO OPERACIONAL
-# -------------------------
+        with st.expander(f"🔴 {atrasadas} OP(s) atrasada(s) — clique para ver"):
 
-c5, c6 = st.columns(2)
+            df_alerta = df_atrasadas.copy()
 
-c5.metric("⚙ Operadores ativos", metricas["maquinas_ocupadas"])
-c6.metric("➡ Próxima máquina", metricas["proxima_maquina"])
+            df_alerta["prazo_limite"] = pd.to_datetime(
+                df_alerta["prazo_limite"], errors="coerce"
+            ).dt.strftime("%d/%m/%Y")
+
+            df_alerta = df_alerta.rename(columns={
+                "produto": "Produto",
+                "operador": "Operador",
+                "quantidade": "Quantidade",
+                "prazo_limite": "Prazo limite"
+            })
+
+            st.dataframe(
+                df_alerta[
+                    [
+                        "Produto",
+                        "Quantidade",
+                        "Operador",
+                        "Prazo limite"
+                    ]
+                ],
+                use_container_width=True,
+                hide_index=True
+            )
+
+    else:
+
+        st.caption("🟢 Nenhuma OP atrasada")
+
+    # -------------------------
+    # VISÃO OPERACIONAL
+    # -------------------------
+
+    c5, c6 = st.columns(2)
+
+    c5.metric("⚙ Operadores ativos", metricas["maquinas_ocupadas"])
+    c6.metric("➡ Próxima máquina", metricas["proxima_maquina"])
 
 
 st.divider()
