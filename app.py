@@ -303,6 +303,8 @@ if st.session_state.nivel in ["admin", "pcp"]:
             operadores["nome"] if not operadores.empty else []
         )
 
+        operador = nome_operador_bonito(operador)
+
         produto = st.text_input("Produto")
 
         quantidade = st.number_input(
@@ -377,7 +379,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
                 imagem_bytes = desenho.read()
 
         df_nova = pd.DataFrame({
-            "operador": [normalizar_texto(operador)],
+            "operador": [nome_operador_bonito(operador)],
             "produto": [produto],
             "quantidade": [quantidade],
             "inicio": [inicio],
