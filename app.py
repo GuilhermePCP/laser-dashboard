@@ -395,7 +395,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     maquina = st.sidebar.selectbox(
         "Operador",
-        ["Todas"] + list(df["operador"].dropna().unique())
+        ["Todos"] + list(df["operador"].dropna().unique())
     )
 
     status = st.sidebar.selectbox(
