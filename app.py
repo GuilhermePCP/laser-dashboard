@@ -115,7 +115,7 @@ if "logado" not in st.session_state:
     if cookies.get("usuario"):
 
         st.session_state.logado = True
-        st.session_state.usuario = cookies.get("usuario")
+        st.session_state.usuario = nome_operador_bonito(cookies.get("usuario"))
         st.session_state.nivel = cookies.get("nivel")
 
     else:
