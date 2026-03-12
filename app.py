@@ -435,9 +435,16 @@ if st.session_state.nivel in ["admin", "pcp"]:
     novo = st.sidebar.text_input("Novo operador")
 
     if st.sidebar.button("Adicionar operador"):
-        if novo:
-            adicionar_operador(novo)
+
+        if novo.strip():
+
+            adicionar_operador(novo.strip())
+
+            st.success("Operador adicionado!")
             st.rerun()
+
+        else:
+            st.warning("Digite um nome válido.")
 
     ops = carregar_operadores()
 
