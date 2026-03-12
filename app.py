@@ -416,9 +416,15 @@ else:
 
 df_filtrado = filtrar_dados(df, maquina, status)
 
+# -------------------------------------------------
+# OPERADOR VÊ APENAS SUAS OPs
+# -------------------------------------------------
+
+if st.session_state.nivel == "operador":
+    df_filtrado = df_filtrado[df_filtrado["operador"] == st.session_state.usuario]
+
 df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
 df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
-
 # -------------------------------------------------
 # TABELA DE FABRICAÇÃO
 # -------------------------------------------------
@@ -433,7 +439,10 @@ if not df_tabela.empty:
     df_tabela["fim"] = pd.to_datetime(df_tabela["fim"], errors="coerce")
     df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"], errors="coerce")
 
-    operadores = df_tabela["operador"].unique()
+    if st.session_state.nivel == "operador":
+        operadores = [st.session_state.usuario]
+    else:
+        operadores = df_tabela["operador"].unique()
 
     abas = st.tabs(list(operadores))
 
@@ -896,7 +905,10 @@ st.divider()
 
 st.subheader("📋 Kanban de produção")
 
-operadores = df_producao["operador"].unique()
+if st.session_state.nivel == "operador":
+    operadores = [st.session_state.usuario]
+else:
+    operadores = df_producao["operador"].unique()
 
 if len(operadores) > 0:
     cols = st.columns(len(operadores))
