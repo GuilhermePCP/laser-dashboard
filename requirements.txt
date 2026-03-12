@@ -9,3 +9,4 @@ Pillow
 streamlit-sortables
 streamlit-plotly-events
 pymupdf
+streamlit-cookies-manager
