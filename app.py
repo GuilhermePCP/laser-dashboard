@@ -454,7 +454,7 @@ if not df_tabela.empty:
                 "quantidade",
                 "operador",
                 "status",
-                "caminho_desenho"
+                "desenho"
             ]
 
             colunas_data = [
@@ -519,7 +519,7 @@ if not df_tabela.empty:
             # TABELA
             # -------------------------
 
-            df_exibicao = df_operador.drop(columns=["caminho_desenho"], errors="ignore")
+            df_exibicao = df_operador.drop(columns=["desenho"], errors="ignore")
 
             df_exibicao = df_exibicao.rename(columns={
                 "id": "ID",
@@ -558,7 +558,7 @@ if not df_tabela.empty:
 
                 with col1:
 
-                    imagem = linha["desenho"]
+                    imagem = linha.get("desenho")
 
                     if imagem:
 
