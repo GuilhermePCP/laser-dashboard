@@ -1102,8 +1102,10 @@ st.divider()
 
 if st.session_state.nivel in ["admin", "pcp"]:
     st.subheader("📊 Linha do tempo da produção")
+
     if df_producao.empty:
         st.info("Nenhuma programação ativa para exibir no gráfico.")
+
     else:
         df_gantt = df_producao.copy()
 
@@ -1111,7 +1113,21 @@ if st.session_state.nivel in ["admin", "pcp"]:
         df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
         df_gantt["quantidade"] = df_gantt["quantidade"].astype(int)
 
-        # detectar atraso
+        # -------------------------------------------------
+        # CORREÇÃO PARA OP DE 1 DIA NÃO VIRAR TRACINHO
+        # -------------------------------------------------
+
+        df_gantt["fim_plot"] = df_gantt["fim"]
+
+        df_gantt.loc[
+            df_gantt["inicio"] == df_gantt["fim"],
+            "fim_plot"
+        ] = df_gantt["fim"] + pd.Timedelta(days=1)
+
+        # -------------------------------------------------
+        # DETECTAR ATRASO
+        # -------------------------------------------------
+
         hoje = pd.Timestamp.today().normalize()
 
         df_gantt["atrasado"] = (
@@ -1133,7 +1149,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
         fig = px.timeline(
             df_gantt,
             x_start="inicio",
-            x_end="fim",
+            x_end="fim_plot",   # 👈 usamos a nova coluna
             y="operador",
             color="status_visual",
             color_discrete_map=cores_status,
@@ -1174,22 +1190,28 @@ if st.session_state.nivel in ["admin", "pcp"]:
         fig.update_xaxes(
             showgrid=True,
             gridcolor="rgba(200,200,200,0.2)",
-            dtick="D1",              # um tick por dia
-            tickformat="%d/%m",      # mostra apenas dia/mês
+            dtick="D1",
+            tickformat="%d/%m",
             ticklabelmode="period"
         )
+
         fig.update_yaxes(showgrid=False)
 
-        # linha de HOJE
+        # -------------------------------------------------
+        # LINHA DE HOJE
+        # -------------------------------------------------
+
+        hoje = pd.Timestamp.today().normalize()
+
         fig.add_vline(
-            x=pd.Timestamp.today().normalize(),
+            x=hoje,
             line_width=3,
             line_dash="dash",
             line_color="red"
         )
 
         fig.add_annotation(
-            x=pd.Timestamp.today().normalize(),
+            x=hoje,
             y=1.02,
             yref="paper",
             text="HOJE",
