@@ -438,11 +438,32 @@ if not df_tabela.empty:
 
             df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
+            hoje = pd.Timestamp.today().normalize()
+
+            df_operador["atrasado"] = (
+                (pd.to_datetime(df_operador["prazo_limite"], errors="coerce").dt.normalize() < hoje) &
+                (df_operador["status"] != "Finalizado")
+            )
+
+            df_operador.loc[df_operador["atrasado"], "status"] = "Atrasado"
+
+            prioridade_status = {
+                "Atrasado": 0,
+                "Em produção": 1,
+                "Programado": 2,
+                "Parado": 3,
+                "Finalizado": 4
+            }
+
+            df_operador["prioridade"] = df_operador["status"].map(prioridade_status)
+
             # -------------------------
             # ORDENAR PRIMEIRO
             # -------------------------
 
-            df_operador = df_operador.sort_values("inicio").reset_index(drop=True)
+            df_operador = df_operador.sort_values(
+                ["prioridade", "inicio"]
+            ).reset_index(drop=True)
 
             # -------------------------
             # CONTROLE DE COLUNAS POR NÍVEL
