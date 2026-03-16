@@ -1441,46 +1441,12 @@ if st.session_state.chat_aberto:
 
     for _, msg in mensagens.iterrows():
 
-        hora = msg.data.strftime("%H:%M")
+        hora = msg["data"].strftime("%H:%M")
 
-        if msg.remetente == usuario:
-
-            st.markdown(
-                f"""
-                <div style="
-                background:#1f77b4;
-                padding:8px;
-                border-radius:8px;
-                margin-bottom:6px;
-                width:80%;
-                margin-left:auto;
-                text-align:right;
-                ">
-                {msg.mensagem}
-                <div style="font-size:10px">{hora}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
+        if msg["remetente"] == usuario:
+            st.write(f"Você: {msg['mensagem']} ({hora})")
         else:
-
-            st.markdown(
-                f"""
-                <div style="
-                background:#444;
-                padding:8px;
-                border-radius:8px;
-                margin-bottom:6px;
-                width:80%;
-                ">
-                <b>{msg.remetente}</b><br>
-                {msg.mensagem}
-                <div style="font-size:10px">{hora}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.write(f"{msg['remetente']}: {msg['mensagem']} ({hora})")
 
 
     # ----------------------------------------
