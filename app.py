@@ -1356,7 +1356,7 @@ st.markdown("""
     z-index: 9999;
 }
 
-.chat-container {
+.chat-box {
     position: fixed;
     bottom: 100px;
     right: 25px;
@@ -1366,6 +1366,7 @@ st.markdown("""
     border-radius: 12px;
     padding: 15px;
     box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
+    overflow-y: auto;
     z-index: 9999;
 }
 
@@ -1373,7 +1374,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# BOTÃO
+# BOTÃO DO CHAT
 st.markdown('<div class="chat-floating-button">', unsafe_allow_html=True)
 
 if st.button("💬", key="chat_toggle"):
@@ -1382,52 +1383,36 @@ if st.button("💬", key="chat_toggle"):
 st.markdown('</div>', unsafe_allow_html=True)
 
 
-# CHAT
+# CAIXA DO CHAT
 if st.session_state.chat_aberto:
 
-    container = st.container()
+    st.markdown('<div class="chat-box">', unsafe_allow_html=True)
 
-    with container:
+    st.markdown("### 💬 Suporte Produção")
 
-        st.markdown(
-            """
-            <div class="chat-container">
-            """,
-            unsafe_allow_html=True
-        )
+    mensagens = carregar_chat()
 
-        st.markdown("### 💬 Suporte Produção")
+    for msg in reversed(mensagens):
 
-        mensagens = carregar_chat()
+        hora = msg.data.strftime("%H:%M")
 
-        for msg in reversed(mensagens):
+        if msg.nivel == "operador":
+            st.markdown(f"🔵 **{msg.usuario}** ({hora})  \n{msg.mensagem}")
+        else:
+            st.markdown(f"🟢 **{msg.usuario}** ({hora})  \n{msg.mensagem}")
 
-            hora = msg.data.strftime("%H:%M")
+    nova_msg = st.text_input("Mensagem", key="chat_msg")
 
-            if msg.nivel == "operador":
+    if st.button("Enviar", key="chat_enviar"):
 
-                st.markdown(
-                    f"🔵 **{msg.usuario}** ({hora})  \n{msg.mensagem}"
-                )
+        if nova_msg.strip():
 
-            else:
+            enviar_mensagem(
+                st.session_state.usuario,
+                st.session_state.nivel,
+                nova_msg
+            )
 
-                st.markdown(
-                    f"🟢 **{msg.usuario}** ({hora})  \n{msg.mensagem}"
-                )
+            st.rerun()
 
-        nova_msg = st.text_input("Mensagem", key="chat_msg")
-
-        if st.button("Enviar", key="chat_enviar"):
-
-            if nova_msg.strip():
-
-                enviar_mensagem(
-                    st.session_state.usuario,
-                    st.session_state.nivel,
-                    nova_msg
-                )
-
-                st.rerun()
-
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
