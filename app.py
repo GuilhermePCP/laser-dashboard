@@ -1,5 +1,6 @@
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import streamlit as st
@@ -10,18 +11,20 @@ from PIL import Image
 
 from src.analytics import calcular_metricas, filtrar_dados
 from src.visuals import grafico_gantt
+
 from src.database import (
-    criar_tabela,
+    criar_tabelas,
     carregar_dados,
     salvar_programacao,
+    finalizar_programacao,
+    atualizar_programacao,
     carregar_operadores,
     adicionar_operador,
     remover_operador,
-    finalizar_programacao,
-    engine
+    enviar_mensagem,
+    carregar_chat
 )
 
-from sqlalchemy import text
 import fitz
 import io
 import plotly.express as px
@@ -29,8 +32,9 @@ import re
 import unicodedata
 from streamlit_cookies_manager import EncryptedCookieManager
 from streamlit_autorefresh import st_autorefresh
-from src.database import criar_tabelas
 
+
+# CRIAR TABELAS NO BANCO
 criar_tabelas()
 
 #==========================================================
