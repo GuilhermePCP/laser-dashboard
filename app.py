@@ -1342,23 +1342,18 @@ else:
 # CHAT FLUTUANTE
 # -------------------------------------------------
 
+if "chat_aberto" not in st.session_state:
+    st.session_state.chat_aberto = False
+
+
 st.markdown("""
 <style>
 
-.chat-button {
+.chat-button-container {
     position: fixed;
     bottom: 25px;
     right: 25px;
-    background-color: #1f77b4;
-    color: white;
-    border-radius: 50%;
-    width: 65px;
-    height: 65px;
-    font-size: 30px;
-    text-align: center;
-    line-height: 65px;
-    cursor: pointer;
-    box-shadow: 0px 6px 15px rgba(0,0,0,0.3);
+    z-index: 9999;
 }
 
 .chat-box {
@@ -1372,6 +1367,7 @@ st.markdown("""
     padding: 12px;
     overflow-y: auto;
     box-shadow: 0px 10px 30px rgba(0,0,0,0.35);
+    z-index: 9999;
 }
 
 </style>
@@ -1379,7 +1375,7 @@ st.markdown("""
 
 
 # BOTÃO CHAT
-st.markdown('<div class="chat-button">', unsafe_allow_html=True)
+st.markdown('<div class="chat-button-container">', unsafe_allow_html=True)
 
 if st.button("💬", key="chat_btn"):
     st.session_state.chat_aberto = not st.session_state.chat_aberto
@@ -1387,7 +1383,10 @@ if st.button("💬", key="chat_btn"):
 st.markdown('</div>', unsafe_allow_html=True)
 
 
+# -------------------------------------------------
 # JANELA DO CHAT
+# -------------------------------------------------
+
 if st.session_state.chat_aberto:
 
     st.markdown('<div class="chat-box">', unsafe_allow_html=True)
@@ -1400,6 +1399,7 @@ if st.session_state.chat_aberto:
 
         hora = msg.data.strftime("%H:%M")
 
+        # MENSAGEM OPERADOR
         if msg.nivel == "operador":
 
             st.markdown(
@@ -1419,6 +1419,7 @@ if st.session_state.chat_aberto:
                 unsafe_allow_html=True
             )
 
+        # MENSAGEM PCP / ADMIN
         else:
 
             st.markdown(
