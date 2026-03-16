@@ -29,6 +29,9 @@ import re
 import unicodedata
 from streamlit_cookies_manager import EncryptedCookieManager
 from streamlit_autorefresh import st_autorefresh
+from src.database import criar_tabelas
+
+criar_tabelas()
 
 #==========================================================
 

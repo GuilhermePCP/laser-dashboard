@@ -3,22 +3,28 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime
 
-# ----------------------------
-# CONEXÃO COM O BANCO
-# ----------------------------
+# -------------------------------------------------
+# CONEXÃO COM BANCO
+# -------------------------------------------------
 
-DATABASE_URL = st.secrets["DATABASE_URL"]
+DATABASE_URL = st.secrets.get("DATABASE_URL")
+
+if DATABASE_URL is None:
+    st.error("DATABASE_URL não configurado no Streamlit Secrets")
+    st.stop()
+
 engine = create_engine(DATABASE_URL)
 
 
-# ----------------------------
+# -------------------------------------------------
 # CRIAR TABELAS
-# ----------------------------
+# -------------------------------------------------
 
-def criar_tabela():
+def criar_tabelas():
 
     with engine.begin() as conn:
 
+        # PROGRAMACAO
         conn.execute(text("""
         CREATE TABLE IF NOT EXISTS programacao (
             id SERIAL PRIMARY KEY,
@@ -35,6 +41,7 @@ def criar_tabela():
         )
         """))
 
+        # OPERADORES
         conn.execute(text("""
         CREATE TABLE IF NOT EXISTS operadores (
             id SERIAL PRIMARY KEY,
@@ -42,21 +49,32 @@ def criar_tabela():
         )
         """))
 
+        # CHAT
+        conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS chat (
+            id SERIAL PRIMARY KEY,
+            remetente TEXT,
+            destinatario TEXT,
+            mensagem TEXT,
+            data TIMESTAMP DEFAULT NOW()
+        )
+        """))
 
-# ----------------------------
-# CARREGAR DADOS
-# ----------------------------
+
+# -------------------------------------------------
+# CARREGAR PROGRAMACAO
+# -------------------------------------------------
 
 def carregar_dados():
 
-    query = "SELECT * FROM programacao"
+    query = "SELECT * FROM programacao ORDER BY inicio"
 
     return pd.read_sql(query, engine)
 
 
-# ----------------------------
-# SALVAR PROGRAMAÇÃO
-# ----------------------------
+# -------------------------------------------------
+# SALVAR PROGRAMACAO
+# -------------------------------------------------
 
 def salvar_programacao(df):
 
@@ -102,9 +120,9 @@ def salvar_programacao(df):
             )
 
 
-# ----------------------------
-# FINALIZAR PROGRAMAÇÃO
-# ----------------------------
+# -------------------------------------------------
+# FINALIZAR PROGRAMACAO
+# -------------------------------------------------
 
 def finalizar_programacao(id_programacao):
 
@@ -124,42 +142,9 @@ def finalizar_programacao(id_programacao):
         )
 
 
-# ----------------------------
-# OPERADORES
-# ----------------------------
-
-def carregar_operadores():
-
-    return pd.read_sql("SELECT * FROM operadores", engine)
-
-
-def adicionar_operador(nome):
-
-    with engine.begin() as conn:
-
-        conn.execute(
-            text("""
-            INSERT INTO operadores (nome)
-            VALUES (:nome)
-            ON CONFLICT DO NOTHING
-            """),
-            {"nome": nome}
-        )
-
-
-def remover_operador(nome):
-
-    with engine.begin() as conn:
-
-        conn.execute(
-            text("DELETE FROM operadores WHERE nome = :nome"),
-            {"nome": nome}
-        )
-
-
-# ----------------------------
-# ATUALIZAR PROGRAMAÇÃO
-# ----------------------------
+# -------------------------------------------------
+# ATUALIZAR PROGRAMACAO
+# -------------------------------------------------
 
 def atualizar_programacao(df_editado):
 
@@ -192,3 +177,86 @@ def atualizar_programacao(df_editado):
                     "data_finalizado": row["data_finalizado"]
                 }
             )
+
+
+# -------------------------------------------------
+# OPERADORES
+# -------------------------------------------------
+
+def carregar_operadores():
+
+    return pd.read_sql("SELECT * FROM operadores ORDER BY nome", engine)
+
+
+def adicionar_operador(nome):
+
+    with engine.begin() as conn:
+
+        conn.execute(
+            text("""
+            INSERT INTO operadores (nome)
+            VALUES (:nome)
+            ON CONFLICT DO NOTHING
+            """),
+            {"nome": nome}
+        )
+
+
+def remover_operador(nome):
+
+    with engine.begin() as conn:
+
+        conn.execute(
+            text("""
+            DELETE FROM operadores
+            WHERE nome = :nome
+            """),
+            {"nome": nome}
+        )
+
+
+# -------------------------------------------------
+# CHAT
+# -------------------------------------------------
+
+def enviar_mensagem(remetente, destinatario, mensagem):
+
+    with engine.begin() as conn:
+
+        conn.execute(
+            text("""
+            INSERT INTO chat
+            (remetente, destinatario, mensagem)
+            VALUES
+            (:remetente, :destinatario, :mensagem)
+            """),
+            {
+                "remetente": remetente,
+                "destinatario": destinatario,
+                "mensagem": mensagem
+            }
+        )
+
+
+def carregar_chat(usuario, destino):
+
+    query = text("""
+    SELECT *
+    FROM chat
+    WHERE
+        (remetente = :usuario AND destinatario = :destino)
+        OR
+        (remetente = :destino AND destinatario = :usuario)
+    ORDER BY data
+    """)
+
+    with engine.begin() as conn:
+
+        result = conn.execute(query, {
+            "usuario": usuario,
+            "destino": destino
+        })
+
+        rows = result.fetchall()
+
+        return rows
