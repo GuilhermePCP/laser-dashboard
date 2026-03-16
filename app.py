@@ -217,7 +217,7 @@ st_autorefresh(interval=60000, key="auto_refresh")
 # CRIAR TABELA
 # -------------------------------------------------
 
-criar_tabela()
+criar_tabelas()
 
 # -------------------------------------------------
 # FUNÇÃO CARREGAR DADOS
