@@ -1,6 +1,5 @@
 import sys
 import os
-
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import streamlit as st
@@ -11,20 +10,18 @@ from PIL import Image
 
 from src.analytics import calcular_metricas, filtrar_dados
 from src.visuals import grafico_gantt
-
 from src.database import (
-    criar_tabelas,
+    criar_tabela,
     carregar_dados,
     salvar_programacao,
-    finalizar_programacao,
-    atualizar_programacao,
     carregar_operadores,
     adicionar_operador,
     remover_operador,
-    enviar_mensagem,
-    carregar_chat
+    finalizar_programacao,
+    engine
 )
 
+from sqlalchemy import text
 import fitz
 import io
 import plotly.express as px
@@ -32,45 +29,6 @@ import re
 import unicodedata
 from streamlit_cookies_manager import EncryptedCookieManager
 from streamlit_autorefresh import st_autorefresh
-
-
-# CRIAR TABELAS NO BANCO
-criar_tabelas()
-
-#==========================================================
-
-def enviar_mensagem(usuario, nivel, mensagem):
-
-    query = """
-    INSERT INTO chat_mensagens (usuario, nivel, mensagem)
-    VALUES (:usuario, :nivel, :mensagem)
-    """
-
-    with engine.begin() as conn:
-        conn.execute(
-            text(query),
-            {
-                "usuario": usuario,
-                "nivel": nivel,
-                "mensagem": mensagem
-            }
-        )
-
-
-def carregar_chat():
-
-    query = """
-    SELECT usuario, nivel, mensagem, data
-    FROM chat_mensagens
-    ORDER BY data DESC
-    LIMIT 50
-    """
-
-    with engine.begin() as conn:
-        return conn.execute(text(query)).fetchall()
-    
-
-#=========================================================
 
 def normalizar_texto(texto):
     if texto is None:
@@ -109,15 +67,6 @@ st.set_page_config(
     page_title="Programação Laser",
     layout="wide"
 )
-
-# -------------------------------------------------
-# ESTADO DO CHAT
-# -------------------------------------------------
-
-if "chat_aberto" not in st.session_state:
-    st.session_state.chat_aberto = False
-
-#--------------------------------------------------
 
 cookies = EncryptedCookieManager(
     prefix="laser_app",
@@ -217,7 +166,7 @@ st_autorefresh(interval=60000, key="auto_refresh")
 # CRIAR TABELA
 # -------------------------------------------------
 
-criar_tabelas()
+criar_tabela()
 
 # -------------------------------------------------
 # FUNÇÃO CARREGAR DADOS
@@ -1344,128 +1293,3 @@ if not df_finalizados.empty:
 else:
 
     st.info("Nenhuma programação finalizada ainda")
-
-# -------------------------------------------------
-# CHAT FLUTUANTE
-# -------------------------------------------------
-
-if "chat_aberto" not in st.session_state:
-    st.session_state.chat_aberto = False
-
-if "chat_operador" not in st.session_state:
-    st.session_state.chat_operador = None
-
-
-# CSS
-st.markdown("""
-<style>
-
-.chat-button {
-    position: fixed;
-    bottom: 25px;
-    right: 25px;
-    z-index: 9999;
-}
-
-.chat-box {
-    position: fixed;
-    bottom: 90px;
-    right: 25px;
-    width: 350px;
-    height: 420px;
-    background: #111;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0px 10px 25px rgba(0,0,0,0.4);
-    overflow-y: auto;
-    z-index: 9999;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-
-# BOTÃO FLUTUANTE
-st.markdown('<div class="chat-button">', unsafe_allow_html=True)
-
-if st.button("💬", key="abrir_chat"):
-    st.session_state.chat_aberto = not st.session_state.chat_aberto
-
-st.markdown("</div>", unsafe_allow_html=True)
-
-
-# -------------------------------------------------
-# JANELA DO CHAT
-# -------------------------------------------------
-
-if st.session_state.chat_aberto:
-
-    st.markdown('<div class="chat-box">', unsafe_allow_html=True)
-
-    st.markdown("### 💬 Suporte Produção")
-
-    usuario = st.session_state.usuario
-    nivel = st.session_state.nivel
-
-
-    # ----------------------------------------
-    # ADMIN / PCP ESCOLHE OPERADOR
-    # ----------------------------------------
-
-    if nivel in ["admin", "pcp"]:
-
-        operadores = carregar_operadores()
-
-        operador_escolhido = st.selectbox(
-            "Conversar com operador",
-            operadores["nome"]
-        )
-
-        destino = operador_escolhido
-
-
-    # ----------------------------------------
-    # OPERADOR FALA COM PCP
-    # ----------------------------------------
-
-    else:
-
-        destino = "pcp"
-
-
-    # ----------------------------------------
-    # CARREGAR MENSAGENS
-    # ----------------------------------------
-
-    mensagens = carregar_chat(usuario, destino)
-
-    for _, msg in mensagens.iterrows():
-
-        hora = msg["data"].strftime("%H:%M")
-
-        if msg["remetente"] == usuario:
-            st.write(f"Você: {msg['mensagem']} ({hora})")
-        else:
-            st.write(f"{msg['remetente']}: {msg['mensagem']} ({hora})")
-
-
-    # ----------------------------------------
-    # ENVIAR MENSAGEM
-    # ----------------------------------------
-
-    nova_msg = st.text_input("Mensagem", key="msg_chat")
-
-    if st.button("Enviar", key="btn_enviar_chat"):
-
-        if nova_msg.strip():
-
-            enviar_mensagem(
-                remetente=usuario,
-                destinatario=destino,
-                mensagem=nova_msg
-            )
-
-            st.rerun()
-
-
-    st.markdown("</div>", unsafe_allow_html=True)
