@@ -1379,7 +1379,7 @@ st.markdown("""
 
 
 # BOTÃO CHAT
-ist.markdown('<div class="chat-button">', unsafe_allow_html=True)
+st.markdown('<div class="chat-button">', unsafe_allow_html=True)
 
 if st.button("💬", key="chat_btn"):
     st.session_state.chat_aberto = not st.session_state.chat_aberto
