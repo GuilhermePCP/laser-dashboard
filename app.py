@@ -1345,11 +1345,15 @@ else:
 if "chat_aberto" not in st.session_state:
     st.session_state.chat_aberto = False
 
+if "chat_operador" not in st.session_state:
+    st.session_state.chat_operador = None
 
+
+# CSS
 st.markdown("""
 <style>
 
-.chat-floating-button {
+.chat-button {
     position: fixed;
     bottom: 25px;
     right: 25px;
@@ -1358,14 +1362,14 @@ st.markdown("""
 
 .chat-box {
     position: fixed;
-    bottom: 100px;
+    bottom: 90px;
     right: 25px;
-    width: 360px;
+    width: 350px;
     height: 420px;
-    background-color: #111;
+    background: #111;
     border-radius: 12px;
     padding: 15px;
-    box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
+    box-shadow: 0px 10px 25px rgba(0,0,0,0.4);
     overflow-y: auto;
     z-index: 9999;
 }
@@ -1374,45 +1378,121 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# BOTÃO DO CHAT
-st.markdown('<div class="chat-floating-button">', unsafe_allow_html=True)
+# BOTÃO FLUTUANTE
+st.markdown('<div class="chat-button">', unsafe_allow_html=True)
 
-if st.button("💬", key="chat_toggle"):
+if st.button("💬", key="abrir_chat"):
     st.session_state.chat_aberto = not st.session_state.chat_aberto
 
-st.markdown('</div>', unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
 
-# CAIXA DO CHAT
+# -------------------------------------------------
+# JANELA DO CHAT
+# -------------------------------------------------
+
 if st.session_state.chat_aberto:
 
     st.markdown('<div class="chat-box">', unsafe_allow_html=True)
 
     st.markdown("### 💬 Suporte Produção")
 
-    mensagens = carregar_chat()
+    usuario = st.session_state.usuario
+    nivel = st.session_state.nivel
 
-    for msg in reversed(mensagens):
+
+    # ----------------------------------------
+    # ADMIN / PCP ESCOLHE OPERADOR
+    # ----------------------------------------
+
+    if nivel in ["admin", "pcp"]:
+
+        operadores = carregar_operadores()
+
+        operador_escolhido = st.selectbox(
+            "Conversar com operador",
+            operadores["nome"]
+        )
+
+        destino = operador_escolhido
+
+
+    # ----------------------------------------
+    # OPERADOR FALA COM PCP
+    # ----------------------------------------
+
+    else:
+
+        destino = "pcp"
+
+
+    # ----------------------------------------
+    # CARREGAR MENSAGENS
+    # ----------------------------------------
+
+    mensagens = carregar_chat(usuario, destino)
+
+    for msg in mensagens:
 
         hora = msg.data.strftime("%H:%M")
 
-        if msg.nivel == "operador":
-            st.markdown(f"🔵 **{msg.usuario}** ({hora})  \n{msg.mensagem}")
+        if msg.remetente == usuario:
+
+            st.markdown(
+                f"""
+                <div style="
+                background:#1f77b4;
+                padding:8px;
+                border-radius:8px;
+                margin-bottom:6px;
+                width:80%;
+                margin-left:auto;
+                text-align:right;
+                ">
+                {msg.mensagem}
+                <div style="font-size:10px">{hora}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
         else:
-            st.markdown(f"🟢 **{msg.usuario}** ({hora})  \n{msg.mensagem}")
 
-    nova_msg = st.text_input("Mensagem", key="chat_msg")
+            st.markdown(
+                f"""
+                <div style="
+                background:#444;
+                padding:8px;
+                border-radius:8px;
+                margin-bottom:6px;
+                width:80%;
+                ">
+                <b>{msg.remetente}</b><br>
+                {msg.mensagem}
+                <div style="font-size:10px">{hora}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-    if st.button("Enviar", key="chat_enviar"):
+
+    # ----------------------------------------
+    # ENVIAR MENSAGEM
+    # ----------------------------------------
+
+    nova_msg = st.text_input("Mensagem", key="msg_chat")
+
+    if st.button("Enviar", key="btn_enviar_chat"):
 
         if nova_msg.strip():
 
             enviar_mensagem(
-                st.session_state.usuario,
-                st.session_state.nivel,
-                nova_msg
+                remetente=usuario,
+                destinatario=destino,
+                mensagem=nova_msg
             )
 
             st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
