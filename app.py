@@ -1349,24 +1349,23 @@ if "chat_aberto" not in st.session_state:
 st.markdown("""
 <style>
 
-.chat-button-container {
+.chat-floating-button {
     position: fixed;
     bottom: 25px;
     right: 25px;
     z-index: 9999;
 }
 
-.chat-box {
+.chat-container {
     position: fixed;
     bottom: 100px;
     right: 25px;
-    width: 340px;
+    width: 360px;
     height: 420px;
-    background: white;
+    background-color: #111;
     border-radius: 12px;
-    padding: 12px;
-    overflow-y: auto;
-    box-shadow: 0px 10px 30px rgba(0,0,0,0.35);
+    padding: 15px;
+    box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
     z-index: 9999;
 }
 
@@ -1374,86 +1373,61 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# BOTÃO CHAT
-st.markdown('<div class="chat-button-container">', unsafe_allow_html=True)
+# BOTÃO
+st.markdown('<div class="chat-floating-button">', unsafe_allow_html=True)
 
-if st.button("💬", key="chat_btn"):
+if st.button("💬", key="chat_toggle"):
     st.session_state.chat_aberto = not st.session_state.chat_aberto
 
 st.markdown('</div>', unsafe_allow_html=True)
 
 
-# -------------------------------------------------
-# JANELA DO CHAT
-# -------------------------------------------------
-
+# CHAT
 if st.session_state.chat_aberto:
 
-    st.markdown('<div class="chat-box">', unsafe_allow_html=True)
+    container = st.container()
 
-    st.markdown("### 💬 Suporte Produção")
+    with container:
 
-    mensagens = carregar_chat()
+        st.markdown(
+            """
+            <div class="chat-container">
+            """,
+            unsafe_allow_html=True
+        )
 
-    for msg in reversed(mensagens):
+        st.markdown("### 💬 Suporte Produção")
 
-        hora = msg.data.strftime("%H:%M")
+        mensagens = carregar_chat()
 
-        # MENSAGEM OPERADOR
-        if msg.nivel == "operador":
+        for msg in reversed(mensagens):
 
-            st.markdown(
-                f"""
-                <div style="
-                background:#e3f2fd;
-                padding:8px;
-                border-radius:8px;
-                margin-bottom:6px;
-                width:80%;
-                ">
-                <b>{msg.usuario}</b><br>
-                {msg.mensagem}
-                <div style="font-size:10px;color:gray">{hora}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            hora = msg.data.strftime("%H:%M")
 
-        # MENSAGEM PCP / ADMIN
-        else:
+            if msg.nivel == "operador":
 
-            st.markdown(
-                f"""
-                <div style="
-                background:#e8f5e9;
-                padding:8px;
-                border-radius:8px;
-                margin-bottom:6px;
-                width:80%;
-                margin-left:auto;
-                text-align:right;
-                ">
-                <b>{msg.usuario}</b><br>
-                {msg.mensagem}
-                <div style="font-size:10px;color:gray">{hora}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+                st.markdown(
+                    f"🔵 **{msg.usuario}** ({hora})  \n{msg.mensagem}"
+                )
 
+            else:
 
-    nova_msg = st.text_input("Mensagem", key="chat_input")
+                st.markdown(
+                    f"🟢 **{msg.usuario}** ({hora})  \n{msg.mensagem}"
+                )
 
-    if st.button("Enviar", key="chat_send"):
+        nova_msg = st.text_input("Mensagem", key="chat_msg")
 
-        if nova_msg.strip():
+        if st.button("Enviar", key="chat_enviar"):
 
-            enviar_mensagem(
-                st.session_state.usuario,
-                st.session_state.nivel,
-                nova_msg
-            )
+            if nova_msg.strip():
 
-            st.rerun()
+                enviar_mensagem(
+                    st.session_state.usuario,
+                    st.session_state.nivel,
+                    nova_msg
+                )
 
-    st.markdown("</div>", unsafe_allow_html=True)
+                st.rerun()
+
+        st.markdown("</div>", unsafe_allow_html=True)
