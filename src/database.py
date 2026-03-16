@@ -238,25 +238,25 @@ def enviar_mensagem(remetente, destinatario, mensagem):
         )
 
 
-def carregar_chat(usuario, destino):
+#def carregar_chat(usuario, destino):
 
-    query = """
-    SELECT remetente, destinatario, mensagem, data
-    FROM chat
-    WHERE
-        (remetente = %(usuario)s AND destinatario = %(destino)s)
-        OR
-        (remetente = %(destino)s AND destinatario = %(usuario)s)
-    ORDER BY data
-    """
+    #query = """
+    #SELECT remetente, destinatario, mensagem, data
+    #FROM chat
+    #WHERE
+        #(remetente = %(usuario)s AND destinatario = %(destino)s)
+        #OR
+        #(remetente = %(destino)s AND destinatario = %(usuario)s)
+    #ORDER BY data
+    #"""
 
-    df = pd.read_sql(
-        query,
-        engine,
-        params={
-            "usuario": usuario,
-            "destino": destino
-        }
-    )
+    #df = pd.read_sql(
+        #query,
+        #engine,
+        #params={
+       #     "usuario": usuario,
+      #      "destino": destino
+     #   }
+    #)
 
-    return df
+    #return df
