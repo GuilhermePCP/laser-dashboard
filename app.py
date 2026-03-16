@@ -1439,7 +1439,7 @@ if st.session_state.chat_aberto:
 
     mensagens = carregar_chat(usuario, destino)
 
-    for msg in mensagens:
+    for _, msg in mensagens.iterrows():
 
         hora = msg.data.strftime("%H:%M")
 
