@@ -30,6 +30,41 @@ import unicodedata
 from streamlit_cookies_manager import EncryptedCookieManager
 from streamlit_autorefresh import st_autorefresh
 
+#==========================================================
+
+def enviar_mensagem(usuario, nivel, mensagem):
+
+    query = """
+    INSERT INTO chat_mensagens (usuario, nivel, mensagem)
+    VALUES (:usuario, :nivel, :mensagem)
+    """
+
+    with engine.begin() as conn:
+        conn.execute(
+            text(query),
+            {
+                "usuario": usuario,
+                "nivel": nivel,
+                "mensagem": mensagem
+            }
+        )
+
+
+def carregar_chat():
+
+    query = """
+    SELECT usuario, nivel, mensagem, data
+    FROM chat_mensagens
+    ORDER BY data DESC
+    LIMIT 50
+    """
+
+    with engine.begin() as conn:
+        return conn.execute(text(query)).fetchall()
+    
+
+#=========================================================
+
 def normalizar_texto(texto):
     if texto is None:
         return ""
@@ -67,6 +102,15 @@ st.set_page_config(
     page_title="Programação Laser",
     layout="wide"
 )
+
+# -------------------------------------------------
+# ESTADO DO CHAT
+# -------------------------------------------------
+
+if "chat_aberto" not in st.session_state:
+    st.session_state.chat_aberto = False
+
+#--------------------------------------------------
 
 cookies = EncryptedCookieManager(
     prefix="laser_app",
@@ -1293,3 +1337,122 @@ if not df_finalizados.empty:
 else:
 
     st.info("Nenhuma programação finalizada ainda")
+
+# -------------------------------------------------
+# CHAT FLUTUANTE
+# -------------------------------------------------
+
+st.markdown("""
+<style>
+
+.chat-button {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    background-color: #1f77b4;
+    color: white;
+    border-radius: 50%;
+    width: 65px;
+    height: 65px;
+    font-size: 30px;
+    text-align: center;
+    line-height: 65px;
+    cursor: pointer;
+    box-shadow: 0px 6px 15px rgba(0,0,0,0.3);
+}
+
+.chat-box {
+    position: fixed;
+    bottom: 100px;
+    right: 25px;
+    width: 340px;
+    height: 420px;
+    background: white;
+    border-radius: 12px;
+    padding: 12px;
+    overflow-y: auto;
+    box-shadow: 0px 10px 30px rgba(0,0,0,0.35);
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+
+# BOTÃO CHAT
+ist.markdown('<div class="chat-button">', unsafe_allow_html=True)
+
+if st.button("💬", key="chat_btn"):
+    st.session_state.chat_aberto = not st.session_state.chat_aberto
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+
+# JANELA DO CHAT
+if st.session_state.chat_aberto:
+
+    st.markdown('<div class="chat-box">', unsafe_allow_html=True)
+
+    st.markdown("### 💬 Suporte Produção")
+
+    mensagens = carregar_chat()
+
+    for msg in reversed(mensagens):
+
+        hora = msg.data.strftime("%H:%M")
+
+        if msg.nivel == "operador":
+
+            st.markdown(
+                f"""
+                <div style="
+                background:#e3f2fd;
+                padding:8px;
+                border-radius:8px;
+                margin-bottom:6px;
+                width:80%;
+                ">
+                <b>{msg.usuario}</b><br>
+                {msg.mensagem}
+                <div style="font-size:10px;color:gray">{hora}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        else:
+
+            st.markdown(
+                f"""
+                <div style="
+                background:#e8f5e9;
+                padding:8px;
+                border-radius:8px;
+                margin-bottom:6px;
+                width:80%;
+                margin-left:auto;
+                text-align:right;
+                ">
+                <b>{msg.usuario}</b><br>
+                {msg.mensagem}
+                <div style="font-size:10px;color:gray">{hora}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+
+    nova_msg = st.text_input("Mensagem", key="chat_input")
+
+    if st.button("Enviar", key="chat_send"):
+
+        if nova_msg.strip():
+
+            enviar_mensagem(
+                st.session_state.usuario,
+                st.session_state.nivel,
+                nova_msg
+            )
+
+            st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
