@@ -677,22 +677,37 @@ if not df_tabela.empty:
             # TABELA
             # -------------------------
 
-            # 🔥 GARANTIR COLUNA
+            # 🔥 GARANTIR COLUNA E LIMPAR VALORES
             if "quantidade_produzida" not in df_operador.columns:
                 df_operador["quantidade_produzida"] = 0
 
-            # 🔥 FUNÇÃO BARRA VISUAL
+            df_operador["quantidade_produzida"] = pd.to_numeric(
+                df_operador["quantidade_produzida"],
+                errors="coerce"
+            ).fillna(0)
+
+            df_operador["quantidade"] = pd.to_numeric(
+                df_operador["quantidade"],
+                errors="coerce"
+            ).fillna(0)
+
+
+            # 🔥 FUNÇÃO BARRA VISUAL (CORRIGIDA)
             def barra_progresso(qtd_prod, qtd_total):
 
-                if qtd_prod is None or qtd_prod == 0:
-                    return f"{int(qtd_total)}"
+                qtd_prod = int(qtd_prod)
+                qtd_total = int(qtd_total)
+
+                # NÃO MOSTRAR SE NÃO PRODUZIU NADA
+                if qtd_prod == 0:
+                    return f"{qtd_total}"
 
                 percentual = int((qtd_prod / qtd_total) * 100) if qtd_total > 0 else 0
 
                 blocos = int(percentual / 10)
                 barra = "█" * blocos + "░" * (10 - blocos)
 
-                return f"{barra} {percentual}% ({int(qtd_prod)}/{int(qtd_total)})"
+                return f"{barra} {percentual}% ({qtd_prod}/{qtd_total})"
 
 
             # 🔥 CRIAR COLUNA VISUAL
