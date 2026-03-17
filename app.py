@@ -677,6 +677,16 @@ if not df_tabela.empty:
             # TABELA
             # -------------------------
 
+            # 🔥 GARANTIR COLUNA DE PRODUÇÃO
+            if "quantidade_produzida" not in df_operador.columns:
+                df_operador["quantidade_produzida"] = 0
+
+            # 🔥 MOSTRAR SÓ QUANDO PARADO
+            df_operador["Produzido"] = df_operador.apply(
+                lambda row: int(row["quantidade_produzida"]) if row["status"] == "Parado" else "",
+                axis=1
+            )
+
             df_exibicao = df_operador.drop(columns=["desenho", "status"], errors="ignore")
 
             df_exibicao = df_exibicao.rename(columns={
@@ -690,10 +700,12 @@ if not df_tabela.empty:
                 "prazo_limite": "Prazo"
             })
 
+            # 🔥 ORDEM FINAL (com Produzido)
             ordem_colunas = [
                 "Sequência",
                 "Produto",
                 "Quantidade",
+                "Produzido",  # 👈 NOVO
                 "Operador",
                 "Status",
                 "Início",
@@ -776,17 +788,51 @@ if not df_tabela.empty:
                             col_pause, col_finish = st.columns(2)
 
                             with col_pause:
+
                                 if st.button("⏸ Pausar", use_container_width=True,
-                                             key=f"pausar_{linha['id']}"):
+                                            key=f"pausar_{linha['id']}"):
 
-                                    with engine.begin() as conn:
-                                        conn.execute(text("""
-                                            UPDATE programacao
-                                            SET status = 'Parado'
-                                            WHERE id = :id
-                                        """), {"id": int(linha["id"])})
+                                    st.session_state[f"pausando_{linha['id']}"] = True
 
-                                    st.rerun()
+
+                                # 🔥 MOSTRAR INPUT DE QUANTIDADE
+                                if st.session_state.get(f"pausando_{linha['id']}", False):
+
+                                    qtd_produzida = st.number_input(
+                                        "Quantidade já produzida",
+                                        min_value=0,
+                                        max_value=int(linha["quantidade"]),
+                                        step=1,
+                                        key=f"qtd_{linha['id']}"
+                                    )
+
+                                    col_confirm, col_cancel = st.columns(2)
+
+                                    with col_confirm:
+                                        if st.button("💾 Confirmar pausa", use_container_width=True,
+                                                    key=f"confirmar_pausa_{linha['id']}"):
+
+                                            with engine.begin() as conn:
+                                                conn.execute(text("""
+                                                    UPDATE programacao
+                                                    SET status = 'Parado',
+                                                        quantidade_produzida = :qtd
+                                                    WHERE id = :id
+                                                """), {
+                                                    "id": int(linha["id"]),
+                                                    "qtd": qtd_produzida
+                                                })
+
+                                            st.session_state[f"pausando_{linha['id']}"] = False
+                                            st.success("Produção pausada e quantidade registrada")
+                                            st.rerun()
+
+                                    with col_cancel:
+                                        if st.button("❌ Cancelar", use_container_width=True,
+                                                    key=f"cancelar_pausa_{linha['id']}"):
+
+                                            st.session_state[f"pausando_{linha['id']}"] = False
+                                            st.rerun()
 
                             with col_finish:
                                 if st.button("✔ Finalizar", use_container_width=True,
