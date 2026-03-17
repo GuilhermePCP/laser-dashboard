@@ -767,6 +767,17 @@ if not df_tabela.empty:
                         # BOTÕES
                         # -------------------------
 
+                        status_op = linha["status"]
+
+                        # 🔥 TRATAR STATUS ATRASADO (continua com ações de "Em produção")
+                        if status_op == "Atrasado":
+                            status_op = "Em produção"
+
+
+                        # -------------------------
+                        # PROGRAMADO
+                        # -------------------------
+
                         if status_op == "Programado":
 
                             if st.button(
@@ -792,6 +803,11 @@ if not df_tabela.empty:
 
                                 st.success("Produção iniciada")
                                 st.rerun()
+
+
+                        # -------------------------
+                        # EM PRODUÇÃO (inclui atrasado)
+                        # -------------------------
 
                         elif status_op == "Em produção":
 
@@ -850,6 +866,11 @@ if not df_tabela.empty:
 
                                     st.success("Produção finalizada")
                                     st.rerun()
+
+
+                        # -------------------------
+                        # PARADO
+                        # -------------------------
 
                         elif status_op == "Parado":
 
