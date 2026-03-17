@@ -573,12 +573,13 @@ if not df_tabela.empty:
                 (df_operador["status"] != "Finalizado")
             )
 
+            # 🔥 NÃO SOBRESCREVE STATUS REAL
             df_operador["status_original"] = df_operador["status"]
 
             df_operador["status_visual_base"] = df_operador.apply(
                 lambda row: "Atrasado"
-                if row["atrasado"] and row["status"] != "Finalizado"
-                else row["status"],
+                if row["atrasado"] and row["status_original"] != "Finalizado"
+                else row["status_original"],
                 axis=1
             )
 
@@ -590,7 +591,7 @@ if not df_tabela.empty:
                 "Finalizado": 4
             }
 
-            df_operador["prioridade"] = df_operador["status"].map(prioridade_status)
+            df_operador["prioridade"] = df_operador["status_visual_base"].map(prioridade_status)
 
             # -------------------------
             # GARANTIR SEQUÊNCIA
@@ -620,7 +621,8 @@ if not df_tabela.empty:
                 "quantidade",
                 "operador",
                 "status",
-                "desenho"
+                "desenho",
+                "quantidade_produzida"  # 🔥 GARANTIDO
             ]
 
             colunas_data = [
@@ -633,9 +635,16 @@ if not df_tabela.empty:
                 st.session_state.nivel = None
 
             if st.session_state.nivel in ["admin", "pcp"]:
-                df_operador["status_original"] = df_operador["status"]
+                df_operador = df_operador[colunas_base + colunas_data]
             else:
                 df_operador = df_operador[colunas_base]
+
+            # 🔥 GARANTE DEPOIS DO CORTE
+            if "status_original" not in df_operador.columns:
+                df_operador["status_original"] = df_operador["status"]
+
+            if "quantidade_produzida" not in df_operador.columns:
+                df_operador["quantidade_produzida"] = 0
 
             # -------------------------
             # FORMATAR DATAS
@@ -664,35 +673,26 @@ if not df_tabela.empty:
 
                 if status == "Programado":
                     return "🟡 Programado"
-
                 elif status == "Em produção":
                     return "🟢 Em produção"
-
                 elif status == "Finalizado":
                     return "🔵 Finalizado"
-
                 elif status == "Atrasado":
                     return "🔴 Atrasado"
-
                 elif status == "Parado":
                     return "🟠 Parado"
 
                 return status
 
-            df_operador["status_visual"] = df_operador["status"].apply(icone_status)
+            df_operador["status_visual"] = df_operador["status_visual_base"].apply(icone_status)
 
             # -------------------------
             # TABELA
             # -------------------------
 
-            # 🔥 GARANTIR COLUNA
-            if "quantidade_produzida" not in df_operador.columns:
-                df_operador["quantidade_produzida"] = 0
-
-            # 🔥 CRIAR COLUNA VISUAL (produzido / total)
             df_operador["Quantidade"] = df_operador.apply(
                 lambda row: f"{int(row['quantidade_produzida'])} / {int(row['quantidade'])}"
-                if row["status_original"] == "Parado"
+                if row["status_original"] == "Parado" and row["quantidade_produzida"] > 0
                 else f"{int(row['quantidade'])}",
                 axis=1
             )
@@ -709,7 +709,6 @@ if not df_tabela.empty:
                 "prazo_limite": "Prazo"
             })
 
-            # 🔥 ORDEM FINAL (sem coluna Produzido separada)
             ordem_colunas = [
                 "Sequência",
                 "Produto",
@@ -768,12 +767,10 @@ if not df_tabela.empty:
                         st.write(f"**Produto:** {linha['produto']}")
                         st.write(f"**Quantidade:** {int(linha['quantidade'])}")
                         st.write(f"**Operador:** {linha['operador']}")
-
                         st.write(f"**Sequência:** {int(linha['sequencia'])}")
 
                         st.divider()
 
-                        # 🔥 ATRASADO = EM PRODUÇÃO
                         if status_op == "Atrasado":
                             status_op = "Em produção"
 
@@ -797,14 +794,11 @@ if not df_tabela.empty:
 
                             with col_pause:
 
-                                # 1️⃣ CLICOU EM PAUSAR → ATIVA INPUT
                                 if st.button("⏸ Pausar", use_container_width=True,
                                             key=f"pausar_{linha['id']}"):
 
                                     st.session_state[f"pausando_{linha['id']}"] = True
 
-
-                                # 2️⃣ MOSTRA INPUT
                                 if st.session_state.get(f"pausando_{linha['id']}", False):
 
                                     qtd_produzida = st.number_input(
@@ -812,12 +806,12 @@ if not df_tabela.empty:
                                         min_value=0,
                                         max_value=int(linha["quantidade"]),
                                         step=1,
-                                        value=int(linha.get("quantidade_produzida", 0))
+                                        value=int(linha.get("quantidade_produzida", 0)),
+                                        key=f"input_qtd_{linha['id']}"
                                     )
 
                                     col_confirm, col_cancel = st.columns(2)
 
-                                    # ✅ CONFIRMAR (SALVA CERTO)
                                     with col_confirm:
                                         if st.button("💾 Confirmar pausa",
                                                     use_container_width=True,
@@ -838,7 +832,6 @@ if not df_tabela.empty:
                                             st.success("Quantidade salva corretamente")
                                             st.rerun()
 
-                                    # ❌ CANCELAR
                                     with col_cancel:
                                         if st.button("❌ Cancelar",
                                                     use_container_width=True,
