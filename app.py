@@ -681,11 +681,26 @@ if not df_tabela.empty:
             if "quantidade_produzida" not in df_operador.columns:
                 df_operador["quantidade_produzida"] = 0
 
-            # 🔥 CRIAR COLUNA VISUAL (produzido / total)
+            # 🔥 FUNÇÃO BARRA VISUAL
+            def barra_progresso(qtd_prod, qtd_total):
+
+                if qtd_prod is None or qtd_prod == 0:
+                    return f"{int(qtd_total)}"
+
+                percentual = int((qtd_prod / qtd_total) * 100) if qtd_total > 0 else 0
+
+                blocos = int(percentual / 10)
+                barra = "█" * blocos + "░" * (10 - blocos)
+
+                return f"{barra} {percentual}% ({int(qtd_prod)}/{int(qtd_total)})"
+
+
+            # 🔥 CRIAR COLUNA VISUAL
             df_operador["Quantidade"] = df_operador.apply(
-                lambda row: f"{int(row['quantidade_produzida'])} / {int(row['quantidade'])}"
-                if row["status"] == "Parado"
-                else f"{int(row['quantidade'])}",
+                lambda row: barra_progresso(
+                    row["quantidade_produzida"],
+                    row["quantidade"]
+                ),
                 axis=1
             )
 
@@ -701,7 +716,6 @@ if not df_tabela.empty:
                 "prazo_limite": "Prazo"
             })
 
-            # 🔥 ORDEM FINAL (sem coluna Produzido separada)
             ordem_colunas = [
                 "Sequência",
                 "Produto",
