@@ -677,13 +677,15 @@ if not df_tabela.empty:
             # TABELA
             # -------------------------
 
-            # 🔥 GARANTIR COLUNA DE PRODUÇÃO
+            # 🔥 GARANTIR COLUNA
             if "quantidade_produzida" not in df_operador.columns:
                 df_operador["quantidade_produzida"] = 0
 
-            # 🔥 MOSTRAR SÓ QUANDO PARADO
-            df_operador["Produzido"] = df_operador.apply(
-                lambda row: int(row["quantidade_produzida"]) if row["status"] == "Parado" else "",
+            # 🔥 CRIAR COLUNA VISUAL (produzido / total)
+            df_operador["Quantidade"] = df_operador.apply(
+                lambda row: f"{int(row['quantidade_produzida'])} / {int(row['quantidade'])}"
+                if row["status"] == "Parado"
+                else f"{int(row['quantidade'])}",
                 axis=1
             )
 
@@ -692,7 +694,6 @@ if not df_tabela.empty:
             df_exibicao = df_exibicao.rename(columns={
                 "sequencia": "Sequência",
                 "produto": "Produto",
-                "quantidade": "Quantidade",
                 "operador": "Operador",
                 "status_visual": "Status",
                 "inicio": "Início",
@@ -700,12 +701,11 @@ if not df_tabela.empty:
                 "prazo_limite": "Prazo"
             })
 
-            # 🔥 ORDEM FINAL (com Produzido)
+            # 🔥 ORDEM FINAL (sem coluna Produzido separada)
             ordem_colunas = [
                 "Sequência",
                 "Produto",
                 "Quantidade",
-                "Produzido",  # 👈 NOVO
                 "Operador",
                 "Status",
                 "Início",
