@@ -789,13 +789,14 @@ if not df_tabela.empty:
 
                             with col_pause:
 
+                                # 1️⃣ CLICOU EM PAUSAR → ATIVA INPUT
                                 if st.button("⏸ Pausar", use_container_width=True,
                                             key=f"pausar_{linha['id']}"):
 
                                     st.session_state[f"pausando_{linha['id']}"] = True
 
 
-                                # 🔥 MOSTRAR INPUT DE QUANTIDADE
+                                # 2️⃣ MOSTRA INPUT
                                 if st.session_state.get(f"pausando_{linha['id']}", False):
 
                                     qtd_produzida = st.number_input(
@@ -803,13 +804,15 @@ if not df_tabela.empty:
                                         min_value=0,
                                         max_value=int(linha["quantidade"]),
                                         step=1,
-                                        key=f"qtd_{linha['id']}"
+                                        key=f"input_qtd_{linha['id']}"
                                     )
 
                                     col_confirm, col_cancel = st.columns(2)
 
+                                    # ✅ CONFIRMAR (SALVA CERTO)
                                     with col_confirm:
-                                        if st.button("💾 Confirmar pausa", use_container_width=True,
+                                        if st.button("💾 Confirmar pausa",
+                                                    use_container_width=True,
                                                     key=f"confirmar_pausa_{linha['id']}"):
 
                                             with engine.begin() as conn:
@@ -820,11 +823,20 @@ if not df_tabela.empty:
                                                     WHERE id = :id
                                                 """), {
                                                     "id": int(linha["id"]),
-                                                    "qtd": qtd_produzida
+                                                    "qtd": int(qtd_produzida)
                                                 })
 
                                             st.session_state[f"pausando_{linha['id']}"] = False
-                                            st.success("Produção pausada e quantidade registrada")
+                                            st.success("Quantidade salva corretamente")
+                                            st.rerun()
+
+                                    # ❌ CANCELAR
+                                    with col_cancel:
+                                        if st.button("❌ Cancelar",
+                                                    use_container_width=True,
+                                                    key=f"cancelar_pausa_{linha['id']}"):
+
+                                            st.session_state[f"pausando_{linha['id']}"] = False
                                             st.rerun()
 
                                     with col_cancel:
