@@ -622,7 +622,8 @@ if not df_tabela.empty:
                 "operador",
                 "status",
                 "desenho",
-                "quantidade_produzida"  # 🔥 GARANTIDO
+                "status_visual_base",  # 🔥 ADICIONA ISSO
+                "quantidade_produzida"
             ]
 
             colunas_data = [
