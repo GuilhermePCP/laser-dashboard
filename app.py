@@ -1,6 +1,8 @@
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(BASE_DIR, "src"))
 
 import streamlit as st
 import pandas as pd
@@ -8,9 +10,10 @@ import base64
 from datetime import datetime
 from PIL import Image
 
-from src.analytics import calcular_metricas, filtrar_dados
-from src.visuals import grafico_gantt
-from src.database import (
+# 🔥 IMPORTS SEM "src."
+from analytics import calcular_metricas, filtrar_dados
+from visuals import grafico_gantt
+from database import (
     criar_tabela,
     carregar_dados,
     salvar_programacao,
