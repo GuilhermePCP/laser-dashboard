@@ -633,7 +633,7 @@ if not df_tabela.empty:
                 st.session_state.nivel = None
 
             if st.session_state.nivel in ["admin", "pcp"]:
-                df_operador = df_operador[colunas_base + colunas_data]
+                df_operador["status_original"] = df_operador["status"]
             else:
                 df_operador = df_operador[colunas_base]
 
