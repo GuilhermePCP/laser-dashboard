@@ -677,41 +677,17 @@ if not df_tabela.empty:
             # TABELA
             # -------------------------
 
-            # 🔥 GARANTIR COLUNA E LIMPAR VALORES
+            # 🔥 GARANTIR COLUNA
             if "quantidade_produzida" not in df_operador.columns:
                 df_operador["quantidade_produzida"] = 0
 
-            df_operador["quantidade_produzida"] = pd.to_numeric(
-                df_operador["quantidade_produzida"],
-                errors="coerce"
-            ).fillna(0)
-
-            df_operador["quantidade"] = pd.to_numeric(
-                df_operador["quantidade"],
-                errors="coerce"
-            ).fillna(0)
-
-
-            # 🔥 MOSTRAR PRODUZIDO / TOTAL (SEM BARRA)
-            def formatar_quantidade(qtd_prod, qtd_total):
-
-                qtd_prod = int(qtd_prod)
-                qtd_total = int(qtd_total)
-
-                if qtd_prod == 0:
-                    return f"{qtd_total}"
-
-                return f"{qtd_prod}/{qtd_total}"
-
-
+            # 🔥 CRIAR COLUNA VISUAL (produzido / total)
             df_operador["Quantidade"] = df_operador.apply(
-                lambda row: formatar_quantidade(
-                    row["quantidade_produzida"],
-                    row["quantidade"]
-                ),
+                lambda row: f"{int(row['quantidade_produzida'])} / {int(row['quantidade'])}"
+                if row["status"] == "Parado"
+                else f"{int(row['quantidade'])}",
                 axis=1
             )
-
 
             df_exibicao = df_operador.drop(columns=["desenho", "status"], errors="ignore")
 
@@ -725,6 +701,7 @@ if not df_tabela.empty:
                 "prazo_limite": "Prazo"
             })
 
+            # 🔥 ORDEM FINAL (sem coluna Produzido separada)
             ordem_colunas = [
                 "Sequência",
                 "Produto",
