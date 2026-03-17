@@ -877,6 +877,15 @@ if not df_tabela.empty:
 
                             with st.expander("✏️ Editar OP"):
 
+                                # 🔥 NOVO CAMPO SEQUÊNCIA
+                                nova_sequencia = st.number_input(
+                                    "Sequência",
+                                    min_value=1,
+                                    step=1,
+                                    value=int(linha.get("sequencia", linha["id"])),
+                                    key=f"seq_{operador}_{linha['id']}"
+                                )
+
                                 novo_produto = st.text_input(
                                     "Produto",
                                     value=linha["produto"],
@@ -893,21 +902,21 @@ if not df_tabela.empty:
 
                                 nova_inicio = st.date_input(
                                     "Início",
-                                    pd.to_datetime(linha["inicio"], dayfirst= True),
+                                    pd.to_datetime(linha["inicio"], dayfirst=True),
                                     format="DD/MM/YYYY",
                                     key=f"inicio_{operador}_{linha['id']}"
                                 )
 
                                 novo_fim = st.date_input(
                                     "Fim",
-                                    pd.to_datetime(linha["fim"], dayfirst= True),
+                                    pd.to_datetime(linha["fim"], dayfirst=True),
                                     format="DD/MM/YYYY",
                                     key=f"fim_{operador}_{linha['id']}"
                                 )
 
                                 novo_prazo = st.date_input(
                                     "Prazo limite",
-                                    pd.to_datetime(linha["prazo_limite"], dayfirst= True),
+                                    pd.to_datetime(linha["prazo_limite"], dayfirst=True),
                                     format="DD/MM/YYYY",
                                     key=f"prazo_{operador}_{linha['id']}"
                                 )
@@ -924,7 +933,8 @@ if not df_tabela.empty:
                                         quantidade = :quantidade,
                                         inicio = :inicio,
                                         fim = :fim,
-                                        prazo_limite = :prazo
+                                        prazo_limite = :prazo,
+                                        sequencia = :sequencia
                                     WHERE id = :id
                                     """
 
@@ -937,6 +947,7 @@ if not df_tabela.empty:
                                                 "inicio": nova_inicio,
                                                 "fim": novo_fim,
                                                 "prazo": novo_prazo,
+                                                "sequencia": nova_sequencia,  # 🔥 AQUI
                                                 "id": int(linha["id"])
                                             }
                                         )
