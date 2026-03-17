@@ -692,32 +692,26 @@ if not df_tabela.empty:
             ).fillna(0)
 
 
-            # 🔥 FUNÇÃO BARRA VISUAL (CORRIGIDA)
-            def barra_progresso(qtd_prod, qtd_total):
+            # 🔥 MOSTRAR PRODUZIDO / TOTAL (SEM BARRA)
+            def formatar_quantidade(qtd_prod, qtd_total):
 
                 qtd_prod = int(qtd_prod)
                 qtd_total = int(qtd_total)
 
-                # NÃO MOSTRAR SE NÃO PRODUZIU NADA
                 if qtd_prod == 0:
                     return f"{qtd_total}"
 
-                percentual = int((qtd_prod / qtd_total) * 100) if qtd_total > 0 else 0
-
-                blocos = int(percentual / 10)
-                barra = "█" * blocos + "░" * (10 - blocos)
-
-                return f"{barra} {percentual}% ({qtd_prod}/{qtd_total})"
+                return f"{qtd_prod}/{qtd_total}"
 
 
-            # 🔥 CRIAR COLUNA VISUAL
             df_operador["Quantidade"] = df_operador.apply(
-                lambda row: barra_progresso(
+                lambda row: formatar_quantidade(
                     row["quantidade_produzida"],
                     row["quantidade"]
                 ),
                 axis=1
             )
+
 
             df_exibicao = df_operador.drop(columns=["desenho", "status"], errors="ignore")
 
