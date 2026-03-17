@@ -538,6 +538,7 @@ if st.session_state.nivel == "operador":
 
 df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
 df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
+
 # -------------------------------------------------
 # TABELA DE FABRICAÇÃO
 # -------------------------------------------------
@@ -572,7 +573,14 @@ if not df_tabela.empty:
                 (df_operador["status"] != "Finalizado")
             )
 
-            df_operador.loc[df_operador["atrasado"], "status"] = "Atrasado"
+            df_operador["status_original"] = df_operador["status"]
+
+            df_operador["status_visual_base"] = df_operador.apply(
+                lambda row: "Atrasado"
+                if row["atrasado"] and row["status"] != "Finalizado"
+                else row["status"],
+                axis=1
+            )
 
             prioridade_status = {
                 "Atrasado": 0,
@@ -684,7 +692,7 @@ if not df_tabela.empty:
             # 🔥 CRIAR COLUNA VISUAL (produzido / total)
             df_operador["Quantidade"] = df_operador.apply(
                 lambda row: f"{int(row['quantidade_produzida'])} / {int(row['quantidade'])}"
-                if row["status"] == "Parado"
+                if row["status_original"] == "Parado"
                 else f"{int(row['quantidade'])}",
                 axis=1
             )
@@ -804,7 +812,7 @@ if not df_tabela.empty:
                                         min_value=0,
                                         max_value=int(linha["quantidade"]),
                                         step=1,
-                                        key=f"input_qtd_{linha['id']}"
+                                        value=int(linha.get("quantidade_produzida", 0))
                                     )
 
                                     col_confirm, col_cancel = st.columns(2)
@@ -834,13 +842,6 @@ if not df_tabela.empty:
                                     with col_cancel:
                                         if st.button("❌ Cancelar",
                                                     use_container_width=True,
-                                                    key=f"cancelar_pausa_{linha['id']}"):
-
-                                            st.session_state[f"pausando_{linha['id']}"] = False
-                                            st.rerun()
-
-                                    with col_cancel:
-                                        if st.button("❌ Cancelar", use_container_width=True,
                                                     key=f"cancelar_pausa_{linha['id']}"):
 
                                             st.session_state[f"pausando_{linha['id']}"] = False
