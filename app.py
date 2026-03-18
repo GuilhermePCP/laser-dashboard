@@ -7,14 +7,13 @@ sys.path.append(os.path.join(BASE_DIR, "src"))
 import streamlit as st
 import pandas as pd
 import base64
-import json
 from datetime import datetime
 from PIL import Image
 
-# 🔥 IMPORTS CORRETOS (COM src.)
-from src.analytics import calcular_metricas, filtrar_dados
-from src.visuals import grafico_gantt
-from src.database import (
+# 🔥 IMPORTS SEM "src."
+from analytics import calcular_metricas, filtrar_dados
+from visuals import grafico_gantt
+from database import (
     criar_tabela,
     carregar_dados,
     salvar_programacao,
@@ -33,7 +32,6 @@ import re
 import unicodedata
 from streamlit_cookies_manager import EncryptedCookieManager
 from streamlit_autorefresh import st_autorefresh
-
 
 def normalizar_texto(texto):
     if texto is None:
@@ -369,12 +367,12 @@ if st.session_state.nivel in ["admin", "pcp"]:
             ["Programado","Em produção","Finalizado"]
         )
 
-        desenhos = st.file_uploader(
-            "Desenhos (PNG, JPG ou PDF)",
-            type=["png", "jpg", "jpeg", "pdf"],
-            accept_multiple_files=True
+        desenho = st.file_uploader(
+            "Desenho da peça (PNG, JPG ou PDF)",
+            type=["png","jpg","jpeg","pdf"]
         )
 
+        # ✅ BOTÃO TEM QUE FICAR DENTRO DO FORM
         salvar = st.form_submit_button("Salvar")
 
 
@@ -384,56 +382,35 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     if salvar:
 
-        imagens_lista = []
+        imagem_bytes = None
 
-        if desenhos:
+        if desenho is not None:
 
-            for arquivo in desenhos:
+            timestamp = int(datetime.now().timestamp())
 
-                file_bytes = arquivo.read()
+            produto_limpo = re.sub(r'[^a-zA-Z0-9_-]', '_', produto)
 
-                # ----------------------------------------
-                # 📄 SE FOR PDF → CONVERTE TODAS PÁGINAS
-                # ----------------------------------------
-                if arquivo.type == "application/pdf":
+            # -------------------------------------------------
+            # SE FOR PDF → CONVERTER PARA IMAGEM
+            # -------------------------------------------------
 
-                    try:
-                        pdf = fitz.open(stream=file_bytes, filetype="pdf")
+            if desenho.type == "application/pdf":
 
-                        for pagina in pdf:
-                            pix = pagina.get_pixmap()
-                            img_bytes = pix.tobytes("png")
+                pdf = fitz.open(stream=desenho.read(), filetype="pdf")
 
-                            imagens_lista.append(
-                                base64.b64encode(img_bytes).decode()
-                            )
+                pagina = pdf.load_page(0)
 
-                    except:
-                        st.warning(f"Erro ao converter PDF: {arquivo.name}")
+                pix = pagina.get_pixmap()
 
-                # ----------------------------------------
-                # 🖼️ SE FOR IMAGEM → VALIDA E SALVA
-                # ----------------------------------------
-                else:
+                imagem_bytes = pix.tobytes("png")
 
-                    try:
-                        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+            # -------------------------------------------------
+            # SE FOR IMAGEM NORMAL
+            # -------------------------------------------------
 
-                        buffer = io.BytesIO()
-                        image.save(buffer, format="PNG")
+            else:
 
-                        imagens_lista.append(
-                            base64.b64encode(buffer.getvalue()).decode()
-                        )
-
-                    except:
-                        st.warning(f"Imagem inválida: {arquivo.name}")
-
-        # 🔥 GARANTIR QUE SEMPRE É LISTA
-        if not imagens_lista:
-            imagens_json = None
-        else:
-            imagens_json = json.dumps(imagens_lista)
+                imagem_bytes = desenho.read()
 
         df_nova = pd.DataFrame({
             "operador": [nome_operador_bonito(operador)],
@@ -443,7 +420,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
             "fim": [fim],
             "prazo_limite": [prazo],
             "status": [status],
-            "desenho": [imagens_json]
+            "desenho": [imagem_bytes]   # AGORA SALVA NO BANCO
         })
 
         salvar_programacao(df_nova)
@@ -771,75 +748,16 @@ if not df_tabela.empty:
                 # IMAGEM
                 with col1:
 
-                    imagens = linha.get("desenho")
+                    imagem = linha.get("desenho")
 
-                    if imagens and imagens != "null":
-
+                    if imagem is not None:
                         try:
-                            lista = []
-
-                            try:
-                                if imagens:
-
-                                    # 🔥 tenta JSON
-                                    if isinstance(imagens, str):
-                                        try:
-                                            parsed = json.loads(imagens)
-
-                                            if isinstance(parsed, list):
-                                                lista = parsed
-                                            else:
-                                                lista = [parsed]
-
-                                        except:
-                                            # fallback string
-                                            if imagens.count("iVBOR") > 1:
-                                                partes = imagens.split("iVBOR")
-                                                lista = ["iVBOR" + p for p in partes if p.strip()]
-                                            else:
-                                                lista = [imagens]
-
-                                    # 🔥 bytes direto
-                                    elif isinstance(imagens, (bytes, bytearray)):
-                                        lista = [imagens]
-
-                            except Exception as e:
-                                st.warning(f"Erro ao processar imagens: {e}")
-
-                            # DEBUG (pode apagar depois)
-                            st.write("DEBUG lista:", lista)
-
-                            # 🔥 EXIBIÇÃO
-                            if lista:
-
-                                for i, img in enumerate(lista):
-
-                                    with st.expander(f"📄 Desenho {i+1}", expanded=(i == 0)):
-
-                                        image = None
-
-                                        # base64
-                                        try:
-                                            image_bytes = base64.b64decode(img)
-                                            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-                                        except:
-                                            pass
-
-                                        # bytes
-                                        if image is None:
-                                            try:
-                                                if isinstance(img, (bytes, bytearray)):
-                                                    image = Image.open(io.BytesIO(img)).convert("RGB")
-                                            except:
-                                                pass
-
-                                        if image:
-                                            st.image(image, use_container_width=True)
-                                        else:
-                                            st.warning(f"Imagem {i+1} inválida")
-
-                            else:
-                                st.info("Sem desenho para essa OP")
+                            image = Image.open(io.BytesIO(imagem))
+                            st.image(image, use_container_width=True)
+                        except Exception as e:
+                            st.warning(f"Erro ao carregar imagem: {e}")
+                    else:
+                        st.info("Sem desenho para essa OP")
 
                 # CONTROLE
                 with col2:
