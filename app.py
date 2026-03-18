@@ -1,9 +1,3 @@
-import sys
-import os
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(BASE_DIR, "src"))
-
 import streamlit as st
 import pandas as pd
 import base64
@@ -11,10 +5,10 @@ import json
 from datetime import datetime
 from PIL import Image
 
-# 🔥 IMPORTS SEM "src."
-from analytics import calcular_metricas, filtrar_dados
-from visuals import grafico_gantt
-from database import (
+# 🔥 IMPORTS CORRETOS (COM src.)
+from src.analytics import calcular_metricas, filtrar_dados
+from src.visuals import grafico_gantt
+from src.database import (
     criar_tabela,
     carregar_dados,
     salvar_programacao,
@@ -33,7 +27,6 @@ import re
 import unicodedata
 from streamlit_cookies_manager import EncryptedCookieManager
 from streamlit_autorefresh import st_autorefresh
-
 def normalizar_texto(texto):
     if texto is None:
         return ""
