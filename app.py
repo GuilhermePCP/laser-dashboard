@@ -1,8 +1,16 @@
 import sys
 import os
 
+# 🔥 BASE DO PROJETO
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(BASE_DIR, "src"))
+
+# 🔥 GARANTE QUE O PYTHON ENXERGA TUDO
+if BASE_DIR not in sys.path:
+    sys.path.append(BASE_DIR)
+
+SRC_PATH = os.path.join(BASE_DIR, "src")
+if SRC_PATH not in sys.path:
+    sys.path.append(SRC_PATH)
 
 import streamlit as st
 import pandas as pd
@@ -11,7 +19,7 @@ import base64
 from datetime import datetime
 from PIL import Image
 
-# 🔥 IMPORTS SEM "src."
+# 🔥 IMPORTS (AGORA FUNCIONAM EM QUALQUER LUGAR)
 from analytics import calcular_metricas, filtrar_dados
 from visuals import grafico_gantt
 from database import (
