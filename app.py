@@ -759,10 +759,18 @@ if not df_tabela.empty:
 
                     imagens = linha.get("desenho")
 
-                    if imagens:
+                    if imagens and imagens != "null":
 
                         try:
-                            lista = json.loads(imagens)
+                            try:
+                                lista = json.loads(imagens)
+
+                                if not isinstance(lista, list):
+                                    lista = []
+
+                            except:
+                                # 🔥 formato antigo (imagem única em bytes)
+                                lista = [base64.b64encode(imagens).decode()]
 
                             if not isinstance(lista, list):
                                 lista = []
