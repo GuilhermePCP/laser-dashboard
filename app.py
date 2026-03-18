@@ -759,66 +759,61 @@ if not df_tabela.empty:
 
                     imagens = linha.get("desenho")
 
-                    if imagens:
+                    if imagens is not None:
 
                         try:
-                            # =========================
-                            # 🟢 CASO NOVO (JSON)
-                            # =========================
-                            if isinstance(imagens, str) and imagens.strip():
+                            dados = imagens
 
-                                lista = json.loads(imagens)
+                            # -------------------------
+                            # NORMALIZAR DADOS
+                            # -------------------------
+                            if isinstance(dados, memoryview):
+                                dados = dados.tobytes()
 
-                                if not isinstance(lista, list):
-                                    lista = []
-
-                                for i, img in enumerate(lista):
-                                    try:
-                                        image_bytes = base64.b64decode(img)
-
-                                        image = Image.open(io.BytesIO(image_bytes))
-                                        image.verify()  # 🔥 valida
-
-                                        image = Image.open(io.BytesIO(image_bytes))  # reabre depois do verify
-                                        st.image(image, use_container_width=True, caption=f"Desenho {i+1}")
-                                    except Exception as e:
-                                        st.warning(f"Arquivo {i+1} inválido: {e}")
-
-                            # =========================
-                            # 🟡 CASO ANTIGO (bytes)
-                            # =========================
-                            else:
-
-                                if isinstance(imagens, memoryview):
-                                    imagens = imagens.tobytes()
-
+                            if isinstance(dados, str):
                                 try:
-                                    image = Image.open(io.BytesIO(imagens))
-                                    st.image(image, use_container_width=True)
-
+                                    dados = base64.b64decode(dados)
                                 except:
-                                   # 🔥 SE NÃO FOR IMAGEM → TENTA PDF
-                                    try:
-                                        if isinstance(imagens, memoryview):
-                                            imagens = imagens.tobytes()
+                                    st.error("Erro ao decodificar base64")
+                                    st.stop()
 
-                                        pdf = fitz.open(stream=imagens, filetype="pdf")
+                            if not dados:
+                                st.warning("Arquivo vazio")
+                                st.stop()
 
+                            # -------------------------
+                            # TENTAR COMO IMAGEM
+                            # -------------------------
+                            try:
+                                image = Image.open(io.BytesIO(dados))
+                                st.image(image, use_container_width=True)
+
+                            except:
+                                # -------------------------
+                                # TENTAR COMO PDF
+                                # -------------------------
+                                try:
+                                    pdf = fitz.open(stream=dados, filetype="pdf")
+
+                                    if pdf.page_count == 0:
+                                        st.warning("PDF sem páginas")
+                                    else:
                                         for i, pagina in enumerate(pdf):
                                             pix = pagina.get_pixmap()
                                             img_bytes = pix.tobytes("png")
 
-                                            try:
-                                                image = Image.open(io.BytesIO(img_bytes))
-                                                st.image(image, use_container_width=True, caption=f"PDF página {i+1}")
-                                            except Exception as e:
-                                                st.warning(f"Erro ao renderizar página {i+1}: {e}")
+                                            image = Image.open(io.BytesIO(img_bytes))
+                                            st.image(
+                                                image,
+                                                use_container_width=True,
+                                                caption=f"Página {i+1}"
+                                            )
 
-                                    except Exception as e:
-                                        st.warning(f"PDF inválido: {e}")
+                                except Exception as e:
+                                    st.error(f"Arquivo não suportado ou corrompido: {e}")
 
                         except Exception as e:
-                            st.warning(f"Erro ao carregar imagens: {e}")
+                            st.error(f"Erro geral: {e}")
 
                     else:
                         st.info("Sem desenho para essa OP")
