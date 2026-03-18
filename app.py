@@ -763,36 +763,55 @@ if not df_tabela.empty:
                     if imagens and imagens != "null":
 
                         try:
+                            # 🔥 tenta carregar como JSON (novo padrão)
                             try:
                                 lista = json.loads(imagens)
 
                                 if not isinstance(lista, list):
-                                    lista = []
+                                    lista = [lista]
 
                             except:
                                 # 🔥 fallback para dados antigos
-                                try:
-                                    lista = [base64.b64encode(imagens).decode()]
-                                except:
-                                    lista = []
+                                lista = [imagens]
 
+                            # 🔥 garante lista válida
                             if not isinstance(lista, list):
                                 lista = []
 
+                            # 🔥 loop das imagens
                             for i, img in enumerate(lista):
 
                                 with st.expander(f"📄 Desenho {i+1}", expanded=(i == 0)):
 
+                                    image = None
+
+                                    # 1️⃣ tenta base64 (novo padrão)
                                     try:
                                         image_bytes = base64.b64decode(img)
-
                                         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-                                        st.image(image, use_container_width=True)
+                                    except:
+                                        pass
 
-                                        st.image(image, use_container_width=True)
+                                    # 2️⃣ tenta bytes diretos (formato antigo)
+                                    if image is None:
+                                        try:
+                                            if isinstance(img, (bytes, bytearray)):
+                                                image = Image.open(io.BytesIO(img)).convert("RGB")
+                                        except:
+                                            pass
 
-                                    except Exception as e:
-                                        st.warning(f"Imagem {i+1} corrompida")
+                                    # 3️⃣ tenta string pura
+                                    if image is None:
+                                        try:
+                                            image = Image.open(io.BytesIO(img.encode())).convert("RGB")
+                                        except:
+                                            pass
+
+                                    # ✅ resultado final
+                                    if image:
+                                        st.image(image, use_container_width=True)
+                                    else:
+                                        st.warning(f"Imagem {i+1} não pôde ser carregada")
 
                         except Exception as e:
                             st.warning("Erro ao carregar desenhos")
