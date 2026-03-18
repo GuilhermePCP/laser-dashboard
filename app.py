@@ -431,10 +431,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
             "prazo_limite": [prazo],
             "status": [status],
             "desenho": [
-                json.dumps([
-                    base64.b64encode(img).decode()
-                    for img in imagens_lista
-                ]) if imagens_lista else None
+                json.dumps(imagens_lista) if imagens_lista else None
             ]
         })
 
