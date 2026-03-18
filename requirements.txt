@@ -11,3 +11,4 @@ streamlit-plotly-events
 pymupdf
 streamlit-cookies-manager
 streamlit_autorefresh
+imghdr
