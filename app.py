@@ -754,23 +754,46 @@ if not df_tabela.empty:
                     if imagens:
 
                         try:
-                            # 🟢 CASO NOVO (JSON com lista)
+                            # =========================
+                            # 🟢 CASO NOVO (JSON)
+                            # =========================
                             if isinstance(imagens, str):
 
                                 lista = json.loads(imagens)
 
                                 for i, img in enumerate(lista):
-                                    image = Image.open(io.BytesIO(base64.b64decode(img)))
-                                    st.image(image, use_container_width=True, caption=f"Desenho {i+1}")
+                                    try:
+                                        image = Image.open(io.BytesIO(base64.b64decode(img)))
+                                        st.image(image, use_container_width=True, caption=f"Desenho {i+1}")
+                                    except:
+                                        st.warning(f"Arquivo {i+1} não é uma imagem válida")
 
-                            # 🟡 CASO ANTIGO (bytes ou memoryview)
+                            # =========================
+                            # 🟡 CASO ANTIGO (bytes)
+                            # =========================
                             else:
 
                                 if isinstance(imagens, memoryview):
                                     imagens = imagens.tobytes()
 
-                                image = Image.open(io.BytesIO(imagens))
-                                st.image(image, use_container_width=True)
+                                try:
+                                    image = Image.open(io.BytesIO(imagens))
+                                    st.image(image, use_container_width=True)
+
+                                except:
+                                    # 🔥 SE NÃO FOR IMAGEM → TENTA PDF
+                                    try:
+                                        pdf = fitz.open(stream=imagens, filetype="pdf")
+
+                                        for i, pagina in enumerate(pdf):
+                                            pix = pagina.get_pixmap()
+                                            img_bytes = pix.tobytes("png")
+
+                                            image = Image.open(io.BytesIO(img_bytes))
+                                            st.image(image, use_container_width=True, caption=f"PDF página {i+1}")
+
+                                    except:
+                                        st.error("Arquivo não suportado ou corrompido")
 
                         except Exception as e:
                             st.warning(f"Erro ao carregar imagens: {e}")
