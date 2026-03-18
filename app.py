@@ -10,7 +10,6 @@ import base64
 import json
 from datetime import datetime
 from PIL import Image
-import imghdr
 
 # 🔥 IMPORTS CORRETOS (COM src.)
 from src.analytics import calcular_metricas, filtrar_dados
@@ -784,11 +783,17 @@ if not df_tabela.empty:
                                         image_bytes = base64.b64decode(img)
 
                                         # 🔥 valida se é imagem de verdade
-                                        tipo = imghdr.what(None, h=image_bytes)
+                                        try:
+                                            image = Image.open(io.BytesIO(image_bytes))
+                                            image.verify()  # 🔥 valida se é imagem real
 
-                                        if tipo not in ["png", "jpeg", "jpg"]:
+                                            # reabre porque verify "fecha" a imagem
+                                            image = Image.open(io.BytesIO(image_bytes))
+
+                                            st.image(image, use_container_width=True)
+
+                                        except Exception:
                                             st.warning("Arquivo não é uma imagem válida")
-                                            continue
 
                                         image = Image.open(io.BytesIO(image_bytes))
                                         st.image(image, use_container_width=True)
