@@ -754,11 +754,22 @@ if not df_tabela.empty:
                     if imagens:
 
                         try:
+                            # 🟢 CASO NOVO (JSON com lista)
+                            if isinstance(imagens, str):
 
-                            imagens = json.loads(imagens)
+                                lista = json.loads(imagens)
 
-                            for img in imagens:
-                                image = Image.open(io.BytesIO(base64.b64decode(img)))
+                                for i, img in enumerate(lista):
+                                    image = Image.open(io.BytesIO(base64.b64decode(img)))
+                                    st.image(image, use_container_width=True, caption=f"Desenho {i+1}")
+
+                            # 🟡 CASO ANTIGO (bytes ou memoryview)
+                            else:
+
+                                if isinstance(imagens, memoryview):
+                                    imagens = imagens.tobytes()
+
+                                image = Image.open(io.BytesIO(imagens))
                                 st.image(image, use_container_width=True)
 
                         except Exception as e:
