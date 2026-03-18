@@ -773,24 +773,24 @@ if not df_tabela.empty:
 
                     imagens = linha.get("desenho")
 
-                    # 🔥 AQUI
+                    # 🔥 TRATAMENTO ROBUSTO DO BANCO
                     if isinstance(imagens, memoryview):
-                        imagens = imagens.tobytes().decode()
+                        imagens = imagens.tobytes()
 
-                    elif isinstance(imagens, bytes):
+                    if isinstance(imagens, bytes):
                         try:
-                            imagens = imagens.decode()
+                            imagens = imagens.decode("utf-8")  # tenta JSON
                         except:
-                            imagens = None
+                            pass  # mantém como bytes (imagem antiga)
 
                     if imagens and imagens != "null":
 
-                        try:
-                            lista = []
+                        lista = []
 
-                            # ----------------------------------------
-                            # 🔥 1. TENTA JSON (PADRÃO NOVO)
-                            # ----------------------------------------
+                        # ----------------------------------------
+                        # 🔥 1. JSON (NOVO PADRÃO)
+                        # ----------------------------------------
+                        if isinstance(imagens, str):
                             try:
                                 parsed = json.loads(imagens)
 
@@ -799,64 +799,65 @@ if not df_tabela.empty:
                                 else:
                                     lista = [parsed]
 
-                            # ----------------------------------------
-                            # 🔥 2. FALLBACK (DADOS ANTIGOS)
-                            # ----------------------------------------
                             except:
+                                lista = []
 
-                                if isinstance(imagens, str):
+                        # ----------------------------------------
+                        # 🔥 2. FALLBACK (ANTIGO)
+                        # ----------------------------------------
+                        if not lista:
 
-                                    # 🔥 múltiplas imagens grudadas (bug antigo)
-                                    if imagens.count("iVBOR") > 1:
-                                        partes = imagens.split("iVBOR")
-                                        lista = ["iVBOR" + p for p in partes if p.strip()]
-                                    else:
-                                        lista = [imagens]
+                            if isinstance(imagens, str):
 
-                                elif isinstance(imagens, (bytes, bytearray)):
+                                # múltiplas imagens grudadas (bug antigo)
+                                if imagens.count("iVBOR") > 1:
+                                    partes = imagens.split("iVBOR")
+                                    lista = ["iVBOR" + p for p in partes if p.strip()]
+                                else:
                                     lista = [imagens]
 
-                            # 🔥 GARANTIA FINAL (ESSA LINHA É A CHAVE)
-                            if not lista or lista == [None]:
-                                lista = []
-                            # ----------------------------------------
-                            # 🔥 GARANTIR LISTA
-                            # ----------------------------------------
-                            if not isinstance(lista, list):
-                                lista = []
+                            elif isinstance(imagens, (bytes, bytearray)):
+                                lista = [imagens]
 
-                            # ----------------------------------------
-                            # 🔥 EXIBIÇÃO
-                            # ----------------------------------------
+                        # ----------------------------------------
+                        # 🔥 LIMPEZA FINAL
+                        # ----------------------------------------
+                        lista = [img for img in lista if img]
+
+                        # ----------------------------------------
+                        # 🔥 EXIBIÇÃO
+                        # ----------------------------------------
+                        if lista:
+
                             for i, img in enumerate(lista):
 
                                 with st.expander(f"📄 Desenho {i+1}", expanded=(i == 0)):
 
                                     image = None
 
-                                    # 1️⃣ BASE64 (PADRÃO NOVO)
-                                    try:
-                                        image_bytes = base64.b64decode(img)
-                                        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-                                    except:
-                                        pass
-
-                                    # 2️⃣ BYTES DIRETOS (LEGADO)
-                                    if image is None:
+                                    # BASE64 (novo padrão)
+                                    if isinstance(img, str):
                                         try:
-                                            if isinstance(img, (bytes, bytearray)):
-                                                image = Image.open(io.BytesIO(img)).convert("RGB")
+                                            image_bytes = base64.b64decode(img)
+                                            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
                                         except:
                                             pass
 
-                                    # ✅ RESULTADO FINAL
+                                    # BYTES (legado)
+                                    if image is None and isinstance(img, (bytes, bytearray)):
+                                        try:
+                                            image = Image.open(io.BytesIO(img)).convert("RGB")
+                                        except:
+                                            pass
+
+                                    # RESULTADO
                                     if image:
                                         st.image(image, use_container_width=True)
                                     else:
-                                        st.warning(f"Imagem {i+1} não pôde ser carregada")
+                                        st.warning(f"Imagem {i+1} inválida")
 
-                        except Exception as e:
-                            st.warning(f"Erro ao carregar desenhos: {e}")
+                        else:
+                            st.info("Sem desenho para essa OP")
 
                     else:
                         st.info("Sem desenho para essa OP")
