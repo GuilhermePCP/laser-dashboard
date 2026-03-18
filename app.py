@@ -391,19 +391,27 @@ if st.session_state.nivel in ["admin", "pcp"]:
             for arquivo in desenhos:
 
                 try:
+                    file_bytes = arquivo.read()  # ✅ LÊ UMA VEZ SÓ
 
-                    # PDF → várias páginas
+                    if not file_bytes:
+                        continue  # ignora arquivo vazio
+
+                    # -------------------------
+                    # PDF
+                    # -------------------------
                     if arquivo.type == "application/pdf":
 
-                        pdf = fitz.open(stream=arquivo.read(), filetype="pdf")
+                        pdf = fitz.open(stream=file_bytes, filetype="pdf")
 
                         for pagina in pdf:
                             pix = pagina.get_pixmap()
                             imagens_lista.append(pix.tobytes("png"))
 
-                    # imagem normal
+                    # -------------------------
+                    # IMAGEM NORMAL
+                    # -------------------------
                     else:
-                        imagens_lista.append(arquivo.read())
+                        imagens_lista.append(file_bytes)
 
                 except Exception as e:
                     st.warning(f"Erro ao processar arquivo: {e}")
