@@ -7,13 +7,14 @@ sys.path.append(os.path.join(BASE_DIR, "src"))
 import streamlit as st
 import pandas as pd
 import base64
+import json
 from datetime import datetime
 from PIL import Image
 
-# 🔥 IMPORTS SEM "src."
-from analytics import calcular_metricas, filtrar_dados
-from visuals import grafico_gantt
-from database import (
+# 🔥 IMPORTS CORRETOS (COM src.)
+from src.analytics import calcular_metricas, filtrar_dados
+from src.visuals import grafico_gantt
+from src.database import (
     criar_tabela,
     carregar_dados,
     salvar_programacao,
@@ -32,6 +33,7 @@ import re
 import unicodedata
 from streamlit_cookies_manager import EncryptedCookieManager
 from streamlit_autorefresh import st_autorefresh
+
 
 def normalizar_texto(texto):
     if texto is None:
@@ -367,12 +369,12 @@ if st.session_state.nivel in ["admin", "pcp"]:
             ["Programado","Em produção","Finalizado"]
         )
 
-        desenho = st.file_uploader(
-            "Desenho da peça (PNG, JPG ou PDF)",
-            type=["png","jpg","jpeg","pdf"]
+        desenhos = st.file_uploader(
+            "Desenhos (PNG, JPG ou PDF)",
+            type=["png", "jpg", "jpeg", "pdf"],
+            accept_multiple_files=True
         )
 
-        # ✅ BOTÃO TEM QUE FICAR DENTRO DO FORM
         salvar = st.form_submit_button("Salvar")
 
 
@@ -382,35 +384,56 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     if salvar:
 
-        imagem_bytes = None
+        imagens_lista = []
 
-        if desenho is not None:
+        if desenhos:
 
-            timestamp = int(datetime.now().timestamp())
+            for arquivo in desenhos:
 
-            produto_limpo = re.sub(r'[^a-zA-Z0-9_-]', '_', produto)
+                file_bytes = arquivo.read()
 
-            # -------------------------------------------------
-            # SE FOR PDF → CONVERTER PARA IMAGEM
-            # -------------------------------------------------
+                # ----------------------------------------
+                # 📄 SE FOR PDF → CONVERTE TODAS PÁGINAS
+                # ----------------------------------------
+                if arquivo.type == "application/pdf":
 
-            if desenho.type == "application/pdf":
+                    try:
+                        pdf = fitz.open(stream=file_bytes, filetype="pdf")
 
-                pdf = fitz.open(stream=desenho.read(), filetype="pdf")
+                        for pagina in pdf:
+                            pix = pagina.get_pixmap()
+                            img_bytes = pix.tobytes("png")
 
-                pagina = pdf.load_page(0)
+                            imagens_lista.append(
+                                base64.b64encode(img_bytes).decode()
+                            )
 
-                pix = pagina.get_pixmap()
+                    except:
+                        st.warning(f"Erro ao converter PDF: {arquivo.name}")
 
-                imagem_bytes = pix.tobytes("png")
+                # ----------------------------------------
+                # 🖼️ SE FOR IMAGEM → VALIDA E SALVA
+                # ----------------------------------------
+                else:
 
-            # -------------------------------------------------
-            # SE FOR IMAGEM NORMAL
-            # -------------------------------------------------
+                    try:
+                        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
 
-            else:
+                        buffer = io.BytesIO()
+                        image.save(buffer, format="PNG")
 
-                imagem_bytes = desenho.read()
+                        imagens_lista.append(
+                            base64.b64encode(buffer.getvalue()).decode()
+                        )
+
+                    except:
+                        st.warning(f"Imagem inválida: {arquivo.name}")
+
+        # 🔥 GARANTIR QUE SEMPRE É LISTA
+        if not imagens_lista:
+            imagens_json = None
+        else:
+            imagens_json = json.dumps(imagens_lista)
 
         df_nova = pd.DataFrame({
             "operador": [nome_operador_bonito(operador)],
@@ -420,7 +443,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
             "fim": [fim],
             "prazo_limite": [prazo],
             "status": [status],
-            "desenho": [imagem_bytes]   # AGORA SALVA NO BANCO
+            "desenho": [imagens_json]
         })
 
         salvar_programacao(df_nova)
@@ -748,14 +771,93 @@ if not df_tabela.empty:
                 # IMAGEM
                 with col1:
 
-                    imagem = linha.get("desenho")
+                    imagens = linha.get("desenho")
 
-                    if imagem is not None:
+                    # 🔥 AQUI
+                    if isinstance(imagens, memoryview):
+                        imagens = imagens.tobytes().decode()
+
+                    elif isinstance(imagens, bytes):
                         try:
-                            image = Image.open(io.BytesIO(imagem))
-                            st.image(image, use_container_width=True)
+                            imagens = imagens.decode()
+                        except:
+                            imagens = None
+
+                    if imagens and imagens != "null":
+
+                        try:
+                            lista = []
+
+                            # ----------------------------------------
+                            # 🔥 1. TENTA JSON (PADRÃO NOVO)
+                            # ----------------------------------------
+                            try:
+                                parsed = json.loads(imagens)
+
+                                if isinstance(parsed, list):
+                                    lista = parsed
+                                else:
+                                    lista = [parsed]
+
+                            # ----------------------------------------
+                            # 🔥 2. FALLBACK (DADOS ANTIGOS)
+                            # ----------------------------------------
+                            except:
+
+                                if isinstance(imagens, str):
+
+                                    # 🔥 múltiplas imagens grudadas (bug antigo)
+                                    if imagens.count("iVBOR") > 1:
+                                        partes = imagens.split("iVBOR")
+                                        lista = ["iVBOR" + p for p in partes if p.strip()]
+                                    else:
+                                        lista = [imagens]
+
+                                elif isinstance(imagens, (bytes, bytearray)):
+                                    lista = [imagens]
+
+                            # 🔥 GARANTIA FINAL (ESSA LINHA É A CHAVE)
+                            if not lista or lista == [None]:
+                                lista = []
+                            # ----------------------------------------
+                            # 🔥 GARANTIR LISTA
+                            # ----------------------------------------
+                            if not isinstance(lista, list):
+                                lista = []
+
+                            # ----------------------------------------
+                            # 🔥 EXIBIÇÃO
+                            # ----------------------------------------
+                            for i, img in enumerate(lista):
+
+                                with st.expander(f"📄 Desenho {i+1}", expanded=(i == 0)):
+
+                                    image = None
+
+                                    # 1️⃣ BASE64 (PADRÃO NOVO)
+                                    try:
+                                        image_bytes = base64.b64decode(img)
+                                        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+                                    except:
+                                        pass
+
+                                    # 2️⃣ BYTES DIRETOS (LEGADO)
+                                    if image is None:
+                                        try:
+                                            if isinstance(img, (bytes, bytearray)):
+                                                image = Image.open(io.BytesIO(img)).convert("RGB")
+                                        except:
+                                            pass
+
+                                    # ✅ RESULTADO FINAL
+                                    if image:
+                                        st.image(image, use_container_width=True)
+                                    else:
+                                        st.warning(f"Imagem {i+1} não pôde ser carregada")
+
                         except Exception as e:
-                            st.warning(f"Erro ao carregar imagem: {e}")
+                            st.warning(f"Erro ao carregar desenhos: {e}")
+
                     else:
                         st.info("Sem desenho para essa OP")
 
