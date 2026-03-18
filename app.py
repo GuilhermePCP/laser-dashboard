@@ -763,17 +763,10 @@ if not df_tabela.empty:
                     if imagens and imagens != "null":
 
                         try:
-                            # 🔥 tenta carregar JSON
-                            try:
-                                lista = json.loads(imagens)
-                                if not isinstance(lista, list):
-                                    lista = []
-                            except:
-                                # 🔥 fallback dados antigos
-                                lista = [base64.b64encode(imagens).decode()]
+                            lista = json.loads(imagens)
 
-                            if len(lista) == 1:
-                                lista = lista  # só mantém padrão
+                            if not isinstance(lista, list):
+                                lista = []
 
                             for i, img in enumerate(lista):
 
@@ -782,27 +775,19 @@ if not df_tabela.empty:
                                     try:
                                         image_bytes = base64.b64decode(img)
 
-                                        # 🔥 valida se é imagem de verdade
-                                        try:
-                                            image = Image.open(io.BytesIO(image_bytes))
-                                            image.verify()  # 🔥 valida se é imagem real
-
-                                            # reabre porque verify "fecha" a imagem
-                                            image = Image.open(io.BytesIO(image_bytes))
-
-                                            st.image(image, use_container_width=True)
-
-                                        except Exception:
-                                            st.warning("Arquivo não é uma imagem válida")
-
                                         image = Image.open(io.BytesIO(image_bytes))
+                                        image.verify()
+
+                                        # reabre corretamente
+                                        image = Image.open(io.BytesIO(image_bytes))
+
                                         st.image(image, use_container_width=True)
 
                                     except Exception as e:
-                                        st.warning(f"Erro imagem {i+1}: {e}")
+                                        st.warning(f"Imagem {i+1} corrompida")
 
                         except Exception as e:
-                            st.warning(f"Erro ao carregar desenhos: {e}")
+                            st.warning("Erro ao carregar desenhos")
 
                     else:
                         st.info("Sem desenho para essa OP")
