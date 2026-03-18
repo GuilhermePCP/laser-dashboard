@@ -778,78 +778,68 @@ if not df_tabela.empty:
                         try:
                             lista = []
 
-                            # ----------------------------------------
-                            # 🔥 1. TENTA JSON (PADRÃO NOVO)
-                            # ----------------------------------------
                             try:
-                                parsed = json.loads(imagens)
+                                if imagens:
 
-                                if isinstance(parsed, list):
-                                    lista = parsed
-                                else:
-                                    lista = [parsed]
+                                    # 🔥 tenta JSON
+                                    if isinstance(imagens, str):
+                                        try:
+                                            parsed = json.loads(imagens)
 
-                            # ----------------------------------------
-                            # 🔥 2. FALLBACK (DADOS ANTIGOS)
-                            # ----------------------------------------
-                            except:
+                                            if isinstance(parsed, list):
+                                                lista = parsed
+                                            else:
+                                                lista = [parsed]
 
-                                if isinstance(imagens, str):
+                                        except:
+                                            # fallback string
+                                            if imagens.count("iVBOR") > 1:
+                                                partes = imagens.split("iVBOR")
+                                                lista = ["iVBOR" + p for p in partes if p.strip()]
+                                            else:
+                                                lista = [imagens]
 
-                                    # 🔥 múltiplas imagens grudadas (bug antigo)
-                                    if imagens.count("iVBOR") > 1:
-                                        partes = imagens.split("iVBOR")
-                                        lista = ["iVBOR" + p for p in partes if p.strip()]
-                                    else:
+                                    # 🔥 bytes direto
+                                    elif isinstance(imagens, (bytes, bytearray)):
                                         lista = [imagens]
 
-                                elif isinstance(imagens, (bytes, bytearray)):
-                                    lista = [imagens]
+                            except Exception as e:
+                                st.warning(f"Erro ao processar imagens: {e}")
 
-                            # 🔥 GARANTIA FINAL (ESSA LINHA É A CHAVE)
-                            if not lista or lista == [None]:
-                                lista = []
-                            # ----------------------------------------
-                            # 🔥 GARANTIR LISTA
-                            # ----------------------------------------
-                            if not isinstance(lista, list):
-                                lista = []
+                            # DEBUG (pode apagar depois)
+                            st.write("DEBUG lista:", lista)
 
-                            # ----------------------------------------
                             # 🔥 EXIBIÇÃO
-                            # ----------------------------------------
-                            for i, img in enumerate(lista):
+                            if lista:
 
-                                with st.expander(f"📄 Desenho {i+1}", expanded=(i == 0)):
+                                for i, img in enumerate(lista):
 
-                                    image = None
+                                    with st.expander(f"📄 Desenho {i+1}", expanded=(i == 0)):
 
-                                    # 1️⃣ BASE64 (PADRÃO NOVO)
-                                    try:
-                                        image_bytes = base64.b64decode(img)
-                                        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-                                    except:
-                                        pass
+                                        image = None
 
-                                    # 2️⃣ BYTES DIRETOS (LEGADO)
-                                    if image is None:
+                                        # base64
                                         try:
-                                            if isinstance(img, (bytes, bytearray)):
-                                                image = Image.open(io.BytesIO(img)).convert("RGB")
+                                            image_bytes = base64.b64decode(img)
+                                            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
                                         except:
                                             pass
 
-                                    # ✅ RESULTADO FINAL
-                                    if image:
-                                        st.image(image, use_container_width=True)
-                                    else:
-                                        st.warning(f"Imagem {i+1} não pôde ser carregada")
+                                        # bytes
+                                        if image is None:
+                                            try:
+                                                if isinstance(img, (bytes, bytearray)):
+                                                    image = Image.open(io.BytesIO(img)).convert("RGB")
+                                            except:
+                                                pass
 
-                        except Exception as e:
-                            st.warning(f"Erro ao carregar desenhos: {e}")
+                                        if image:
+                                            st.image(image, use_container_width=True)
+                                        else:
+                                            st.warning(f"Imagem {i+1} inválida")
 
-                    else:
-                        st.info("Sem desenho para essa OP")
+                            else:
+                                st.info("Sem desenho para essa OP")
 
                 # CONTROLE
                 with col2:
