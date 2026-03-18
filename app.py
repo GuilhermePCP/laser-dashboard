@@ -10,6 +10,7 @@ import base64
 import json
 from datetime import datetime
 from PIL import Image
+import imghdr
 
 # 🔥 IMPORTS CORRETOS (COM src.)
 from src.analytics import calcular_metricas, filtrar_dados
@@ -33,6 +34,8 @@ import re
 import unicodedata
 from streamlit_cookies_manager import EncryptedCookieManager
 from streamlit_autorefresh import st_autorefresh
+
+
 def normalizar_texto(texto):
     if texto is None:
         return ""
@@ -761,38 +764,37 @@ if not df_tabela.empty:
                     if imagens and imagens != "null":
 
                         try:
+                            # 🔥 tenta carregar JSON
                             try:
                                 lista = json.loads(imagens)
-
                                 if not isinstance(lista, list):
                                     lista = []
-
                             except:
-                                # 🔥 formato antigo (imagem única em bytes)
+                                # 🔥 fallback dados antigos
                                 lista = [base64.b64encode(imagens).decode()]
 
-                            if not isinstance(lista, list):
-                                lista = []
-
                             if len(lista) == 1:
-                                # mostra direto
-                                image_bytes = base64.b64decode(lista[0])
-                                image = Image.open(io.BytesIO(image_bytes))
-                                st.image(image, use_container_width=True)
+                                lista = lista  # só mantém padrão
 
-                            else:
-                                # 🔥 múltiplas imagens → botões
-                                for i, img in enumerate(lista):
+                            for i, img in enumerate(lista):
 
-                                    with st.expander(f"📄 Desenho {i+1}"):
+                                with st.expander(f"📄 Desenho {i+1}", expanded=(i == 0)):
 
-                                        try:
-                                            image_bytes = base64.b64decode(img)
-                                            image = Image.open(io.BytesIO(image_bytes))
-                                            st.image(image, use_container_width=True)
+                                    try:
+                                        image_bytes = base64.b64decode(img)
 
-                                        except Exception as e:
-                                            st.warning(f"Erro imagem {i+1}: {e}")
+                                        # 🔥 valida se é imagem de verdade
+                                        tipo = imghdr.what(None, h=image_bytes)
+
+                                        if tipo not in ["png", "jpeg", "jpg"]:
+                                            st.warning("Arquivo não é uma imagem válida")
+                                            continue
+
+                                        image = Image.open(io.BytesIO(image_bytes))
+                                        st.image(image, use_container_width=True)
+
+                                    except Exception as e:
+                                        st.warning(f"Erro imagem {i+1}: {e}")
 
                         except Exception as e:
                             st.warning(f"Erro ao carregar desenhos: {e}")
