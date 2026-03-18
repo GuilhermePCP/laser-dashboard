@@ -428,7 +428,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
                 json.dumps([
                     base64.b64encode(img).decode()
                     for img in imagens_lista
-                ])
+                ]) if imagens_lista else None
             ]
         })
 
@@ -765,16 +765,24 @@ if not df_tabela.empty:
                             # =========================
                             # 🟢 CASO NOVO (JSON)
                             # =========================
-                            if isinstance(imagens, str):
+                            if isinstance(imagens, str) and imagens.strip():
 
                                 lista = json.loads(imagens)
 
+                                if not isinstance(lista, list):
+                                    lista = []
+
                                 for i, img in enumerate(lista):
                                     try:
-                                        image = Image.open(io.BytesIO(base64.b64decode(img)))
+                                        image_bytes = base64.b64decode(img)
+
+                                        image = Image.open(io.BytesIO(image_bytes))
+                                        image.verify()  # 🔥 valida
+
+                                        image = Image.open(io.BytesIO(image_bytes))  # reabre depois do verify
                                         st.image(image, use_container_width=True, caption=f"Desenho {i+1}")
-                                    except:
-                                        st.warning(f"Arquivo {i+1} não é uma imagem válida")
+                                    except Exception as e:
+                                        st.warning(f"Arquivo {i+1} inválido: {e}")
 
                             # =========================
                             # 🟡 CASO ANTIGO (bytes)
@@ -789,19 +797,22 @@ if not df_tabela.empty:
                                     st.image(image, use_container_width=True)
 
                                 except:
-                                    # 🔥 SE NÃO FOR IMAGEM → TENTA PDF
+                                   # 🔥 SE NÃO FOR IMAGEM → TENTA PDF
                                     try:
-                                        pdf = fitz.open(stream=imagens, filetype="pdf")
+                                        pdf = fitz.open(stream=file_bytes, filetype="pdf")
 
                                         for i, pagina in enumerate(pdf):
                                             pix = pagina.get_pixmap()
                                             img_bytes = pix.tobytes("png")
 
-                                            image = Image.open(io.BytesIO(img_bytes))
-                                            st.image(image, use_container_width=True, caption=f"PDF página {i+1}")
+                                            try:
+                                                image = Image.open(io.BytesIO(img_bytes))
+                                                st.image(image, use_container_width=True, caption=f"PDF página {i+1}")
+                                            except Exception as e:
+                                                st.warning(f"Erro ao renderizar página {i+1}: {e}")
 
-                                    except:
-                                        st.error("Arquivo não suportado ou corrompido")
+                                    except Exception as e:
+                                        st.warning(f"PDF inválido: {e}")
 
                         except Exception as e:
                             st.warning(f"Erro ao carregar imagens: {e}")
