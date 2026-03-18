@@ -796,20 +796,19 @@ if not df_tabela.empty:
 
                                 if isinstance(imagens, str):
 
-                                    # 🔥 caso bug antigo com várias imagens grudadas
+                                    # 🔥 múltiplas imagens grudadas (bug antigo)
                                     if imagens.count("iVBOR") > 1:
                                         partes = imagens.split("iVBOR")
                                         lista = ["iVBOR" + p for p in partes if p.strip()]
-
                                     else:
                                         lista = [imagens]
 
                                 elif isinstance(imagens, (bytes, bytearray)):
                                     lista = [imagens]
 
-                                else:
-                                    lista = []
-
+                            # 🔥 GARANTIA FINAL (ESSA LINHA É A CHAVE)
+                            if not lista or lista == [None]:
+                                lista = []
                             # ----------------------------------------
                             # 🔥 GARANTIR LISTA
                             # ----------------------------------------
