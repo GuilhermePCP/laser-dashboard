@@ -1,6 +1,7 @@
 import sys
 import os
 
+# 🔥 CAMINHO CORRETO PARA src
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(BASE_DIR, "src"))
 
@@ -11,10 +12,10 @@ import json
 from datetime import datetime
 from PIL import Image
 
-# 🔥 IMPORTS CORRETOS (COM src.)
-from src.analytics import calcular_metricas, filtrar_dados
-from src.visuals import grafico_gantt
-from src.database import (
+# 🔥 IMPORTS SEM "src." (CORRETO COM ESSE PATH)
+from analytics import calcular_metricas, filtrar_dados
+from visuals import grafico_gantt
+from database import (
     criar_tabela,
     carregar_dados,
     salvar_programacao,
