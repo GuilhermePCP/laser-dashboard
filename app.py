@@ -1,25 +1,17 @@
 import sys
 import os
 
-# 🔥 BASE DO PROJETO
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# 🔥 GARANTE QUE O PYTHON ENXERGA TUDO
-if BASE_DIR not in sys.path:
-    sys.path.append(BASE_DIR)
-
-SRC_PATH = os.path.join(BASE_DIR, "src")
-if SRC_PATH not in sys.path:
-    sys.path.append(SRC_PATH)
+sys.path.append(os.path.join(BASE_DIR, "src"))
 
 import streamlit as st
 import pandas as pd
-import json
 import base64
+import json
 from datetime import datetime
 from PIL import Image
 
-# 🔥 IMPORTS (AGORA FUNCIONAM EM QUALQUER LUGAR)
+# 🔥 IMPORTS SEM "src."
 from analytics import calcular_metricas, filtrar_dados
 from visuals import grafico_gantt
 from database import (
@@ -399,25 +391,25 @@ if st.session_state.nivel in ["admin", "pcp"]:
             for arquivo in desenhos:
 
                 try:
-                    file_bytes = arquivo.read()  # ✅ LÊ UMA VEZ SÓ
+                    file_bytes = arquivo.read()
 
                     if not file_bytes:
-                        continue  # ignora arquivo vazio
+                        continue
 
-                    # -------------------------
-                    # PDF
-                    # -------------------------
+                    # 🔴 PDF
                     if arquivo.type == "application/pdf":
 
-                        pdf = fitz.open(stream=file_bytes, filetype="pdf")
+                        try:
+                            pdf = fitz.open(stream=file_bytes, filetype="pdf")
 
-                        for pagina in pdf:
-                            pix = pagina.get_pixmap()
-                            imagens_lista.append(pix.tobytes("png"))
+                            for pagina in pdf:
+                                pix = pagina.get_pixmap()
+                                imagens_lista.append(pix.tobytes("png"))
 
-                    # -------------------------
-                    # IMAGEM NORMAL
-                    # -------------------------
+                        except Exception as e:
+                            st.warning(f"Erro no PDF: {e}")
+
+                    # 🟢 IMAGEM
                     else:
                         imagens_lista.append(file_bytes)
 
@@ -767,64 +759,39 @@ if not df_tabela.empty:
 
                     imagens = linha.get("desenho")
 
-                    if imagens is not None:
+                        if imagens:
 
-                        try:
-                            dados = imagens
-
-                            # -------------------------
-                            # NORMALIZAR DADOS
-                            # -------------------------
-                            if isinstance(dados, memoryview):
-                                dados = dados.tobytes()
-
-                            if isinstance(dados, str):
-                                try:
-                                    dados = base64.b64decode(dados)
-                                except:
-                                    st.error("Erro ao decodificar base64")
-                                    st.stop()
-
-                            if not dados:
-                                st.warning("Arquivo vazio")
-                                st.stop()
-
-                            # -------------------------
-                            # TENTAR COMO IMAGEM
-                            # -------------------------
                             try:
-                                image = Image.open(io.BytesIO(dados))
-                                st.image(image, use_container_width=True)
+                                lista = json.loads(imagens)
 
-                            except:
-                                # -------------------------
-                                # TENTAR COMO PDF
-                                # -------------------------
-                                try:
-                                    pdf = fitz.open(stream=dados, filetype="pdf")
+                                if not isinstance(lista, list):
+                                    lista = []
 
-                                    if pdf.page_count == 0:
-                                        st.warning("PDF sem páginas")
-                                    else:
-                                        for i, pagina in enumerate(pdf):
-                                            pix = pagina.get_pixmap()
-                                            img_bytes = pix.tobytes("png")
+                                if len(lista) == 1:
+                                    # mostra direto
+                                    image_bytes = base64.b64decode(lista[0])
+                                    image = Image.open(io.BytesIO(image_bytes))
+                                    st.image(image, use_container_width=True)
 
-                                            image = Image.open(io.BytesIO(img_bytes))
-                                            st.image(
-                                                image,
-                                                use_container_width=True,
-                                                caption=f"Página {i+1}"
-                                            )
+                                else:
+                                    # 🔥 múltiplas imagens → botões
+                                    for i, img in enumerate(lista):
 
-                                except Exception as e:
-                                    st.error(f"Arquivo não suportado ou corrompido: {e}")
+                                        with st.expander(f"📄 Desenho {i+1}"):
 
-                        except Exception as e:
-                            st.error(f"Erro geral: {e}")
+                                            try:
+                                                image_bytes = base64.b64decode(img)
+                                                image = Image.open(io.BytesIO(image_bytes))
+                                                st.image(image, use_container_width=True)
 
-                    else:
-                        st.info("Sem desenho para essa OP")
+                                            except Exception as e:
+                                                st.warning(f"Erro imagem {i+1}: {e}")
+
+                            except Exception as e:
+                                st.warning(f"Erro ao carregar desenhos: {e}")
+
+                        else:
+                            st.info("Sem desenho para essa OP")
 
                 # CONTROLE
                 with col2:
