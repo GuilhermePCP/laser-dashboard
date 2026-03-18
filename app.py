@@ -799,7 +799,10 @@ if not df_tabela.empty:
                                 except:
                                    # 🔥 SE NÃO FOR IMAGEM → TENTA PDF
                                     try:
-                                        pdf = fitz.open(stream=file_bytes, filetype="pdf")
+                                        if isinstance(imagens, memoryview):
+                                            imagens = imagens.tobytes()
+
+                                        pdf = fitz.open(stream=imagens, filetype="pdf")
 
                                         for i, pagina in enumerate(pdf):
                                             pix = pagina.get_pixmap()
