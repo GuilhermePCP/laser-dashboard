@@ -773,8 +773,15 @@ if not df_tabela.empty:
                                     lista = [lista]
 
                             except:
-                                # 🔥 fallback para dados antigos
-                                lista = [imagens]
+                                try:
+                                    # tenta detectar múltiplas imagens concatenadas (caso antigo bugado)
+                                    if isinstance(imagens, str) and imagens.count("iVBOR") > 1:
+                                        partes = imagens.split("iVBOR")
+                                        lista = ["iVBOR" + p for p in partes if p.strip() != ""]
+                                    else:
+                                        lista = [imagens]
+                                except:
+                                    lista = []
 
                             # 🔥 garante lista válida
                             if not isinstance(lista, list):
