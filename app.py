@@ -405,14 +405,19 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
                             for pagina in pdf:
                                 pix = pagina.get_pixmap()
-                                imagens_lista.append(pix.tobytes("png"))
+
+                                # ✅ CONVERTE CADA PÁGINA DIRETO PRA BASE64
+                                img_base64 = base64.b64encode(pix.tobytes("png")).decode()
+
+                                imagens_lista.append(img_base64)
 
                         except Exception as e:
                             st.warning(f"Erro no PDF: {e}")
 
                     # 🟢 IMAGEM
                     else:
-                        imagens_lista.append(file_bytes)
+                        img_base64 = base64.b64encode(file_bytes).decode()
+                        imagens_lista.append(img_base64)
 
                 except Exception as e:
                     st.warning(f"Erro ao processar arquivo: {e}")
