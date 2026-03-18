@@ -763,7 +763,18 @@ if not df_tabela.empty:
                     if imagens and imagens != "null":
 
                         try:
-                            lista = json.loads(imagens)
+                            try:
+                                lista = json.loads(imagens)
+
+                                if not isinstance(lista, list):
+                                    lista = []
+
+                            except:
+                                # 🔥 fallback para dados antigos
+                                try:
+                                    lista = [base64.b64encode(imagens).decode()]
+                                except:
+                                    lista = []
 
                             if not isinstance(lista, list):
                                 lista = []
@@ -775,11 +786,8 @@ if not df_tabela.empty:
                                     try:
                                         image_bytes = base64.b64decode(img)
 
-                                        image = Image.open(io.BytesIO(image_bytes))
-                                        image.verify()
-
-                                        # reabre corretamente
-                                        image = Image.open(io.BytesIO(image_bytes))
+                                        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+                                        st.image(image, use_container_width=True)
 
                                         st.image(image, use_container_width=True)
 
