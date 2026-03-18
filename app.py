@@ -759,39 +759,39 @@ if not df_tabela.empty:
 
                     imagens = linha.get("desenho")
 
-                        if imagens:
+                    if imagens:
 
-                            try:
-                                lista = json.loads(imagens)
+                        try:
+                            lista = json.loads(imagens)
 
-                                if not isinstance(lista, list):
-                                    lista = []
+                            if not isinstance(lista, list):
+                                lista = []
 
-                                if len(lista) == 1:
-                                    # mostra direto
-                                    image_bytes = base64.b64decode(lista[0])
-                                    image = Image.open(io.BytesIO(image_bytes))
-                                    st.image(image, use_container_width=True)
+                            if len(lista) == 1:
+                                # mostra direto
+                                image_bytes = base64.b64decode(lista[0])
+                                image = Image.open(io.BytesIO(image_bytes))
+                                st.image(image, use_container_width=True)
 
-                                else:
-                                    # 🔥 múltiplas imagens → botões
-                                    for i, img in enumerate(lista):
+                            else:
+                                # 🔥 múltiplas imagens → botões
+                                for i, img in enumerate(lista):
 
-                                        with st.expander(f"📄 Desenho {i+1}"):
+                                    with st.expander(f"📄 Desenho {i+1}"):
 
-                                            try:
-                                                image_bytes = base64.b64decode(img)
-                                                image = Image.open(io.BytesIO(image_bytes))
-                                                st.image(image, use_container_width=True)
+                                        try:
+                                            image_bytes = base64.b64decode(img)
+                                            image = Image.open(io.BytesIO(image_bytes))
+                                            st.image(image, use_container_width=True)
 
-                                            except Exception as e:
-                                                st.warning(f"Erro imagem {i+1}: {e}")
+                                        except Exception as e:
+                                            st.warning(f"Erro imagem {i+1}: {e}")
 
-                            except Exception as e:
-                                st.warning(f"Erro ao carregar desenhos: {e}")
+                        except Exception as e:
+                            st.warning(f"Erro ao carregar desenhos: {e}")
 
-                        else:
-                            st.info("Sem desenho para essa OP")
+                    else:
+                        st.info("Sem desenho para essa OP")
 
                 # CONTROLE
                 with col2:
