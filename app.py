@@ -370,12 +370,11 @@ if st.session_state.nivel in ["admin", "pcp"]:
         )
 
         desenhos = st.file_uploader(
-            "Desenhos da peça (pode enviar vários)",
-            type=["png","jpg","jpeg","pdf"],
+            "Desenhos (PNG, JPG ou PDF)",
+            type=["png", "jpg", "jpeg", "pdf"],
             accept_multiple_files=True
         )
 
-        # ✅ BOTÃO TEM QUE FICAR DENTRO DO FORM
         salvar = st.form_submit_button("Salvar")
 
 
@@ -391,36 +390,50 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
             for arquivo in desenhos:
 
-                try:
-                    file_bytes = arquivo.read()
+                file_bytes = arquivo.read()
 
-                    if not file_bytes:
-                        continue
+                # ----------------------------------------
+                # 📄 SE FOR PDF → CONVERTE TODAS PÁGINAS
+                # ----------------------------------------
+                if arquivo.type == "application/pdf":
 
-                    # 🔴 PDF
-                    if arquivo.type == "application/pdf":
+                    try:
+                        pdf = fitz.open(stream=file_bytes, filetype="pdf")
 
-                        try:
-                            pdf = fitz.open(stream=file_bytes, filetype="pdf")
+                        for pagina in pdf:
+                            pix = pagina.get_pixmap()
+                            img_bytes = pix.tobytes("png")
 
-                            for pagina in pdf:
-                                pix = pagina.get_pixmap()
+                            imagens_lista.append(
+                                base64.b64encode(img_bytes).decode()
+                            )
 
-                                # ✅ CONVERTE CADA PÁGINA DIRETO PRA BASE64
-                                img_base64 = base64.b64encode(pix.tobytes("png")).decode()
+                    except:
+                        st.warning(f"Erro ao converter PDF: {arquivo.name}")
 
-                                imagens_lista.append(img_base64)
+                # ----------------------------------------
+                # 🖼️ SE FOR IMAGEM → VALIDA E SALVA
+                # ----------------------------------------
+                else:
 
-                        except Exception as e:
-                            st.warning(f"Erro no PDF: {e}")
+                    try:
+                        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
 
-                    # 🟢 IMAGEM
-                    else:
-                        img_base64 = base64.b64encode(file_bytes).decode()
-                        imagens_lista.append(img_base64)
+                        buffer = io.BytesIO()
+                        image.save(buffer, format="PNG")
 
-                except Exception as e:
-                    st.warning(f"Erro ao processar arquivo: {e}")
+                        imagens_lista.append(
+                            base64.b64encode(buffer.getvalue()).decode()
+                        )
+
+                    except:
+                        st.warning(f"Imagem inválida: {arquivo.name}")
+
+        # 🔥 GARANTIR QUE SEMPRE É LISTA
+        if not imagens_lista:
+            imagens_json = None
+        else:
+            imagens_json = json.dumps(imagens_lista)
 
         df_nova = pd.DataFrame({
             "operador": [nome_operador_bonito(operador)],
@@ -430,9 +443,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
             "fim": [fim],
             "prazo_limite": [prazo],
             "status": [status],
-            "desenho": [
-                json.dumps(imagens_lista) if imagens_lista else None
-            ]
+            "desenho": [imagens_json]
         })
 
         salvar_programacao(df_nova)
@@ -765,43 +776,63 @@ if not df_tabela.empty:
                     if imagens and imagens != "null":
 
                         try:
-                            # 🔥 tenta carregar como JSON (novo padrão)
+                            lista = []
+
+                            # ----------------------------------------
+                            # 🔥 1. TENTA JSON (PADRÃO NOVO)
+                            # ----------------------------------------
                             try:
-                                lista = json.loads(imagens)
+                                parsed = json.loads(imagens)
 
-                                if not isinstance(lista, list):
-                                    lista = [lista]
+                                if isinstance(parsed, list):
+                                    lista = parsed
+                                else:
+                                    lista = [parsed]
 
+                            # ----------------------------------------
+                            # 🔥 2. FALLBACK (DADOS ANTIGOS)
+                            # ----------------------------------------
                             except:
-                                try:
-                                    # tenta detectar múltiplas imagens concatenadas (caso antigo bugado)
-                                    if isinstance(imagens, str) and imagens.count("iVBOR") > 1:
+
+                                if isinstance(imagens, str):
+
+                                    # 🔥 caso bug antigo com várias imagens grudadas
+                                    if imagens.count("iVBOR") > 1:
                                         partes = imagens.split("iVBOR")
-                                        lista = ["iVBOR" + p for p in partes if p.strip() != ""]
+                                        lista = ["iVBOR" + p for p in partes if p.strip()]
+
                                     else:
                                         lista = [imagens]
-                                except:
+
+                                elif isinstance(imagens, (bytes, bytearray)):
+                                    lista = [imagens]
+
+                                else:
                                     lista = []
 
-                            # 🔥 garante lista válida
+                            # ----------------------------------------
+                            # 🔥 GARANTIR LISTA
+                            # ----------------------------------------
                             if not isinstance(lista, list):
                                 lista = []
 
-                            # 🔥 loop das imagens
+                            # ----------------------------------------
+                            # 🔥 EXIBIÇÃO
+                            # ----------------------------------------
                             for i, img in enumerate(lista):
 
                                 with st.expander(f"📄 Desenho {i+1}", expanded=(i == 0)):
 
                                     image = None
 
-                                    # 1️⃣ tenta base64 (novo padrão)
+                                    # 1️⃣ BASE64 (PADRÃO NOVO)
                                     try:
                                         image_bytes = base64.b64decode(img)
                                         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
                                     except:
                                         pass
 
-                                    # 2️⃣ tenta bytes diretos (formato antigo)
+                                    # 2️⃣ BYTES DIRETOS (LEGADO)
                                     if image is None:
                                         try:
                                             if isinstance(img, (bytes, bytearray)):
@@ -809,21 +840,14 @@ if not df_tabela.empty:
                                         except:
                                             pass
 
-                                    # 3️⃣ tenta string pura
-                                    if image is None:
-                                        try:
-                                            image = Image.open(io.BytesIO(img.encode())).convert("RGB")
-                                        except:
-                                            pass
-
-                                    # ✅ resultado final
+                                    # ✅ RESULTADO FINAL
                                     if image:
                                         st.image(image, use_container_width=True)
                                     else:
                                         st.warning(f"Imagem {i+1} não pôde ser carregada")
 
                         except Exception as e:
-                            st.warning("Erro ao carregar desenhos")
+                            st.warning(f"Erro ao carregar desenhos: {e}")
 
                     else:
                         st.info("Sem desenho para essa OP")
