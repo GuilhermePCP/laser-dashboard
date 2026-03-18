@@ -6,6 +6,7 @@ sys.path.append(os.path.join(BASE_DIR, "src"))
 
 import streamlit as st
 import pandas as pd
+import json
 import base64
 from datetime import datetime
 from PIL import Image
@@ -367,9 +368,10 @@ if st.session_state.nivel in ["admin", "pcp"]:
             ["Programado","Em produção","Finalizado"]
         )
 
-        desenho = st.file_uploader(
-            "Desenho da peça (PNG, JPG ou PDF)",
-            type=["png","jpg","jpeg","pdf"]
+        desenhos = st.file_uploader(
+            "Desenhos da peça (pode enviar vários)",
+            type=["png","jpg","jpeg","pdf"],
+            accept_multiple_files=True
         )
 
         # ✅ BOTÃO TEM QUE FICAR DENTRO DO FORM
@@ -382,35 +384,29 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     if salvar:
 
-        imagem_bytes = None
+        imagens_lista = []
 
-        if desenho is not None:
+        if desenhos:
 
-            timestamp = int(datetime.now().timestamp())
+            for arquivo in desenhos:
 
-            produto_limpo = re.sub(r'[^a-zA-Z0-9_-]', '_', produto)
+                try:
 
-            # -------------------------------------------------
-            # SE FOR PDF → CONVERTER PARA IMAGEM
-            # -------------------------------------------------
+                    # PDF → várias páginas
+                    if arquivo.type == "application/pdf":
 
-            if desenho.type == "application/pdf":
+                        pdf = fitz.open(stream=arquivo.read(), filetype="pdf")
 
-                pdf = fitz.open(stream=desenho.read(), filetype="pdf")
+                        for pagina in pdf:
+                            pix = pagina.get_pixmap()
+                            imagens_lista.append(pix.tobytes("png"))
 
-                pagina = pdf.load_page(0)
+                    # imagem normal
+                    else:
+                        imagens_lista.append(arquivo.read())
 
-                pix = pagina.get_pixmap()
-
-                imagem_bytes = pix.tobytes("png")
-
-            # -------------------------------------------------
-            # SE FOR IMAGEM NORMAL
-            # -------------------------------------------------
-
-            else:
-
-                imagem_bytes = desenho.read()
+                except Exception as e:
+                    st.warning(f"Erro ao processar arquivo: {e}")
 
         df_nova = pd.DataFrame({
             "operador": [nome_operador_bonito(operador)],
@@ -420,7 +416,12 @@ if st.session_state.nivel in ["admin", "pcp"]:
             "fim": [fim],
             "prazo_limite": [prazo],
             "status": [status],
-            "desenho": [imagem_bytes]   # AGORA SALVA NO BANCO
+            "desenho": [
+                json.dumps([
+                    base64.b64encode(img).decode()
+                    for img in imagens_lista
+                ])
+            ]
         })
 
         salvar_programacao(df_nova)
@@ -748,14 +749,21 @@ if not df_tabela.empty:
                 # IMAGEM
                 with col1:
 
-                    imagem = linha.get("desenho")
+                    imagens = linha.get("desenho")
 
-                    if imagem is not None:
+                    if imagens:
+
                         try:
-                            image = Image.open(io.BytesIO(imagem))
-                            st.image(image, use_container_width=True)
+
+                            imagens = json.loads(imagens)
+
+                            for img in imagens:
+                                image = Image.open(io.BytesIO(base64.b64decode(img)))
+                                st.image(image, use_container_width=True)
+
                         except Exception as e:
-                            st.warning(f"Erro ao carregar imagem: {e}")
+                            st.warning(f"Erro ao carregar imagens: {e}")
+
                     else:
                         st.info("Sem desenho para essa OP")
 
