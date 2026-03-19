@@ -1040,7 +1040,10 @@ if not df_tabela.empty:
 
                             with st.expander("✏️ Editar OP"):
 
-                                # 🔥 NOVO CAMPO SEQUÊNCIA
+                                # -------------------------
+                                # CAMPOS
+                                # -------------------------
+
                                 nova_sequencia = st.number_input(
                                     "Sequência",
                                     min_value=1,
@@ -1084,11 +1087,112 @@ if not df_tabela.empty:
                                     key=f"prazo_{operador}_{linha['id']}"
                                 )
 
+                                # -------------------------
+                                # DESENHOS ATUAIS
+                                # -------------------------
+
+                                desenhos_existentes = []
+
+                                if linha.get("desenho"):
+                                    try:
+                                        desenhos_existentes = json.loads(linha["desenho"])
+                                    except:
+                                        desenhos_existentes = []
+
+                                st.markdown("### 📄 Desenhos atuais")
+
+                                desenhos_restantes = []
+
+                                for i, img_base64 in enumerate(desenhos_existentes):
+
+                                    col1, col2 = st.columns([5, 1])
+
+                                    with col1:
+                                        st.image(base64.b64decode(img_base64), use_container_width=True)
+
+                                    with col2:
+                                        remover = st.checkbox(
+                                            "Excluir",
+                                            key=f"remover_{linha['id']}_{i}"
+                                        )
+
+                                    if not remover:
+                                        desenhos_restantes.append(img_base64)
+
+                                # -------------------------
+                                # NOVOS DESENHOS
+                                # -------------------------
+
+                                novos_arquivos = st.file_uploader(
+                                    "Adicionar novos desenhos",
+                                    type=["png", "jpg", "jpeg", "pdf"],
+                                    accept_multiple_files=True,
+                                    key=f"upload_{linha['id']}"
+                                )
+
+                                # -------------------------
+                                # SALVAR
+                                # -------------------------
+
                                 if st.button(
                                     "💾 Salvar alterações",
                                     use_container_width=True,
                                     key=f"salvar_op_{operador}_{linha['id']}"
                                 ):
+
+                                    novas_imagens = []
+
+                                    if novos_arquivos:
+
+                                        for arquivo in novos_arquivos:
+
+                                            file_bytes = arquivo.read()
+
+                                            # PDF → imagens
+                                            if arquivo.type == "application/pdf":
+                                                try:
+                                                    pdf = fitz.open(stream=file_bytes, filetype="pdf")
+
+                                                    for pagina in pdf:
+                                                        pix = pagina.get_pixmap()
+                                                        img_bytes = pix.tobytes("png")
+
+                                                        novas_imagens.append(
+                                                            base64.b64encode(img_bytes).decode()
+                                                        )
+
+                                                except:
+                                                    st.warning(f"Erro ao converter PDF: {arquivo.name}")
+
+                                            # imagem normal
+                                            else:
+                                                try:
+                                                    image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+
+                                                    buffer = io.BytesIO()
+                                                    image.save(buffer, format="PNG")
+
+                                                    novas_imagens.append(
+                                                        base64.b64encode(buffer.getvalue()).decode()
+                                                    )
+
+                                                except:
+                                                    st.warning(f"Imagem inválida: {arquivo.name}")
+
+                                    # -------------------------
+                                    # JUNTA TUDO
+                                    # -------------------------
+
+                                    imagens_finais = desenhos_restantes + novas_imagens
+
+                                    if imagens_finais:
+                                        imagens_json = json.dumps(imagens_finais)
+                                    else:
+                                        imagens_json = None
+
+                                    # -------------------------
+                                    # UPDATE
+                                    # -------------------------
 
                                     query = """
                                     UPDATE programacao
@@ -1097,7 +1201,8 @@ if not df_tabela.empty:
                                         inicio = :inicio,
                                         fim = :fim,
                                         prazo_limite = :prazo,
-                                        sequencia = :sequencia
+                                        sequencia = :sequencia,
+                                        desenho = :desenho
                                     WHERE id = :id
                                     """
 
@@ -1110,7 +1215,8 @@ if not df_tabela.empty:
                                                 "inicio": nova_inicio,
                                                 "fim": novo_fim,
                                                 "prazo": novo_prazo,
-                                                "sequencia": nova_sequencia,  # 🔥 AQUI
+                                                "sequencia": nova_sequencia,
+                                                "desenho": imagens_json,
                                                 "id": int(linha["id"])
                                             }
                                         )
