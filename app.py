@@ -643,15 +643,18 @@ if not df_tabela.empty:
 
             colunas_base = [
                 "id",
-                "sequencia",
                 "produto",
                 "quantidade",
                 "operador",
                 "status",
                 "desenho",
-                "status_visual_base",  # 🔥 ADICIONA ISSO
+                "status_visual_base",
                 "quantidade_produzida"
             ]
+
+            # 👇 só adiciona sequência se for admin ou pcp
+            if st.session_state.nivel in ["admin", "pcp"]:
+                colunas_base.insert(1, "sequencia")
 
             colunas_data = [
                 "inicio",
