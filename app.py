@@ -1180,15 +1180,24 @@ if not df_tabela.empty:
                                                     st.warning(f"Imagem inválida: {arquivo.name}")
 
                                     # -------------------------
-                                    # JUNTA TUDO
+                                    # 🔥 CONTROLE INTELIGENTE
                                     # -------------------------
 
-                                    imagens_finais = desenhos_restantes + novas_imagens
+                                    houve_alteracao = False
 
-                                    if imagens_finais:
-                                        imagens_json = json.dumps(imagens_finais)
+                                    # removeu algo?
+                                    if len(desenhos_restantes) != len(desenhos_existentes):
+                                        houve_alteracao = True
+
+                                    # adicionou algo?
+                                    if novas_imagens:
+                                        houve_alteracao = True
+
+                                    if houve_alteracao:
+                                        imagens_finais = desenhos_restantes + novas_imagens
+                                        imagens_json = json.dumps(imagens_finais) if imagens_finais else None
                                     else:
-                                        imagens_json = None
+                                        imagens_json = linha["desenho"]  # 🔥 mantém original
 
                                     # -------------------------
                                     # UPDATE
