@@ -1106,7 +1106,7 @@ if not df_tabela.empty:
 
                                 imagens = linha.get("desenho")
 
-                                # 🔥 TRATAMENTO IGUAL AO VISUAL
+                                # 🔥 NORMALIZAÇÃO DE TIPOS
                                 if isinstance(imagens, memoryview):
                                     imagens = imagens.tobytes()
 
@@ -1116,9 +1116,12 @@ if not df_tabela.empty:
                                     except:
                                         pass
 
+                                # -------------------------
+                                # 🔥 EXTRAÇÃO SEGURA
+                                # -------------------------
+
                                 if imagens and imagens != "null":
 
-                                    # tenta JSON
                                     if isinstance(imagens, str):
                                         try:
                                             parsed = json.loads(imagens)
@@ -1131,9 +1134,12 @@ if not df_tabela.empty:
                                         except:
                                             desenhos_existentes = []
 
-                                    # fallback bruto
                                     elif isinstance(imagens, (bytes, bytearray)):
                                         desenhos_existentes = [imagens]
+
+                                # -------------------------
+                                # UI
+                                # -------------------------
 
                                 st.markdown("### 📄 Desenhos atuais")
 
@@ -1144,7 +1150,29 @@ if not df_tabela.empty:
                                     col1, col2 = st.columns([5, 1])
 
                                     with col1:
-                                        st.image(base64.b64decode(img_base64), use_container_width=True)
+
+                                        image = None
+
+                                        # 🔥 TENTA BASE64
+                                        if isinstance(img_base64, str):
+                                            try:
+                                                image_bytes = base64.b64decode(img_base64)
+                                                image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+                                            except:
+                                                image = None
+
+                                        # 🔥 TENTA BYTES (LEGADO)
+                                        elif isinstance(img_base64, (bytes, bytearray)):
+                                            try:
+                                                image = Image.open(io.BytesIO(img_base64)).convert("RGB")
+                                            except:
+                                                image = None
+
+                                        # 🔥 RESULTADO FINAL
+                                        if image:
+                                            st.image(image, use_container_width=True)
+                                        else:
+                                            st.warning(f"Imagem {i+1} inválida ou corrompida")
 
                                     with col2:
                                         remover = st.checkbox(
