@@ -658,7 +658,8 @@ if not df_tabela.empty:
                 "status",
                 "desenho",
                 "status_visual_base",
-                "quantidade_produzida"
+                "quantidade_produzida",
+                "sequencia"  # ✅ ADICIONE ISSO
             ]
 
             # 👇 só adiciona sequência se for admin ou pcp
@@ -888,7 +889,7 @@ if not df_tabela.empty:
                         st.write(f"**Produto:** {linha['produto']}")
                         st.write(f"**Quantidade:** {int(linha['quantidade'])}")
                         st.write(f"**Operador:** {linha['operador']}")
-                        st.write(f"**Sequência:** {int(linha['sequencia'])}")
+                        st.write(f"**Sequência:** {int(linha.get('sequencia', linha['id']))}")
 
                         st.divider()
 
