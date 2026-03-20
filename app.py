@@ -350,6 +350,13 @@ if st.session_state.nivel in ["admin", "pcp"]:
             step=1
         )
 
+        sequencia = st.number_input(
+            "Sequência",
+            min_value=1,
+            step=1,
+            value=1
+        )
+
         inicio = st.date_input(
             "Início",
             format="DD/MM/YYYY"
@@ -444,6 +451,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
             "fim": [fim],
             "prazo_limite": [prazo],
             "status": [status],
+            "sequencia": [sequencia],  # 🔥 AQUI
             "desenho": [imagens_json]
         })
 
