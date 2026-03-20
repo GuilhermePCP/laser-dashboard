@@ -1101,11 +1101,36 @@ if not df_tabela.empty:
 
                                 desenhos_existentes = []
 
-                                if linha.get("desenho"):
+                                imagens = linha.get("desenho")
+
+                                # 🔥 TRATAMENTO IGUAL AO VISUAL
+                                if isinstance(imagens, memoryview):
+                                    imagens = imagens.tobytes()
+
+                                if isinstance(imagens, bytes):
                                     try:
-                                        desenhos_existentes = json.loads(linha["desenho"])
+                                        imagens = imagens.decode("utf-8")
                                     except:
-                                        desenhos_existentes = []
+                                        pass
+
+                                if imagens and imagens != "null":
+
+                                    # tenta JSON
+                                    if isinstance(imagens, str):
+                                        try:
+                                            parsed = json.loads(imagens)
+
+                                            if isinstance(parsed, list):
+                                                desenhos_existentes = parsed
+                                            else:
+                                                desenhos_existentes = [parsed]
+
+                                        except:
+                                            desenhos_existentes = []
+
+                                    # fallback bruto
+                                    elif isinstance(imagens, (bytes, bytearray)):
+                                        desenhos_existentes = [imagens]
 
                                 st.markdown("### 📄 Desenhos atuais")
 
