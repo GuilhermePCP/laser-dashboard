@@ -186,6 +186,7 @@ def carregar():
         .str.strip()
         .str.lower()
         .str.replace(" ", "_")
+        .str.replace(r"[^\w]", "", regex=True)  # 🔥 REMOVE lixo invisível
     )
 
     datas = ["inicio", "fim", "prazo_limite", "data_finalizado"]
@@ -661,8 +662,9 @@ if not df_tabela.empty:
             ]
 
             # 👇 só adiciona sequência se for admin ou pcp
-            if st.session_state.nivel in ["admin", "pcp"]:
-                colunas_base.insert(1, "sequencia")
+            # SEMPRE mantém no DataFrame
+            if "sequencia" not in df_operador.columns:
+                df_operador["sequencia"] = df_operador["id"]
 
             colunas_data = [
                 "inicio",
