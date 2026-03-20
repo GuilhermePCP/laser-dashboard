@@ -19,6 +19,7 @@ def criar_tabela():
 
     with engine.begin() as conn:
 
+        # Tabela principal
         conn.execute(text("""
         CREATE TABLE IF NOT EXISTS programacao (
             id SERIAL PRIMARY KEY,
@@ -31,10 +32,18 @@ def criar_tabela():
             status TEXT,
             desenho BYTEA,
             nome_arquivo TEXT,
-            data_finalizado TIMESTAMP
+            data_finalizado TIMESTAMP,
+            sequencia INTEGER   -- 🔥 NOVA COLUNA
         )
         """))
 
+        # 🔥 GARANTE QUE A COLUNA EXISTE (caso tabela antiga)
+        conn.execute(text("""
+        ALTER TABLE programacao
+        ADD COLUMN IF NOT EXISTS sequencia INTEGER
+        """))
+
+        # Tabela operadores
         conn.execute(text("""
         CREATE TABLE IF NOT EXISTS operadores (
             id SERIAL PRIMARY KEY,
@@ -75,6 +84,7 @@ def salvar_programacao(df):
                     fim,
                     prazo_limite,
                     status,
+                    sequencia,   -- 🔥 AQUI
                     desenho
                 )
                 VALUES
@@ -86,6 +96,7 @@ def salvar_programacao(df):
                     :fim,
                     :prazo_limite,
                     :status,
+                    :sequencia,  -- 🔥 AQUI
                     :desenho
                 )
                 """),
@@ -97,6 +108,7 @@ def salvar_programacao(df):
                     "fim": row["fim"],
                     "prazo_limite": row["prazo_limite"],
                     "status": row["status"],
+                    "sequencia": row.get("sequencia"),  # 🔥 IMPORTANTE
                     "desenho": row["desenho"]
                 }
             )
@@ -177,6 +189,7 @@ def atualizar_programacao(df_editado):
                     prazo_limite = :prazo,
                     status = :status,
                     operador = :operador,
+                    sequencia = :sequencia,  -- 🔥 AQUI
                     data_finalizado = :data_finalizado
                 WHERE id = :id
                 """),
@@ -189,6 +202,7 @@ def atualizar_programacao(df_editado):
                     "prazo": row["prazo_limite"],
                     "status": row["status"],
                     "operador": row["operador"],
+                    "sequencia": row.get("sequencia"),  # 🔥 AQUI
                     "data_finalizado": row["data_finalizado"]
                 }
             )
