@@ -47,20 +47,23 @@ def normalizar_texto(texto):
 
     return texto.lower()
 
+
+# 🔥 CACHE DOS OPERADORES (EVITA SPAM NO BANCO)
+@st.cache_data(ttl=300)
+def carregar_ops():
+    return carregar_operadores()
+
+
 def nome_operador_bonito(usuario):
 
-    operadores = carregar_operadores()
+    operadores = carregar_ops()  # 🔥 usa cache
 
     for nome in operadores["nome"]:
-
         if normalizar_texto(nome) == normalizar_texto(usuario):
             return nome
 
     return usuario
 
-@st.cache_data
-def carregar_ops():
-    return carregar_operadores()
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -89,20 +92,18 @@ if not cookies.ready():
 def verificar_login(usuario, senha):
 
     try:
-
         query = """
         SELECT usuario, senha, nivel
         FROM usuarios
         """
 
-        with engine.begin() as conn:
-
+        # 🔥 NÃO USA begin() (menos custo no Supabase)
+        with engine.connect() as conn:
             result = conn.execute(text(query)).fetchall()
 
         usuario_digitado = normalizar_texto(usuario)
 
         for row in result:
-
             if (
                 normalizar_texto(row.usuario) == usuario_digitado
                 and row.senha == senha
@@ -115,8 +116,10 @@ def verificar_login(usuario, senha):
         return None
 
 
-# estado da sessão
-# estado da sessão
+# -------------------------------------------------
+# ESTADO DA SESSÃO
+# -------------------------------------------------
+
 if "logado" not in st.session_state:
 
     if cookies.get("usuario"):
@@ -126,7 +129,6 @@ if "logado" not in st.session_state:
         st.session_state.nivel = cookies.get("nivel")
 
     else:
-
         st.session_state.logado = False
 
 if "nivel" not in st.session_state:
@@ -136,7 +138,10 @@ is_admin = st.session_state.nivel == "admin"
 is_pcp = st.session_state.nivel == "pcp"
 is_operador = st.session_state.nivel == "operador"
 
-# tela de login
+# -------------------------------------------------
+# LOGIN UI
+# -------------------------------------------------
+
 if not st.session_state.logado:
 
     st.title("🔐 Login do Sistema")
@@ -161,12 +166,14 @@ if not st.session_state.logado:
             st.rerun()
 
         else:
-
             st.error("Usuário ou senha inválidos")
 
     st.stop()
 
-#st_autorefresh(interval=300000, key="auto_refresh")
+
+# ❌ REMOVIDO AUTOREFRESH PESADO
+# st_autorefresh(interval=300000, key="auto_refresh")
+
 
 # -------------------------------------------------
 # CRIAR TABELA
@@ -175,9 +182,10 @@ if not st.session_state.logado:
 criar_tabela()
 
 # -------------------------------------------------
-# FUNÇÃO CARREGAR DADOS
+# CARREGAR DADOS (CACHE = VIDA)
 # -------------------------------------------------
 
+@st.cache_data(ttl=60)
 def carregar():
     df = carregar_dados()
 
@@ -186,7 +194,7 @@ def carregar():
         .str.strip()
         .str.lower()
         .str.replace(" ", "_")
-        .str.replace(r"[^\w]", "", regex=True)  # 🔥 REMOVE lixo invisível
+        .str.replace(r"[^\w]", "", regex=True)
     )
 
     datas = ["inicio", "fim", "prazo_limite", "data_finalizado"]
@@ -196,6 +204,7 @@ def carregar():
             df[col] = pd.to_datetime(df[col], errors="coerce", dayfirst=True)
 
     return df
+
 
 df = carregar()
 
@@ -210,30 +219,12 @@ metricas = calcular_metricas(df)
 # -------------------------
 # STATUS DA PRODUÇÃO
 # -------------------------
+
 if st.session_state.nivel in ["admin", "pcp"]:
+
     programadas = len(df[df["status"] == "Programado"])
     em_producao = len(df[df["status"] == "Em produção"])
     finalizadas = len(df[df["status"] == "Finalizado"])
-
-    atrasadas = len(
-        df[
-            (df["status"] != "Finalizado") &
-            (pd.to_datetime(df["prazo_limite"]) < pd.Timestamp.today())
-        ]
-    )
-
-
-
-    c1, c2, c3, c4 = st.columns(4)
-
-    c1.metric("🟡 Programadas", programadas)
-    c2.metric("🟢 Em produção", em_producao)
-    c3.metric("⚪ Finalizadas", finalizadas)
-    c4.metric("📦 Total OPs", metricas["total_ops"])
-
-    # -------------------------------------------------
-    # ALERTA DE ATRASOS
-    # -------------------------------------------------
 
     hoje = pd.Timestamp.today().normalize()
 
@@ -246,6 +237,17 @@ if st.session_state.nivel in ["admin", "pcp"]:
     ]
 
     atrasadas = len(df_atrasadas)
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    c1.metric("🟡 Programadas", programadas)
+    c2.metric("🟢 Em produção", em_producao)
+    c3.metric("⚪ Finalizadas", finalizadas)
+    c4.metric("📦 Total OPs", metricas["total_ops"])
+
+    # -------------------------------------------------
+    # ALERTA DE ATRASOS
+    # -------------------------------------------------
 
     if atrasadas > 0:
 
@@ -278,7 +280,6 @@ if st.session_state.nivel in ["admin", "pcp"]:
             )
 
     else:
-
         st.caption("🟢 Nenhuma OP atrasada")
 
     # -------------------------
@@ -304,13 +305,12 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### 👤 Usuário logado")
 
 st.sidebar.write(f"**Nome:** {st.session_state.usuario}")
-
 st.sidebar.write(f"**Função:** {st.session_state.nivel.upper()}")
 
-st.sidebar.write("") #Espaço invisivel de proposito
+st.sidebar.write("")
 
 # -------------------------------------------------
-# BOTÃO LOGOUT
+# LOGOUT
 # -------------------------------------------------
 
 if st.sidebar.button("🚪 Sair"):
@@ -325,7 +325,7 @@ if st.sidebar.button("🚪 Sair"):
 st.sidebar.markdown("---")
 
 # -------------------------------------------------
-# SIDEBAR NOVA PROGRAMAÇÃO
+# NOVA PROGRAMAÇÃO
 # -------------------------------------------------
 
 if st.session_state.nivel in ["admin", "pcp"]:
@@ -334,7 +334,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     with st.sidebar.form("nova_op"):
 
-        operadores = carregar_operadores()
+        operadores = carregar_ops()  # 🔥 cache aqui também
 
         operador = st.selectbox(
             "Operador",
@@ -358,20 +358,9 @@ if st.session_state.nivel in ["admin", "pcp"]:
             value=1
         )
 
-        inicio = st.date_input(
-            "Início",
-            format="DD/MM/YYYY"
-        )
-
-        fim = st.date_input(
-            "Fim",
-            format="DD/MM/YYYY"
-        )
-
-        prazo = st.date_input(
-            "Prazo limite",
-            format="DD/MM/YYYY"
-        )
+        inicio = st.date_input("Início", format="DD/MM/YYYY")
+        fim = st.date_input("Fim", format="DD/MM/YYYY")
+        prazo = st.date_input("Prazo limite", format="DD/MM/YYYY")
 
         status = st.selectbox(
             "Status",
@@ -386,11 +375,6 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
         salvar = st.form_submit_button("Salvar")
 
-
-    # ------------------------------------------
-    # AQUI FICA FORA DO FORM
-    # ------------------------------------------
-
     if salvar:
 
         imagens_lista = []
@@ -401,9 +385,6 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
                 file_bytes = arquivo.read()
 
-                # ----------------------------------------
-                # 📄 SE FOR PDF → CONVERTE TODAS PÁGINAS
-                # ----------------------------------------
                 if arquivo.type == "application/pdf":
 
                     try:
@@ -420,9 +401,6 @@ if st.session_state.nivel in ["admin", "pcp"]:
                     except:
                         st.warning(f"Erro ao converter PDF: {arquivo.name}")
 
-                # ----------------------------------------
-                # 🖼️ SE FOR IMAGEM → VALIDA E SALVA
-                # ----------------------------------------
                 else:
 
                     try:
@@ -438,11 +416,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
                     except:
                         st.warning(f"Imagem inválida: {arquivo.name}")
 
-        # 🔥 GARANTIR QUE SEMPRE É LISTA
-        if not imagens_lista:
-            imagens_json = None
-        else:
-            imagens_json = json.dumps(imagens_lista)
+        imagens_json = json.dumps(imagens_lista) if imagens_lista else None
 
         df_nova = pd.DataFrame({
             "operador": [nome_operador_bonito(operador)],
@@ -452,13 +426,16 @@ if st.session_state.nivel in ["admin", "pcp"]:
             "fim": [fim],
             "prazo_limite": [prazo],
             "status": [status],
-            "sequencia": [sequencia],  # 🔥 AQUI
+            "sequencia": [sequencia],
             "desenho": [imagens_json]
         })
 
         salvar_programacao(df_nova)
 
         st.success("Programação criada")
+
+        # 🔥 LIMPA CACHE E ATUALIZA NA HORA
+        st.cache_data.clear()
         st.rerun()
 
     # -------------------------------------------------
