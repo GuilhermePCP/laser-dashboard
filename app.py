@@ -812,16 +812,16 @@ if st.session_state.nivel in ["admin", "pcp"]:
                 tabela = st.dataframe(
                     df_exibicao,
                     use_container_width=True,
-                    selection_mode="single-row",
-                    on_select="rerun",
-                    hide_index=True
+                    hide_index=True,
+                    selection_mode="single-row"
                 )
 
-            # -------------------------
-            # SELEÇÃO
-            # -------------------------
+                selecionado = tabela.selection.rows
 
-            if tabela["selection"]["rows"]:
+                if selecionado:
+
+                    index = selecionado[0]
+                    linha = df_operador.iloc[index]
 
                 index = tabela["selection"]["rows"][0]
                 linha = df_operador.iloc[index]
