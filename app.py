@@ -182,6 +182,12 @@ criar_tabela()
 def carregar():
     df = carregar_dados()
 
+    # 🔥 CONVERTER TIPOS PROBLEMÁTICOS
+    for col in df.columns:
+        df[col] = df[col].apply(
+            lambda x: bytes(x) if isinstance(x, memoryview) else x
+        )
+
     df.columns = (
         df.columns
         .str.strip()
