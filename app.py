@@ -49,7 +49,7 @@ def normalizar_texto(texto):
 
 def nome_operador_bonito(usuario):
 
-    operadores = carregar_operadores()
+    operadores = carregar_ops()
 
     for nome in operadores["nome"]:
 
@@ -166,7 +166,7 @@ if not st.session_state.logado:
 
     st.stop()
 
-st_autorefresh(interval=300000, key="auto_refresh")
+#st_autorefresh(interval=300000, key="auto_refresh")
 
 # -------------------------------------------------
 # CRIAR TABELA
@@ -178,6 +178,7 @@ criar_tabela()
 # FUNÇÃO CARREGAR DADOS
 # -------------------------------------------------
 
+@st.cache_data(ttl=60)
 def carregar():
     df = carregar_dados()
 
@@ -186,7 +187,7 @@ def carregar():
         .str.strip()
         .str.lower()
         .str.replace(" ", "_")
-        .str.replace(r"[^\w]", "", regex=True)  # 🔥 REMOVE lixo invisível
+        .str.replace(r"[^\w]", "", regex=True)
     )
 
     datas = ["inicio", "fim", "prazo_limite", "data_finalizado"]
@@ -334,7 +335,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     with st.sidebar.form("nova_op"):
 
-        operadores = carregar_operadores()
+        operadores = carregar_ops()
 
         operador = st.selectbox(
             "Operador",
@@ -482,7 +483,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
         else:
             st.warning("Digite um nome válido.")
 
-    operadores = carregar_operadores()
+    operadores = carregar_ops()
 
     if not operadores.empty:
 
