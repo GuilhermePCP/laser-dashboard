@@ -729,7 +729,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
                 if "nivel" not in st.session_state:
                     st.session_state.nivel = None
 
-                if st.session_state.nivel in ["admin", "pcp"]:
+                if st.session_state.nivel in ["admin", "pcp", "operador"]:
                     df_operador = df_operador[colunas_base + colunas_data]
                 else:
                     df_operador = df_operador[colunas_base]
