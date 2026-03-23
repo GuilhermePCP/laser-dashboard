@@ -31,7 +31,7 @@ import unicodedata
 
 try:
     from analytics import calcular_metricas, filtrar_dados
-    from visuals import grafico_gantt
+    #from visuals import grafico_gantt
     from database import (
         criar_tabela,
         carregar_dados,
@@ -45,7 +45,7 @@ try:
 except ImportError:
     # fallback (caso rode fora do padrão esperado)
     from src.analytics import calcular_metricas, filtrar_dados
-    from src.visuals import grafico_gantt
+    #from src.visuals import grafico_gantt
     from src.database import (
         criar_tabela,
         carregar_dados,
