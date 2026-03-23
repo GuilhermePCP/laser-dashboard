@@ -185,7 +185,6 @@ criar_tabela()
 # CARREGAR DADOS (CACHE = VIDA)
 # -------------------------------------------------
 
-@st.cache_data(ttl=60)
 def carregar():
     df = carregar_dados()
 
