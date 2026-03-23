@@ -449,12 +449,9 @@ if st.session_state.nivel in ["admin", "pcp"]:
     if st.sidebar.button("Adicionar operador"):
 
         if novo.strip():
-
             adicionar_operador(novo.strip())
-
             st.success("Operador adicionado!")
             st.rerun()
-
         else:
             st.warning("Digite um nome válido.")
 
@@ -472,296 +469,379 @@ if st.session_state.nivel in ["admin", "pcp"]:
             st.rerun()
 
     # -------------------------------------------------
-# GERENCIAR OPERADORES
-# -------------------------------------------------
+    # GERENCIAR USUÁRIOS
+    # -------------------------------------------------
 
-st.sidebar.divider()
-st.sidebar.subheader("⚙️ Operadores")
+    if st.session_state.nivel == "admin":
 
-novo = st.sidebar.text_input("Novo operador")
+        st.sidebar.divider()
+        st.sidebar.subheader("👤 Usuários")
 
-if st.sidebar.button("Adicionar operador"):
-    if novo.strip():
-        adicionar_operador(novo.strip())
-        st.success("Operador adicionado!")
-        st.rerun()
-    else:
-        st.warning("Digite um nome válido.")
+        novo_usuario = st.sidebar.text_input("Usuário")
+        nova_senha = st.sidebar.text_input("Senha", type="password")
 
-operadores_df = carregar_operadores()
+        nivel_usuario = st.sidebar.selectbox(
+            "Nível",
+            ["admin", "pcp", "operador"]
+        )
 
-if not operadores_df.empty:
-    remover = st.sidebar.selectbox(
-        "Remover operador",
-        operadores_df["nome"]
-    )
+        if st.sidebar.button("Criar usuário"):
 
-    if st.sidebar.button("Remover operador"):
-        remover_operador(remover)
-        st.rerun()
+            if novo_usuario and nova_senha:
 
-# -------------------------------------------------
-# GERENCIAR USUÁRIOS
-# -------------------------------------------------
+                query = """
+                INSERT INTO usuarios (usuario, senha, nivel)
+                VALUES (:usuario, :senha, :nivel)
+                """
 
-if st.session_state.nivel == "admin":
+                with engine.begin() as conn:
+                    conn.execute(
+                        text(query),
+                        {
+                            "usuario": novo_usuario,
+                            "senha": nova_senha,
+                            "nivel": nivel_usuario
+                        }
+                    )
+
+                st.sidebar.success("Usuário criado")
+                st.rerun()
+
+    # -------------------------------------------------
+    # FILTROS
+    # -------------------------------------------------
 
     st.sidebar.divider()
-    st.sidebar.subheader("👤 Usuários")
+    st.sidebar.subheader("Filtros")
 
-    novo_usuario = st.sidebar.text_input("Usuário")
-    nova_senha = st.sidebar.text_input("Senha", type="password")
-
-    nivel_usuario = st.sidebar.selectbox(
-        "Nível",
-        ["admin", "pcp", "operador"]
+    maquina = st.sidebar.selectbox(
+        "Operador",
+        ["Todas"] + list(df["operador"].dropna().unique())
     )
 
-    if st.sidebar.button("Criar usuário"):
-        if novo_usuario and nova_senha:
+    status = st.sidebar.selectbox(
+        "Status",
+        ["Todos"] + list(df["status"].dropna().unique())
+    )
 
-            query = """
-            INSERT INTO usuarios (usuario, senha, nivel)
-            VALUES (:usuario, :senha, :nivel)
-            """
+    # -------------------------------------------------
+    # FILTRAGEM
+    # -------------------------------------------------
 
-            with engine.begin() as conn:
-                conn.execute(
-                    text(query),
-                    {
-                        "usuario": novo_usuario,
-                        "senha": nova_senha,
-                        "nivel": nivel_usuario
-                    }
+    df_filtrado = filtrar_dados(df, maquina, status)
+
+    # 🔥 OTIMIZAÇÃO (sem apply)
+    if st.session_state.nivel == "operador":
+
+        usuario_norm = normalizar_texto(st.session_state.usuario)
+
+        df_filtrado["operador_norm"] = df_filtrado["operador"].astype(str).str.lower()
+
+        df_filtrado = df_filtrado[
+            df_filtrado["operador_norm"] == usuario_norm
+        ]
+
+    df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
+    df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
+
+    # -------------------------------------------------
+    # TABELA DE FABRICAÇÃO
+    # -------------------------------------------------
+
+    st.subheader("Sequência de fabricação")
+
+    df_tabela = df_ativos.copy()
+
+    if not df_tabela.empty:
+
+        # 🔥 CONVERTE UMA VEZ SÓ
+        df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"], errors="coerce")
+        df_tabela["fim"] = pd.to_datetime(df_tabela["fim"], errors="coerce")
+        df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"], errors="coerce")
+
+        if st.session_state.nivel == "operador":
+            operadores = [st.session_state.usuario]
+        else:
+            operadores = df_tabela["operador"].unique()
+
+        abas = st.tabs(list(operadores))
+
+        for i, operador in enumerate(operadores):
+
+            with abas[i]:
+
+                df_operador = df_tabela[df_tabela["operador"] == operador].copy()
+
+                hoje = pd.Timestamp.today().normalize()
+
+                # 🔥 SEM RECONVERTER DATA
+                df_operador["atrasado"] = (
+                    (df_operador["prazo_limite"].dt.normalize() < hoje) &
+                    (df_operador["status"] != "Finalizado")
                 )
 
-            st.sidebar.success("Usuário criado")
-            st.rerun()
+                # 🔥 NÃO SOBRESCREVE STATUS REAL
+                df_operador["status_original"] = df_operador["status"]
 
-# -------------------------------------------------
-# FILTROS
-# -------------------------------------------------
+                # 🔥 OTIMIZAÇÃO (sem apply)
+                df_operador["status_visual_base"] = df_operador["status_original"]
 
-st.sidebar.divider()
-st.sidebar.subheader("Filtros")
+                df_operador.loc[
+                    df_operador["atrasado"] & (df_operador["status_original"] != "Finalizado"),
+                    "status_visual_base"
+                ] = "Atrasado"
 
-maquina = st.sidebar.selectbox(
-    "Operador",
-    ["Todas"] + list(df["operador"].dropna().unique())
-)
+                prioridade_status = {
+                    "Atrasado": 0,
+                    "Em produção": 1,
+                    "Programado": 2,
+                    "Parado": 3,
+                    "Finalizado": 4
+                }
 
-status = st.sidebar.selectbox(
-    "Status",
-    ["Todos"] + list(df["status"].dropna().unique())
-)
+                df_operador["prioridade"] = df_operador["status_visual_base"].map(prioridade_status)
 
-# -------------------------------------------------
-# FILTRAGEM
-# -------------------------------------------------
+                # -------------------------
+                # GARANTIR SEQUÊNCIA
+                # -------------------------
 
-df_filtrado = filtrar_dados(df, maquina, status)
+                if "sequencia" not in df_operador.columns:
+                    df_operador["sequencia"] = df_operador["id"]
 
-# 🔥 OTIMIZAÇÃO (sem apply)
-if st.session_state.nivel == "operador":
-    usuario_norm = normalizar_texto(st.session_state.usuario)
-    df_filtrado = df_filtrado[
-        df_filtrado["operador"].str.lower() == usuario_norm
-    ]
+                df_operador["sequencia"] = df_operador["sequencia"].fillna(df_operador["id"])
 
-df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
-df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
+                # -------------------------
+                # ORDENAR
+                # -------------------------
 
-# -------------------------------------------------
-# TABELA DE FABRICAÇÃO
-# -------------------------------------------------
+                df_operador = df_operador.sort_values(
+                    ["sequencia", "prioridade", "inicio"]
+                ).reset_index(drop=True)
 
-st.subheader("Sequência de fabricação")
+                # -------------------------
+                # CONTROLE DE COLUNAS
+                # -------------------------
 
-df_tabela = df_ativos.copy()
+                colunas_base = [
+                    "id",
+                    "produto",
+                    "quantidade",
+                    "operador",
+                    "status",
+                    "desenho",
+                    "status_visual_base",
+                    "quantidade_produzida",
+                    "sequencia"
+                ]
 
-if not df_tabela.empty:
+                if "sequencia" not in df_operador.columns:
+                    df_operador["sequencia"] = df_operador["id"]
 
-    # 🔥 CONVERTE UMA VEZ SÓ
-    df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"], errors="coerce")
-    df_tabela["fim"] = pd.to_datetime(df_tabela["fim"], errors="coerce")
-    df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"], errors="coerce")
+                colunas_data = [
+                    "inicio",
+                    "fim",
+                    "prazo_limite",
+                ]
 
-    operadores_lista = (
-        [st.session_state.usuario]
-        if st.session_state.nivel == "operador"
-        else df_tabela["operador"].unique()
-    )
+                if "nivel" not in st.session_state:
+                    st.session_state.nivel = None
 
-    abas = st.tabs(list(operadores_lista))
+                if st.session_state.nivel in ["admin", "pcp"]:
+                    df_operador = df_operador[colunas_base + colunas_data]
+                else:
+                    df_operador = df_operador[colunas_base]
 
-    for i, operador in enumerate(operadores_lista):
+                if "status_original" not in df_operador.columns:
+                    df_operador["status_original"] = df_operador["status"]
 
-        with abas[i]:
+                if "quantidade_produzida" not in df_operador.columns:
+                    df_operador["quantidade_produzida"] = 0
 
-            df_operador = df_tabela[df_tabela["operador"] == operador].copy()
+                # -------------------------
+                # FORMATAR DATAS (SEM reconversão)
+                # -------------------------
 
-            hoje = pd.Timestamp.today().normalize()
+                if "inicio" in df_operador.columns:
+                    df_operador["inicio"] = df_operador["inicio"].dt.strftime("%d/%m/%Y")
 
-            # 🔥 OTIMIZADO (sem apply)
-            df_operador["atrasado"] = (
-                (df_operador["prazo_limite"].dt.normalize() < hoje) &
-                (df_operador["status"] != "Finalizado")
-            )
+                if "fim" in df_operador.columns:
+                    df_operador["fim"] = df_operador["fim"].dt.strftime("%d/%m/%Y")
 
-            df_operador["status_original"] = df_operador["status"]
+                if "prazo_limite" in df_operador.columns:
+                    df_operador["prazo_limite"] = df_operador["prazo_limite"].dt.strftime("%d/%m/%Y")
 
-            df_operador["status_visual_base"] = df_operador["status"]
-            df_operador.loc[
-                df_operador["atrasado"] & (df_operador["status"] != "Finalizado"),
-                "status_visual_base"
-            ] = "Atrasado"
+                # -------------------------
+                # STATUS COM ÍCONE
+                # -------------------------
 
-            prioridade_status = {
-                "Atrasado": 0,
-                "Em produção": 1,
-                "Programado": 2,
-                "Parado": 3,
-                "Finalizado": 4
-            }
+                mapa_status = {
+                    "Programado": "🟡 Programado",
+                    "Em produção": "🟢 Em produção",
+                    "Finalizado": "🔵 Finalizado",
+                    "Atrasado": "🔴 Atrasado",
+                    "Parado": "🟠 Parado"
+                }
 
-            df_operador["prioridade"] = df_operador["status_visual_base"].map(prioridade_status)
+                df_operador["status_visual"] = df_operador["status_visual_base"].map(mapa_status)
 
-            if "sequencia" not in df_operador.columns:
-                df_operador["sequencia"] = df_operador["id"]
+                # -------------------------
+                # TABELA (sem apply pesado)
+                # -------------------------
 
-            df_operador["sequencia"] = df_operador["sequencia"].fillna(df_operador["id"])
+                df_operador["Quantidade"] = df_operador["quantidade"].astype(int).astype(str)
 
-            df_operador = df_operador.sort_values(
-                ["sequencia", "prioridade", "inicio"]
-            ).reset_index(drop=True)
+                mask = (
+                    (df_operador["status_original"] == "Parado") &
+                    (df_operador["quantidade_produzida"] > 0)
+                )
 
-            colunas_base = [
-                "id", "produto", "quantidade", "operador",
-                "status", "desenho", "status_visual_base",
-                "quantidade_produzida", "sequencia"
-            ]
+                df_operador.loc[mask, "Quantidade"] = (
+                    df_operador["quantidade_produzida"].astype(int).astype(str)
+                    + " / " +
+                    df_operador["quantidade"].astype(int).astype(str)
+                )
 
-            colunas_data = ["inicio", "fim", "prazo_limite"]
+                df_exibicao = df_operador.drop(columns=["desenho", "status"], errors="ignore")
 
-            if st.session_state.nivel in ["admin", "pcp"]:
-                df_operador = df_operador[colunas_base + colunas_data]
-            else:
-                df_operador = df_operador[colunas_base]
+                df_exibicao = df_exibicao.rename(columns={
+                    "sequencia": "Sequência",
+                    "produto": "Produto",
+                    "operador": "Operador",
+                    "status_visual": "Status",
+                    "inicio": "Início",
+                    "fim": "Fim",
+                    "prazo_limite": "Prazo"
+                })
 
-            df_operador["quantidade_produzida"] = df_operador.get("quantidade_produzida", 0)
+                ordem_colunas = [
+                    "Sequência",
+                    "Produto",
+                    "Quantidade",
+                    "Operador",
+                    "Status",
+                    "Início",
+                    "Fim",
+                    "Prazo"
+                ]
 
-            # 🔥 FORMATAR UMA VEZ
-            if "inicio" in df_operador:
-                df_operador["inicio"] = df_operador["inicio"].dt.strftime("%d/%m/%Y")
+                df_exibicao = df_exibicao[[col for col in ordem_colunas if col in df_exibicao.columns]]
 
-            if "fim" in df_operador:
-                df_operador["fim"] = df_operador["fim"].dt.strftime("%d/%m/%Y")
+                tabela = st.dataframe(
+                    df_exibicao,
+                    use_container_width=True,
+                    selection_mode="single-row",
+                    on_select="rerun",
+                    hide_index=True
+                )
 
-            if "prazo_limite" in df_operador:
-                df_operador["prazo_limite"] = df_operador["prazo_limite"].dt.strftime("%d/%m/%Y")
-
-            # STATUS VISUAL
-            mapa_status = {
-                "Programado": "🟡 Programado",
-                "Em produção": "🟢 Em produção",
-                "Finalizado": "🔵 Finalizado",
-                "Atrasado": "🔴 Atrasado",
-                "Parado": "🟠 Parado"
-            }
-
-            df_operador["status_visual"] = df_operador["status_visual_base"].map(mapa_status)
-
-            # 🔥 OTIMIZAÇÃO SEM APPLY
-            df_operador["Quantidade"] = df_operador["quantidade"].astype(str)
-
-            mask = (
-                (df_operador["status_original"] == "Parado") &
-                (df_operador["quantidade_produzida"] > 0)
-            )
-
-            df_operador.loc[mask, "Quantidade"] = (
-                df_operador["quantidade_produzida"].astype(str)
-                + " / "
-                + df_operador["quantidade"].astype(str)
-            )
-
-            df_exibicao = df_operador.drop(columns=["desenho", "status"], errors="ignore")
-
-            df_exibicao = df_exibicao.rename(columns={
-                "sequencia": "Sequência",
-                "produto": "Produto",
-                "operador": "Operador",
-                "status_visual": "Status",
-                "inicio": "Início",
-                "fim": "Fim",
-                "prazo_limite": "Prazo"
-            })
-
-            ordem_colunas = [
-                "Sequência", "Produto", "Quantidade",
-                "Operador", "Status", "Início", "Fim", "Prazo"
-            ]
-
-            df_exibicao = df_exibicao[[c for c in ordem_colunas if c in df_exibicao.columns]]
-
-            tabela = st.dataframe(
-                df_exibicao,
-                use_container_width=True,
-                selection_mode="single-row",
-                on_select="rerun",
-                hide_index=True
-            )
-
-            # -------------------------------------------------
+            # -------------------------
             # SELEÇÃO
-            # -------------------------------------------------
+            # -------------------------
 
             if tabela["selection"]["rows"]:
+
                 index = tabela["selection"]["rows"][0]
                 linha = df_operador.iloc[index]
 
-                col1, col2 = st.columns([2, 1])
+                col1, col2 = st.columns([2,1])
 
-                # 🔥 (mantive toda sua lógica de imagem intacta — só removi redundância)
+                # -------------------------
+                # IMAGEM
+                # -------------------------
                 with col1:
 
                     imagens = linha.get("desenho")
 
+                    # 🔥 TRATAMENTO ROBUSTO DO BANCO
                     if isinstance(imagens, memoryview):
                         imagens = imagens.tobytes()
 
                     if isinstance(imagens, bytes):
                         try:
-                            imagens = imagens.decode("utf-8")
+                            imagens = imagens.decode("utf-8")  # tenta JSON
                         except:
-                            pass
-
-                    lista = []
+                            pass  # mantém como bytes
 
                     if imagens and imagens != "null":
-                        try:
-                            parsed = json.loads(imagens)
-                            lista = parsed if isinstance(parsed, list) else [parsed]
-                        except:
-                            lista = [imagens]
 
-                    if lista:
-                        for i, img in enumerate(lista):
+                        lista = []
 
-                            with st.expander(f"📄 Desenho {i+1}", expanded=(i == 0)):
-                                try:
-                                    image_bytes = base64.b64decode(img)
-                                    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-                                    st.image(image, use_container_width=True)
-                                except:
-                                    st.warning(f"Imagem {i+1} inválida")
+                        # -------------------------
+                        # 🔥 1. JSON (PADRÃO NOVO)
+                        # -------------------------
+                        if isinstance(imagens, str):
+                            try:
+                                parsed = json.loads(imagens)
+
+                                if isinstance(parsed, list):
+                                    lista = parsed
+                                else:
+                                    lista = [parsed]
+
+                            except:
+                                lista = []
+
+                        # -------------------------
+                        # 🔥 2. FALLBACK (LEGADO)
+                        # -------------------------
+                        if not lista:
+
+                            if isinstance(imagens, str):
+
+                                # múltiplas imagens coladas (bug antigo)
+                                if imagens.count("iVBOR") > 1:
+                                    partes = imagens.split("iVBOR")
+                                    lista = ["iVBOR" + p for p in partes if p.strip()]
+                                else:
+                                    lista = [imagens]
+
+                            elif isinstance(imagens, (bytes, bytearray)):
+                                lista = [imagens]
+
+                        # -------------------------
+                        # 🔥 LIMPEZA FINAL
+                        # -------------------------
+                        lista = [img for img in lista if img]
+
+                        # ----------------------------------------
+                        # 🔥 EXIBIÇÃO
+                        # ----------------------------------------
+                        if lista:
+
+                            for i, img in enumerate(lista):
+
+                                with st.expander(f"📄 Desenho {i+1}", expanded=(i == 0)):
+
+                                    image = None
+
+                                    # BASE64 (novo padrão)
+                                    if isinstance(img, str):
+                                        try:
+                                            image_bytes = base64.b64decode(img)
+                                            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+                                        except:
+                                            pass
+
+                                    # BYTES (legado)
+                                    if image is None and isinstance(img, (bytes, bytearray)):
+                                        try:
+                                            image = Image.open(io.BytesIO(img)).convert("RGB")
+                                        except:
+                                            pass
+
+                                    # RESULTADO
+                                    if image:
+                                        st.image(image, use_container_width=True)
+                                    else:
+                                        st.warning(f"Imagem {i+1} inválida")
+
+                        else:
+                            st.info("Sem desenho para essa OP")
+
                     else:
                         st.info("Sem desenho para essa OP")
 
-                # -------------------------------------------------
-                # CONTROLE DA OP (mantido igual)
-                # -------------------------------------------------
-
+                # CONTROLE
                 with col2:
 
                     status_op = linha["status"]
