@@ -220,6 +220,47 @@ def carregar():
 df = carregar()
 
 # -------------------------------------------------
+# BASE DE DADOS GLOBAL (ANTI-ERRO DEFINITIVO)
+# -------------------------------------------------
+
+# fallback de segurança
+if df is None or df.empty:
+    df = pd.DataFrame(columns=[
+        "id", "produto", "quantidade", "operador",
+        "status", "inicio", "fim", "prazo_limite",
+        "data_finalizado", "sequencia", "desenho",
+        "quantidade_produzida"
+    ])
+
+# filtros padrão (caso ainda não existam)
+if "maquina" not in locals():
+    maquina = "Todas"
+
+if "status" not in locals():
+    status = "Todos"
+
+# aplica filtro SEMPRE
+df_filtrado = filtrar_dados(df, maquina, status)
+
+# operador vê só o dele
+if st.session_state.nivel == "operador":
+    df_filtrado = df_filtrado[
+        df_filtrado["operador"].apply(normalizar_texto)
+        == normalizar_texto(st.session_state.usuario)
+    ]
+
+# separações padrão (SEMPRE EXISTEM)
+df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"].copy()
+df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"].copy()
+
+# segurança extra (evita crash em qualquer tela)
+if df_producao is None:
+    df_producao = pd.DataFrame(columns=df.columns)
+
+if df_finalizados is None:
+    df_finalizados = pd.DataFrame(columns=df.columns)
+
+# -------------------------------------------------
 # KPIs
 # -------------------------------------------------
 
