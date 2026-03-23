@@ -47,23 +47,20 @@ def normalizar_texto(texto):
 
     return texto.lower()
 
-
-# 🔥 CACHE DOS OPERADORES (EVITA SPAM NO BANCO)
-@st.cache_data(ttl=300)
-def carregar_ops():
-    return carregar_operadores()
-
-
 def nome_operador_bonito(usuario):
 
-    operadores = carregar_ops()  # 🔥 usa cache
+    operadores = carregar_operadores()
 
     for nome in operadores["nome"]:
+
         if normalizar_texto(nome) == normalizar_texto(usuario):
             return nome
 
     return usuario
 
+@st.cache_data
+def carregar_ops():
+    return carregar_operadores()
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -92,18 +89,20 @@ if not cookies.ready():
 def verificar_login(usuario, senha):
 
     try:
+
         query = """
         SELECT usuario, senha, nivel
         FROM usuarios
         """
 
-        # 🔥 NÃO USA begin() (menos custo no Supabase)
-        with engine.connect() as conn:
+        with engine.begin() as conn:
+
             result = conn.execute(text(query)).fetchall()
 
         usuario_digitado = normalizar_texto(usuario)
 
         for row in result:
+
             if (
                 normalizar_texto(row.usuario) == usuario_digitado
                 and row.senha == senha
@@ -116,10 +115,8 @@ def verificar_login(usuario, senha):
         return None
 
 
-# -------------------------------------------------
-# ESTADO DA SESSÃO
-# -------------------------------------------------
-
+# estado da sessão
+# estado da sessão
 if "logado" not in st.session_state:
 
     if cookies.get("usuario"):
@@ -129,6 +126,7 @@ if "logado" not in st.session_state:
         st.session_state.nivel = cookies.get("nivel")
 
     else:
+
         st.session_state.logado = False
 
 if "nivel" not in st.session_state:
@@ -138,10 +136,7 @@ is_admin = st.session_state.nivel == "admin"
 is_pcp = st.session_state.nivel == "pcp"
 is_operador = st.session_state.nivel == "operador"
 
-# -------------------------------------------------
-# LOGIN UI
-# -------------------------------------------------
-
+# tela de login
 if not st.session_state.logado:
 
     st.title("🔐 Login do Sistema")
@@ -166,14 +161,12 @@ if not st.session_state.logado:
             st.rerun()
 
         else:
+
             st.error("Usuário ou senha inválidos")
 
     st.stop()
 
-
-# ❌ REMOVIDO AUTOREFRESH PESADO
-# st_autorefresh(interval=300000, key="auto_refresh")
-
+st_autorefresh(interval=60000, key="auto_refresh")
 
 # -------------------------------------------------
 # CRIAR TABELA
@@ -182,7 +175,7 @@ if not st.session_state.logado:
 criar_tabela()
 
 # -------------------------------------------------
-# CARREGAR DADOS (CACHE = VIDA)
+# FUNÇÃO CARREGAR DADOS
 # -------------------------------------------------
 
 def carregar():
@@ -193,7 +186,7 @@ def carregar():
         .str.strip()
         .str.lower()
         .str.replace(" ", "_")
-        .str.replace(r"[^\w]", "", regex=True)
+        .str.replace(r"[^\w]", "", regex=True)  # 🔥 REMOVE lixo invisível
     )
 
     datas = ["inicio", "fim", "prazo_limite", "data_finalizado"]
@@ -203,7 +196,6 @@ def carregar():
             df[col] = pd.to_datetime(df[col], errors="coerce", dayfirst=True)
 
     return df
-
 
 df = carregar()
 
@@ -218,12 +210,30 @@ metricas = calcular_metricas(df)
 # -------------------------
 # STATUS DA PRODUÇÃO
 # -------------------------
-
 if st.session_state.nivel in ["admin", "pcp"]:
-
     programadas = len(df[df["status"] == "Programado"])
     em_producao = len(df[df["status"] == "Em produção"])
     finalizadas = len(df[df["status"] == "Finalizado"])
+
+    atrasadas = len(
+        df[
+            (df["status"] != "Finalizado") &
+            (pd.to_datetime(df["prazo_limite"]) < pd.Timestamp.today())
+        ]
+    )
+
+
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    c1.metric("🟡 Programadas", programadas)
+    c2.metric("🟢 Em produção", em_producao)
+    c3.metric("⚪ Finalizadas", finalizadas)
+    c4.metric("📦 Total OPs", metricas["total_ops"])
+
+    # -------------------------------------------------
+    # ALERTA DE ATRASOS
+    # -------------------------------------------------
 
     hoje = pd.Timestamp.today().normalize()
 
@@ -236,17 +246,6 @@ if st.session_state.nivel in ["admin", "pcp"]:
     ]
 
     atrasadas = len(df_atrasadas)
-
-    c1, c2, c3, c4 = st.columns(4)
-
-    c1.metric("🟡 Programadas", programadas)
-    c2.metric("🟢 Em produção", em_producao)
-    c3.metric("⚪ Finalizadas", finalizadas)
-    c4.metric("📦 Total OPs", metricas["total_ops"])
-
-    # -------------------------------------------------
-    # ALERTA DE ATRASOS
-    # -------------------------------------------------
 
     if atrasadas > 0:
 
@@ -279,6 +278,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
             )
 
     else:
+
         st.caption("🟢 Nenhuma OP atrasada")
 
     # -------------------------
@@ -304,12 +304,13 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### 👤 Usuário logado")
 
 st.sidebar.write(f"**Nome:** {st.session_state.usuario}")
+
 st.sidebar.write(f"**Função:** {st.session_state.nivel.upper()}")
 
-st.sidebar.write("")
+st.sidebar.write("") #Espaço invisivel de proposito
 
 # -------------------------------------------------
-# LOGOUT
+# BOTÃO LOGOUT
 # -------------------------------------------------
 
 if st.sidebar.button("🚪 Sair"):
@@ -324,7 +325,7 @@ if st.sidebar.button("🚪 Sair"):
 st.sidebar.markdown("---")
 
 # -------------------------------------------------
-# NOVA PROGRAMAÇÃO
+# SIDEBAR NOVA PROGRAMAÇÃO
 # -------------------------------------------------
 
 if st.session_state.nivel in ["admin", "pcp"]:
@@ -333,7 +334,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     with st.sidebar.form("nova_op"):
 
-        operadores = carregar_ops()  # 🔥 cache aqui também
+        operadores = carregar_operadores()
 
         operador = st.selectbox(
             "Operador",
@@ -357,9 +358,20 @@ if st.session_state.nivel in ["admin", "pcp"]:
             value=1
         )
 
-        inicio = st.date_input("Início", format="DD/MM/YYYY")
-        fim = st.date_input("Fim", format="DD/MM/YYYY")
-        prazo = st.date_input("Prazo limite", format="DD/MM/YYYY")
+        inicio = st.date_input(
+            "Início",
+            format="DD/MM/YYYY"
+        )
+
+        fim = st.date_input(
+            "Fim",
+            format="DD/MM/YYYY"
+        )
+
+        prazo = st.date_input(
+            "Prazo limite",
+            format="DD/MM/YYYY"
+        )
 
         status = st.selectbox(
             "Status",
@@ -374,6 +386,11 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
         salvar = st.form_submit_button("Salvar")
 
+
+    # ------------------------------------------
+    # AQUI FICA FORA DO FORM
+    # ------------------------------------------
+
     if salvar:
 
         imagens_lista = []
@@ -384,6 +401,9 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
                 file_bytes = arquivo.read()
 
+                # ----------------------------------------
+                # 📄 SE FOR PDF → CONVERTE TODAS PÁGINAS
+                # ----------------------------------------
                 if arquivo.type == "application/pdf":
 
                     try:
@@ -400,6 +420,9 @@ if st.session_state.nivel in ["admin", "pcp"]:
                     except:
                         st.warning(f"Erro ao converter PDF: {arquivo.name}")
 
+                # ----------------------------------------
+                # 🖼️ SE FOR IMAGEM → VALIDA E SALVA
+                # ----------------------------------------
                 else:
 
                     try:
@@ -415,7 +438,11 @@ if st.session_state.nivel in ["admin", "pcp"]:
                     except:
                         st.warning(f"Imagem inválida: {arquivo.name}")
 
-        imagens_json = json.dumps(imagens_lista) if imagens_lista else None
+        # 🔥 GARANTIR QUE SEMPRE É LISTA
+        if not imagens_lista:
+            imagens_json = None
+        else:
+            imagens_json = json.dumps(imagens_lista)
 
         df_nova = pd.DataFrame({
             "operador": [nome_operador_bonito(operador)],
@@ -425,16 +452,13 @@ if st.session_state.nivel in ["admin", "pcp"]:
             "fim": [fim],
             "prazo_limite": [prazo],
             "status": [status],
-            "sequencia": [sequencia],
+            "sequencia": [sequencia],  # 🔥 AQUI
             "desenho": [imagens_json]
         })
 
         salvar_programacao(df_nova)
 
         st.success("Programação criada")
-
-        # 🔥 LIMPA CACHE E ATUALIZA NA HORA
-        st.cache_data.clear()
         st.rerun()
 
     # -------------------------------------------------
@@ -449,9 +473,12 @@ if st.session_state.nivel in ["admin", "pcp"]:
     if st.sidebar.button("Adicionar operador"):
 
         if novo.strip():
+
             adicionar_operador(novo.strip())
+
             st.success("Operador adicionado!")
             st.rerun()
+
         else:
             st.warning("Digite um nome válido.")
 
@@ -478,6 +505,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
         st.sidebar.subheader("👤 Usuários")
 
         novo_usuario = st.sidebar.text_input("Usuário")
+
         nova_senha = st.sidebar.text_input("Senha", type="password")
 
         nivel_usuario = st.sidebar.selectbox(
@@ -505,6 +533,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
                     )
 
                 st.sidebar.success("Usuário criado")
+
                 st.rerun()
 
     # -------------------------------------------------
@@ -524,218 +553,224 @@ if st.session_state.nivel in ["admin", "pcp"]:
         ["Todos"] + list(df["status"].dropna().unique())
     )
 
-    # -------------------------------------------------
-    # FILTRAGEM
-    # -------------------------------------------------
+else:
 
-    df_filtrado = filtrar_dados(df, maquina, status)
+    # operador ainda consegue usar filtros simples
+    maquina = "Todas"
+    status = "Todos"
 
-    # 🔥 OTIMIZAÇÃO (sem apply)
+df_filtrado = filtrar_dados(df, maquina, status)
+
+# -------------------------------------------------
+# OPERADOR VÊ APENAS SUAS OPs
+# -------------------------------------------------
+
+if st.session_state.nivel == "operador":
+
+    df_filtrado = df_filtrado[
+        df_filtrado["operador"].apply(normalizar_texto)
+        == normalizar_texto(st.session_state.usuario)
+    ]
+
+df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
+df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
+
+# -------------------------------------------------
+# TABELA DE FABRICAÇÃO
+# -------------------------------------------------
+
+st.subheader("Sequência de fabricação")
+
+df_tabela = df_ativos.copy()
+
+if not df_tabela.empty:
+
+    df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"], errors="coerce")
+    df_tabela["fim"] = pd.to_datetime(df_tabela["fim"], errors="coerce")
+    df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"], errors="coerce")
+
     if st.session_state.nivel == "operador":
+        operadores = [st.session_state.usuario]
+    else:
+        operadores = df_tabela["operador"].unique()
 
-        usuario_norm = normalizar_texto(st.session_state.usuario)
+    abas = st.tabs(list(operadores))
 
-        df_filtrado["operador_norm"] = df_filtrado["operador"].astype(str).str.lower()
+    for i, operador in enumerate(operadores):
 
-        df_filtrado = df_filtrado[
-            df_filtrado["operador_norm"] == usuario_norm
-        ]
+        with abas[i]:
 
-    df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
-    df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
+            df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
-    # 🔥 CORREÇÃO GLOBAL (ESSENCIAL)
-    df_producao = df_ativos.copy() if not df_ativos.empty else pd.DataFrame()
+            hoje = pd.Timestamp.today().normalize()
 
-    # -------------------------------------------------
-    # TABELA DE FABRICAÇÃO
-    # -------------------------------------------------
+            df_operador["atrasado"] = (
+                (pd.to_datetime(df_operador["prazo_limite"], errors="coerce").dt.normalize() < hoje) &
+                (df_operador["status"] != "Finalizado")
+            )
 
-    st.subheader("Sequência de fabricação")
+            # 🔥 NÃO SOBRESCREVE STATUS REAL
+            df_operador["status_original"] = df_operador["status"]
 
-    df_tabela = df_ativos.copy()
+            df_operador["status_visual_base"] = df_operador.apply(
+                lambda row: "Atrasado"
+                if row["atrasado"] and row["status_original"] != "Finalizado"
+                else row["status_original"],
+                axis=1
+            )
 
-    if not df_tabela.empty:
+            prioridade_status = {
+                "Atrasado": 0,
+                "Em produção": 1,
+                "Programado": 2,
+                "Parado": 3,
+                "Finalizado": 4
+            }
 
-        # 🔥 CONVERTE UMA VEZ SÓ
-        df_tabela["inicio"] = pd.to_datetime(df_tabela["inicio"], errors="coerce")
-        df_tabela["fim"] = pd.to_datetime(df_tabela["fim"], errors="coerce")
-        df_tabela["prazo_limite"] = pd.to_datetime(df_tabela["prazo_limite"], errors="coerce")
+            df_operador["prioridade"] = df_operador["status_visual_base"].map(prioridade_status)
 
-        if st.session_state.nivel == "operador":
-            operadores = [st.session_state.usuario]
-        else:
-            operadores = df_tabela["operador"].unique()
+            # -------------------------
+            # GARANTIR SEQUÊNCIA
+            # -------------------------
 
-        abas = st.tabs(list(operadores))
+            if "sequencia" not in df_operador.columns:
+                df_operador["sequencia"] = df_operador["id"]
 
-        for i, operador in enumerate(operadores):
+            df_operador["sequencia"] = df_operador["sequencia"].fillna(df_operador["id"])
 
-            with abas[i]:
+            # -------------------------
+            # ORDENAR
+            # -------------------------
 
-                df_operador = df_tabela[df_tabela["operador"] == operador].copy()
+            df_operador = df_operador.sort_values(
+                ["sequencia", "prioridade", "inicio"]
+            ).reset_index(drop=True)
 
-                hoje = pd.Timestamp.today().normalize()
+            # -------------------------
+            # CONTROLE DE COLUNAS
+            # -------------------------
 
-                # 🔥 SEM RECONVERTER DATA
-                df_operador["atrasado"] = (
-                    (df_operador["prazo_limite"].dt.normalize() < hoje) &
-                    (df_operador["status"] != "Finalizado")
-                )
+            colunas_base = [
+                "id",
+                "produto",
+                "quantidade",
+                "operador",
+                "status",
+                "desenho",
+                "status_visual_base",
+                "quantidade_produzida",
+                "sequencia"  # ✅ ADICIONE ISSO
+            ]
 
-                # 🔥 NÃO SOBRESCREVE STATUS REAL
+            # 👇 só adiciona sequência se for admin ou pcp
+            # SEMPRE mantém no DataFrame
+            if "sequencia" not in df_operador.columns:
+                df_operador["sequencia"] = df_operador["id"]
+
+            colunas_data = [
+                "inicio",
+                "fim",
+                "prazo_limite",
+            ]
+
+            if "nivel" not in st.session_state:
+                st.session_state.nivel = None
+
+            if st.session_state.nivel in ["admin", "pcp"]:
+                df_operador = df_operador[colunas_base + colunas_data]
+            else:
+                df_operador = df_operador[colunas_base]
+
+            # 🔥 GARANTE DEPOIS DO CORTE
+            if "status_original" not in df_operador.columns:
                 df_operador["status_original"] = df_operador["status"]
 
-                # 🔥 OTIMIZAÇÃO (sem apply)
-                df_operador["status_visual_base"] = df_operador["status_original"]
+            if "quantidade_produzida" not in df_operador.columns:
+                df_operador["quantidade_produzida"] = 0
 
-                df_operador.loc[
-                    df_operador["atrasado"] & (df_operador["status_original"] != "Finalizado"),
-                    "status_visual_base"
-                ] = "Atrasado"
+            # -------------------------
+            # FORMATAR DATAS
+            # -------------------------
 
-                prioridade_status = {
-                    "Atrasado": 0,
-                    "Em produção": 1,
-                    "Programado": 2,
-                    "Parado": 3,
-                    "Finalizado": 4
-                }
+            if "inicio" in df_operador.columns:
+                df_operador["inicio"] = pd.to_datetime(
+                    df_operador["inicio"], errors="coerce"
+                ).dt.strftime("%d/%m/%Y")
 
-                df_operador["prioridade"] = df_operador["status_visual_base"].map(prioridade_status)
+            if "fim" in df_operador.columns:
+                df_operador["fim"] = pd.to_datetime(
+                    df_operador["fim"], errors="coerce"
+                ).dt.strftime("%d/%m/%Y")
 
-                # -------------------------
-                # GARANTIR SEQUÊNCIA
-                # -------------------------
+            if "prazo_limite" in df_operador.columns:
+                df_operador["prazo_limite"] = pd.to_datetime(
+                    df_operador["prazo_limite"], errors="coerce"
+                ).dt.strftime("%d/%m/%Y")
 
-                if "sequencia" not in df_operador.columns:
-                    df_operador["sequencia"] = df_operador["id"]
+            # -------------------------
+            # STATUS COM ÍCONE
+            # -------------------------
 
-                df_operador["sequencia"] = df_operador["sequencia"].fillna(df_operador["id"])
+            def icone_status(status):
 
-                # -------------------------
-                # ORDENAR
-                # -------------------------
+                if status == "Programado":
+                    return "🟡 Programado"
+                elif status == "Em produção":
+                    return "🟢 Em produção"
+                elif status == "Finalizado":
+                    return "🔵 Finalizado"
+                elif status == "Atrasado":
+                    return "🔴 Atrasado"
+                elif status == "Parado":
+                    return "🟠 Parado"
 
-                df_operador = df_operador.sort_values(
-                    ["sequencia", "prioridade", "inicio"]
-                ).reset_index(drop=True)
+                return status
 
-                # -------------------------
-                # CONTROLE DE COLUNAS
-                # -------------------------
+            df_operador["status_visual"] = df_operador["status_visual_base"].apply(icone_status)
 
-                colunas_base = [
-                    "id",
-                    "produto",
-                    "quantidade",
-                    "operador",
-                    "status",
-                    "desenho",
-                    "status_visual_base",
-                    "quantidade_produzida",
-                    "sequencia"
-                ]
+            # -------------------------
+            # TABELA
+            # -------------------------
 
-                if "sequencia" not in df_operador.columns:
-                    df_operador["sequencia"] = df_operador["id"]
+            df_operador["Quantidade"] = df_operador.apply(
+                lambda row: f"{int(row['quantidade_produzida'])} / {int(row['quantidade'])}"
+                if row["status_original"] == "Parado" and row["quantidade_produzida"] > 0
+                else f"{int(row['quantidade'])}",
+                axis=1
+            )
 
-                colunas_data = [
-                    "inicio",
-                    "fim",
-                    "prazo_limite",
-                ]
+            df_exibicao = df_operador.drop(columns=["desenho", "status"], errors="ignore")
 
-                if "nivel" not in st.session_state:
-                    st.session_state.nivel = None
+            df_exibicao = df_exibicao.rename(columns={
+                "sequencia": "Sequência",
+                "produto": "Produto",
+                "operador": "Operador",
+                "status_visual": "Status",
+                "inicio": "Início",
+                "fim": "Fim",
+                "prazo_limite": "Prazo"
+            })
 
-                if st.session_state.nivel in ["admin", "pcp"]:
-                    df_operador = df_operador[colunas_base + colunas_data]
-                else:
-                    df_operador = df_operador[colunas_base]
+            ordem_colunas = [
+                "Sequência",
+                "Produto",
+                "Quantidade",
+                "Operador",
+                "Status",
+                "Início",
+                "Fim",
+                "Prazo"
+            ]
 
-                if "status_original" not in df_operador.columns:
-                    df_operador["status_original"] = df_operador["status"]
+            df_exibicao = df_exibicao[[col for col in ordem_colunas if col in df_exibicao.columns]]
 
-                if "quantidade_produzida" not in df_operador.columns:
-                    df_operador["quantidade_produzida"] = 0
-
-                # -------------------------
-                # FORMATAR DATAS (SEM reconversão)
-                # -------------------------
-
-                if "inicio" in df_operador.columns:
-                    df_operador["inicio"] = df_operador["inicio"].dt.strftime("%d/%m/%Y")
-
-                if "fim" in df_operador.columns:
-                    df_operador["fim"] = df_operador["fim"].dt.strftime("%d/%m/%Y")
-
-                if "prazo_limite" in df_operador.columns:
-                    df_operador["prazo_limite"] = df_operador["prazo_limite"].dt.strftime("%d/%m/%Y")
-
-                # -------------------------
-                # STATUS COM ÍCONE
-                # -------------------------
-
-                mapa_status = {
-                    "Programado": "🟡 Programado",
-                    "Em produção": "🟢 Em produção",
-                    "Finalizado": "🔵 Finalizado",
-                    "Atrasado": "🔴 Atrasado",
-                    "Parado": "🟠 Parado"
-                }
-
-                df_operador["status_visual"] = df_operador["status_visual_base"].map(mapa_status)
-
-                # -------------------------
-                # TABELA (sem apply pesado)
-                # -------------------------
-
-                df_operador["Quantidade"] = df_operador["quantidade"].astype(int).astype(str)
-
-                mask = (
-                    (df_operador["status_original"] == "Parado") &
-                    (df_operador["quantidade_produzida"] > 0)
-                )
-
-                df_operador.loc[mask, "Quantidade"] = (
-                    df_operador["quantidade_produzida"].astype(int).astype(str)
-                    + " / " +
-                    df_operador["quantidade"].astype(int).astype(str)
-                )
-
-                df_exibicao = df_operador.drop(columns=["desenho", "status"], errors="ignore")
-
-                df_exibicao = df_exibicao.rename(columns={
-                    "sequencia": "Sequência",
-                    "produto": "Produto",
-                    "operador": "Operador",
-                    "status_visual": "Status",
-                    "inicio": "Início",
-                    "fim": "Fim",
-                    "prazo_limite": "Prazo"
-                })
-
-                ordem_colunas = [
-                    "Sequência",
-                    "Produto",
-                    "Quantidade",
-                    "Operador",
-                    "Status",
-                    "Início",
-                    "Fim",
-                    "Prazo"
-                ]
-
-                df_exibicao = df_exibicao[[col for col in ordem_colunas if col in df_exibicao.columns]]
-
-                tabela = st.dataframe(
-                    df_exibicao,
-                    use_container_width=True,
-                    selection_mode="single-row",
-                    on_select="rerun",
-                    hide_index=True
-                )
+            tabela = st.dataframe(
+                df_exibicao,
+                use_container_width=True,
+                selection_mode="single-row",
+                on_select="rerun",
+                hide_index=True
+            )
 
             # -------------------------
             # SELEÇÃO
@@ -748,9 +783,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
                 col1, col2 = st.columns([2,1])
 
-                # -------------------------
                 # IMAGEM
-                # -------------------------
                 with col1:
 
                     imagens = linha.get("desenho")
@@ -763,15 +796,15 @@ if st.session_state.nivel in ["admin", "pcp"]:
                         try:
                             imagens = imagens.decode("utf-8")  # tenta JSON
                         except:
-                            pass  # mantém como bytes
+                            pass  # mantém como bytes (imagem antiga)
 
                     if imagens and imagens != "null":
 
                         lista = []
 
-                        # -------------------------
-                        # 🔥 1. JSON (PADRÃO NOVO)
-                        # -------------------------
+                        # ----------------------------------------
+                        # 🔥 1. JSON (NOVO PADRÃO)
+                        # ----------------------------------------
                         if isinstance(imagens, str):
                             try:
                                 parsed = json.loads(imagens)
@@ -784,14 +817,14 @@ if st.session_state.nivel in ["admin", "pcp"]:
                             except:
                                 lista = []
 
-                        # -------------------------
-                        # 🔥 2. FALLBACK (LEGADO)
-                        # -------------------------
+                        # ----------------------------------------
+                        # 🔥 2. FALLBACK (ANTIGO)
+                        # ----------------------------------------
                         if not lista:
 
                             if isinstance(imagens, str):
 
-                                # múltiplas imagens coladas (bug antigo)
+                                # múltiplas imagens grudadas (bug antigo)
                                 if imagens.count("iVBOR") > 1:
                                     partes = imagens.split("iVBOR")
                                     lista = ["iVBOR" + p for p in partes if p.strip()]
@@ -801,14 +834,14 @@ if st.session_state.nivel in ["admin", "pcp"]:
                             elif isinstance(imagens, (bytes, bytearray)):
                                 lista = [imagens]
 
-                        # -------------------------
+                        # ----------------------------------------
                         # 🔥 LIMPEZA FINAL
-                        # -------------------------
+                        # ----------------------------------------
                         lista = [img for img in lista if img]
 
-                        # -------------------------
+                        # ----------------------------------------
                         # 🔥 EXIBIÇÃO
-                        # -------------------------
+                        # ----------------------------------------
                         if lista:
 
                             for i, img in enumerate(lista):
@@ -832,6 +865,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                         except:
                                             pass
 
+                                    # RESULTADO
                                     if image:
                                         st.image(image, use_container_width=True)
                                     else:
@@ -843,22 +877,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
                     else:
                         st.info("Sem desenho para essa OP")
 
-                # -------------------------
-                # FUNÇÃO CENTRAL DE UPDATE (🔥 reduz carga no Supabase)
-                # -------------------------
-                def executar_update(query, params):
-                    try:
-                        with engine.begin() as conn:
-                            conn.execute(text(query), params)
-                        return True
-                    except Exception as e:
-                        st.error(f"Erro ao atualizar banco: {e}")
-                        return False
-
-
-                # -------------------------
                 # CONTROLE
-                # -------------------------
                 with col2:
 
                     status_op = linha["status"]
@@ -877,31 +896,24 @@ if st.session_state.nivel in ["admin", "pcp"]:
                         if status_op == "Atrasado":
                             status_op = "Em produção"
 
-                        # -------------------------
-                        # INICIAR
-                        # -------------------------
                         if status_op == "Programado":
 
                             if st.button("▶ Iniciar produção", use_container_width=True,
-                                        key=f"iniciar_{linha['id']}"):
+                                         key=f"iniciar_{operador}_{linha['id']}"):
 
-                                if executar_update("""
-                                    UPDATE programacao
-                                    SET status = 'Em produção'
-                                    WHERE id = :id
-                                """, {"id": int(linha["id"])}):
-                                    st.rerun()
+                                with engine.begin() as conn:
+                                    conn.execute(text("""
+                                        UPDATE programacao
+                                        SET status = 'Em produção'
+                                        WHERE id = :id
+                                    """), {"id": int(linha["id"])})
 
-                        # -------------------------
-                        # EM PRODUÇÃO
-                        # -------------------------
+                                st.rerun()
+
                         elif status_op == "Em produção":
 
                             col_pause, col_finish = st.columns(2)
 
-                            # -------------------------
-                            # PAUSAR
-                            # -------------------------
                             with col_pause:
 
                                 if st.button("⏸ Pausar", use_container_width=True,
@@ -927,18 +939,20 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                                     use_container_width=True,
                                                     key=f"confirmar_pausa_{linha['id']}"):
 
-                                            if executar_update("""
-                                                UPDATE programacao
-                                                SET status = 'Parado',
-                                                    quantidade_produzida = :qtd
-                                                WHERE id = :id
-                                            """, {
-                                                "id": int(linha["id"]),
-                                                "qtd": int(qtd_produzida)
-                                            }):
-                                                st.session_state[f"pausando_{linha['id']}"] = False
-                                                st.success("Quantidade salva corretamente")
-                                                st.rerun()
+                                            with engine.begin() as conn:
+                                                conn.execute(text("""
+                                                    UPDATE programacao
+                                                    SET status = 'Parado',
+                                                        quantidade_produzida = :qtd
+                                                    WHERE id = :id
+                                                """), {
+                                                    "id": int(linha["id"]),
+                                                    "qtd": int(qtd_produzida)
+                                                })
+
+                                            st.session_state[f"pausando_{linha['id']}"] = False
+                                            st.success("Quantidade salva corretamente")
+                                            st.rerun()
 
                                     with col_cancel:
                                         if st.button("❌ Cancelar",
@@ -948,73 +962,83 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                             st.session_state[f"pausando_{linha['id']}"] = False
                                             st.rerun()
 
-                            # -------------------------
-                            # FINALIZAR
-                            # -------------------------
                             with col_finish:
                                 if st.button("✔ Finalizar", use_container_width=True,
-                                            key=f"finalizar_{linha['id']}"):
+                                             key=f"finalizar_{linha['id']}"):
 
-                                    if executar_update("""
-                                        UPDATE programacao
-                                        SET status = 'Finalizado',
-                                            data_finalizado = :data
-                                        WHERE id = :id
-                                    """, {
-                                        "id": int(linha["id"]),
-                                        "data": datetime.now()
-                                    }):
-                                        st.rerun()
+                                    with engine.begin() as conn:
+                                        conn.execute(text("""
+                                            UPDATE programacao
+                                            SET status = 'Finalizado',
+                                                data_finalizado = :data
+                                            WHERE id = :id
+                                        """), {
+                                            "id": int(linha["id"]),
+                                            "data": datetime.now()
+                                        })
 
-                        # -------------------------
-                        # PARADO
-                        # -------------------------
+                                    st.rerun()
+
                         elif status_op == "Parado":
 
                             if st.button("▶ Retomar produção", use_container_width=True,
-                                        key=f"retomar_{linha['id']}"):
+                                         key=f"retomar_{linha['id']}"):
 
-                                if executar_update("""
-                                    UPDATE programacao
-                                    SET status = 'Em produção'
-                                    WHERE id = :id
-                                """, {"id": int(linha["id"])}):
-                                    st.rerun()
+                                with engine.begin() as conn:
+                                    conn.execute(text("""
+                                        UPDATE programacao
+                                        SET status = 'Em produção'
+                                        WHERE id = :id
+                                    """), {"id": int(linha["id"])})
 
+                                st.rerun()
+                        
                         # -------------------------
                         # EXCLUIR OP
                         # -------------------------
                         if st.session_state.nivel in ["admin", "pcp"]:
-
-                            if st.button("🗑 Excluir OP",
-                                        use_container_width=True,
-                                        key=f"excluir_{linha['id']}"):
+                            
+                            if st.button(
+                                "🗑 Excluir OP",
+                                use_container_width=True,
+                                key=f"excluir_{linha['id']}"
+                            ):
 
                                 st.session_state[f"confirmar_delete_{linha['id']}"] = True
 
+
                             if st.session_state.get(f"confirmar_delete_{linha['id']}", False):
 
-                                st.warning("⚠️ Tem certeza que deseja excluir esta OP?")
+                                st.warning("⚠️ Tem certeza que deseja excluir esta OP? Esta ação não pode ser desfeita.")
 
                                 col_confirmar, col_cancelar = st.columns(2)
 
                                 with col_confirmar:
-                                    if st.button("✅ Sim, excluir",
-                                                use_container_width=True,
-                                                key=f"confirmar_{linha['id']}"):
+                                    if st.button(
+                                        "✅ Sim, excluir",
+                                        use_container_width=True,
+                                        key=f"confirmar_{linha['id']}"
+                                    ):
 
-                                        if executar_update(
-                                            "DELETE FROM programacao WHERE id = :id",
-                                            {"id": int(linha["id"])}
-                                        ):
-                                            st.success("OP excluída com sucesso")
-                                            st.session_state[f"confirmar_delete_{linha['id']}"] = False
-                                            st.rerun()
+                                        query = "DELETE FROM programacao WHERE id = :id"
+
+                                        with engine.begin() as conn:
+                                            conn.execute(
+                                                text(query),
+                                                {"id": int(linha["id"])}
+                                            )
+
+                                        st.success("OP excluída com sucesso")
+
+                                        st.session_state[f"confirmar_delete_{linha['id']}"] = False
+                                        st.rerun()
 
                                 with col_cancelar:
-                                    if st.button("❌ Cancelar",
-                                                use_container_width=True,
-                                                key=f"cancelar_{linha['id']}"):
+                                    if st.button(
+                                        "❌ Cancelar",
+                                        use_container_width=True,
+                                        key=f"cancelar_{linha['id']}"
+                                    ):
 
                                         st.session_state[f"confirmar_delete_{linha['id']}"] = False
                                         st.rerun()
@@ -1022,22 +1046,27 @@ if st.session_state.nivel in ["admin", "pcp"]:
                         # -------------------------
                         # EDITAR OP
                         # -------------------------
+
                         if st.session_state.nivel in ["admin", "pcp"]:
 
                             with st.expander("✏️ Editar OP"):
+
+                                # -------------------------
+                                # CAMPOS
+                                # -------------------------
 
                                 nova_sequencia = st.number_input(
                                     "Sequência",
                                     min_value=1,
                                     step=1,
                                     value=int(linha.get("sequencia", linha["id"])),
-                                    key=f"seq_{linha['id']}"
+                                    key=f"seq_{operador}_{linha['id']}"
                                 )
 
                                 novo_produto = st.text_input(
                                     "Produto",
                                     value=linha["produto"],
-                                    key=f"produto_{linha['id']}"
+                                    key=f"produto_{operador}_{linha['id']}"
                                 )
 
                                 nova_quantidade = st.number_input(
@@ -1045,28 +1074,28 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                     min_value=1,
                                     step=1,
                                     value=int(linha["quantidade"]),
-                                    key=f"quantidade_{linha['id']}"
+                                    key=f"quantidade_{operador}_{linha['id']}"
                                 )
 
                                 nova_inicio = st.date_input(
                                     "Início",
                                     pd.to_datetime(linha["inicio"], dayfirst=True),
                                     format="DD/MM/YYYY",
-                                    key=f"inicio_{linha['id']}"
+                                    key=f"inicio_{operador}_{linha['id']}"
                                 )
 
                                 novo_fim = st.date_input(
                                     "Fim",
                                     pd.to_datetime(linha["fim"], dayfirst=True),
                                     format="DD/MM/YYYY",
-                                    key=f"fim_{linha['id']}"
+                                    key=f"fim_{operador}_{linha['id']}"
                                 )
 
                                 novo_prazo = st.date_input(
                                     "Prazo limite",
                                     pd.to_datetime(linha["prazo_limite"], dayfirst=True),
                                     format="DD/MM/YYYY",
-                                    key=f"prazo_{linha['id']}"
+                                    key=f"prazo_{operador}_{linha['id']}"
                                 )
 
                                 # -------------------------
@@ -1077,7 +1106,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
                                 imagens = linha.get("desenho")
 
-                                # 🔥 NORMALIZAÇÃO SEGURA
+                                # 🔥 NORMALIZAÇÃO DE TIPOS
                                 if isinstance(imagens, memoryview):
                                     imagens = imagens.tobytes()
 
@@ -1088,7 +1117,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                         pass
 
                                 # -------------------------
-                                # 🔥 EXTRAÇÃO OTIMIZADA
+                                # 🔥 EXTRAÇÃO SEGURA
                                 # -------------------------
 
                                 if imagens and imagens != "null":
@@ -1096,7 +1125,12 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                     if isinstance(imagens, str):
                                         try:
                                             parsed = json.loads(imagens)
-                                            desenhos_existentes = parsed if isinstance(parsed, list) else [parsed]
+
+                                            if isinstance(parsed, list):
+                                                desenhos_existentes = parsed
+                                            else:
+                                                desenhos_existentes = [parsed]
+
                                         except:
                                             desenhos_existentes = []
 
@@ -1119,7 +1153,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
                                         image = None
 
-                                        # 🔥 BASE64 (padrão novo)
+                                        # 🔥 TENTA BASE64
                                         if isinstance(img_base64, str):
                                             try:
                                                 image_bytes = base64.b64decode(img_base64)
@@ -1127,17 +1161,18 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                             except:
                                                 image = None
 
-                                        # 🔥 BYTES (legado)
+                                        # 🔥 TENTA BYTES (LEGADO)
                                         elif isinstance(img_base64, (bytes, bytearray)):
                                             try:
                                                 image = Image.open(io.BytesIO(img_base64)).convert("RGB")
                                             except:
                                                 image = None
 
+                                        # 🔥 RESULTADO FINAL
                                         if image:
                                             st.image(image, use_container_width=True)
                                         else:
-                                            st.warning(f"Imagem {i+1} inválida")
+                                            st.warning(f"Imagem {i+1} inválida ou corrompida")
 
                                     with col2:
                                         remover = st.checkbox(
@@ -1177,7 +1212,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
                                             file_bytes = arquivo.read()
 
-                                            # 🔥 PDF → converte páginas
+                                            # PDF → imagens
                                             if arquivo.type == "application/pdf":
                                                 try:
                                                     pdf = fitz.open(stream=file_bytes, filetype="pdf")
@@ -1193,6 +1228,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                                 except:
                                                     st.warning(f"Erro ao converter PDF: {arquivo.name}")
 
+                                            # imagem normal
                                             else:
                                                 try:
                                                     image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
@@ -1211,65 +1247,62 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                     # 🔥 CONTROLE INTELIGENTE
                                     # -------------------------
 
-                                    houve_alteracao = (
-                                        len(desenhos_restantes) != len(desenhos_existentes)
-                                        or len(novas_imagens) > 0
-                                    )
+                                    houve_alteracao = False
+
+                                    # removeu algo?
+                                    if len(desenhos_restantes) != len(desenhos_existentes):
+                                        houve_alteracao = True
+
+                                    # adicionou algo?
+                                    if novas_imagens:
+                                        houve_alteracao = True
 
                                     if houve_alteracao:
                                         imagens_finais = desenhos_restantes + novas_imagens
                                         imagens_json = json.dumps(imagens_finais) if imagens_finais else None
                                     else:
-                                        imagens_json = linha.get("desenho")
+                                        imagens_json = linha["desenho"]  # 🔥 mantém original
 
                                     # -------------------------
-                                    # 🔥 UPDATE (MAIS LEVE)
+                                    # UPDATE
                                     # -------------------------
 
-                                    try:
-                                        with engine.begin() as conn:
-                                            conn.execute(
-                                                text("""
-                                                    UPDATE programacao
-                                                    SET produto = :produto,
-                                                        quantidade = :quantidade,
-                                                        inicio = :inicio,
-                                                        fim = :fim,
-                                                        prazo_limite = :prazo,
-                                                        sequencia = :sequencia,
-                                                        desenho = :desenho
-                                                    WHERE id = :id
-                                                """),
-                                                {
-                                                    "produto": novo_produto,
-                                                    "quantidade": nova_quantidade,
-                                                    "inicio": nova_inicio,
-                                                    "fim": novo_fim,
-                                                    "prazo": novo_prazo,
-                                                    "sequencia": nova_sequencia,
-                                                    "desenho": imagens_json,
-                                                    "id": int(linha["id"])
-                                                }
-                                            )
+                                    query = """
+                                    UPDATE programacao
+                                    SET produto = :produto,
+                                        quantidade = :quantidade,
+                                        inicio = :inicio,
+                                        fim = :fim,
+                                        prazo_limite = :prazo,
+                                        sequencia = :sequencia,
+                                        desenho = :desenho
+                                    WHERE id = :id
+                                    """
 
-                                        st.success("OP atualizada com sucesso")
+                                    with engine.begin() as conn:
+                                        conn.execute(
+                                            text(query),
+                                            {
+                                                "produto": novo_produto,
+                                                "quantidade": nova_quantidade,
+                                                "inicio": nova_inicio,
+                                                "fim": novo_fim,
+                                                "prazo": novo_prazo,
+                                                "sequencia": nova_sequencia,
+                                                "desenho": imagens_json,
+                                                "id": int(linha["id"])
+                                            }
+                                        )
 
-                                    except Exception as e:
-                                        st.error("Erro ao salvar alterações")
-                                        st.exception(e)
-
+                                    st.success("OP atualizada com sucesso")
                                     st.rerun()
+                        
 
-                                # -------------------------------------------------
-                                # FILTRAR APENAS PRODUÇÃO ATIVA
-                                # -------------------------------------------------
+# -------------------------------------------------
+# FILTRAR APENAS PRODUÇÃO ATIVA
+# -------------------------------------------------
 
-                                # 🔥 CORREÇÃO DEFINITIVA DO SEU ERRO
-                                if "df_filtrado" in locals() and not df_filtrado.empty:
-                                    df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"]
-                                else:
-                                    df_producao = pd.DataFrame()
-
+df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"]
 
 
 # -------------------------------------------------
@@ -1277,17 +1310,24 @@ if st.session_state.nivel in ["admin", "pcp"]:
 # -------------------------------------------------
 
 st.divider()
+
 st.subheader("📋 Kanban de produção")
 
 if st.session_state.nivel == "operador":
     operadores = [st.session_state.usuario]
 else:
-    operadores = df_producao["operador"].dropna().unique() if not df_producao.empty else []
+    operadores = df_producao["operador"].unique()
 
 if len(operadores) > 0:
     cols = st.columns(len(operadores))
 else:
     st.info("Nenhuma OP em produção")
+
+status_cores = {
+    "Programado": "🟡",
+    "Em produção": "🟢",
+    "Parado": "🟠"
+}
 
 for i, operador in enumerate(operadores):
 
@@ -1295,69 +1335,69 @@ for i, operador in enumerate(operadores):
 
         df_op = df_producao[df_producao["operador"] == operador].copy()
 
-        if df_op.empty:
-            st.caption("Sem OPs")
-            continue
-
         hoje = pd.Timestamp.today().normalize()
 
-        # 🔥 VETORIZADO (muito mais leve que apply)
-        prazo = pd.to_datetime(df_op["prazo_limite"], errors="coerce").dt.normalize()
+        # detectar atrasos
+        df_op["atrasado"] = (
+            (pd.to_datetime(df_op["prazo_limite"], errors="coerce").dt.normalize() < hoje) &
+            (df_op["status"] != "Finalizado")
+        )
 
-        df_op["atrasado"] = (prazo < hoje) & (df_op["status"] != "Finalizado")
+        # prioridade de exibição
+        def prioridade(row):
 
-        # 🔥 PRIORIDADE OTIMIZADA
-        df_op["prioridade"] = 3
-        df_op.loc[df_op["status"] == "Parado", "prioridade"] = 2
-        df_op.loc[df_op["status"] == "Em produção", "prioridade"] = 1
-        df_op.loc[df_op["atrasado"], "prioridade"] = 0
+            if row["atrasado"]:
+                return 0
+            if row["status"] == "Em produção":
+                return 1
+            if row["status"] == "Parado":
+                return 2
+            return 3
 
+        df_op["prioridade"] = df_op.apply(prioridade, axis=1)
+
+        # ordenar
         df_op = df_op.sort_values(["prioridade", "inicio"])
 
+        # Caixa principal do operador
         with st.container(border=True):
 
             st.markdown(f"### ⚙ {operador}")
             st.caption(f"{len(df_op)} OP(s) programadas")
-
-            try:
-                st.caption(f"📦 {int(df_op['quantidade'].fillna(0).sum())} peças totais")
-            except:
-                st.caption("📦 -")
+            st.caption(f"📦 {int(df_op['quantidade'].sum())} peças totais")
 
             st.divider()
 
             for _, row in df_op.iterrows():
 
+                inicio = pd.to_datetime(row["inicio"]).strftime("%d/%m")
+                fim = pd.to_datetime(row["fim"]).strftime("%d/%m")
+
                 with st.container(border=True):
 
-                    st.write(f"**{row.get('produto', '-')}**")
+                    st.write(f"**{row['produto']}**")
 
-                    try:
-                        st.write(f"📦 Quantidade: {int(row.get('quantidade', 0))}")
-                    except:
-                        st.write("📦 Quantidade: -")
+                    st.write(f"📦 Quantidade: {int(row['quantidade'])}")
 
                     if st.session_state.nivel in ["admin", "pcp"]:
-                        try:
-                            inicio = pd.to_datetime(row["inicio"]).strftime("%d/%m")
-                            fim = pd.to_datetime(row["fim"]).strftime("%d/%m")
-                            st.caption(f"{inicio} → {fim}")
-                        except:
-                            pass
+                        st.caption(f"{inicio} → {fim}")
 
-                    # STATUS
+                    # STATUS VISUAL
                     if row["atrasado"]:
                         st.error("🔴 ATRASADO")
+
                     elif row["status"] == "Em produção":
                         st.success("🟢 Em produção")
+
                     elif row["status"] == "Parado":
                         st.warning("🟠 Parado")
+
                     else:
                         st.write("🟡 Programado")
 
 
 # -------------------------------------------------
-# MINI GANTT (OTIMIZADO)
+# MINI GANTT (VISUAL MELHORADO)
 # -------------------------------------------------
 
 st.divider()
@@ -1371,14 +1411,24 @@ if st.session_state.nivel in ["admin", "pcp"]:
     else:
         df_gantt = df_producao.copy()
 
-        # 🔥 CONVERSÕES SEGURAS
-        df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"], errors="coerce")
-        df_gantt["fim"] = pd.to_datetime(df_gantt["fim"], errors="coerce")
-        df_gantt["quantidade"] = pd.to_numeric(df_gantt["quantidade"], errors="coerce").fillna(0)
+        df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"])
+        df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
+        df_gantt["quantidade"] = df_gantt["quantidade"].astype(int)
 
-        # 🔥 AJUSTE PARA 1 DIA
+        # -------------------------------------------------
+        # CORREÇÃO PARA OP DE 1 DIA NÃO VIRAR TRACINHO
+        # -------------------------------------------------
+
         df_gantt["fim_plot"] = df_gantt["fim"]
-        df_gantt.loc[df_gantt["inicio"] == df_gantt["fim"], "fim_plot"] += pd.Timedelta(days=1)
+
+        df_gantt.loc[
+            df_gantt["inicio"] == df_gantt["fim"],
+            "fim_plot"
+        ] = df_gantt["fim"] + pd.Timedelta(days=1)
+
+        # -------------------------------------------------
+        # DETECTAR ATRASO
+        # -------------------------------------------------
 
         hoje = pd.Timestamp.today().normalize()
 
@@ -1387,6 +1437,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
             (df_gantt["status"] != "Finalizado")
         )
 
+        # status visual
         df_gantt["status_visual"] = df_gantt["status"]
         df_gantt.loc[df_gantt["atrasado"], "status_visual"] = "Atrasado"
 
@@ -1400,40 +1451,80 @@ if st.session_state.nivel in ["admin", "pcp"]:
         fig = px.timeline(
             df_gantt,
             x_start="inicio",
-            x_end="fim_plot",
+            x_end="fim_plot",   # 👈 usamos a nova coluna
             y="operador",
             color="status_visual",
             color_discrete_map=cores_status,
-            text=df_gantt["produto"].astype(str) + " • " + df_gantt["quantidade"].astype(int).astype(str)
+            text=df_gantt["produto"] + " • " + df_gantt["quantidade"].astype(str)
         )
 
         fig.update_traces(
             textposition="inside",
             insidetextanchor="middle",
-            textfont=dict(size=12),
-            width=0.4
+            textfont=dict(
+                color="black",
+                size=13,
+                family="Arial Black"
+            ),
+            width=0.4,
+            marker=dict(
+                line=dict(
+                    color="white",
+                    width=2
+                )
+            )
         )
 
         fig.update_layout(
             height=380,
-            margin=dict(l=10, r=10, t=10, b=10),
+            showlegend=True,
+            margin=dict(l=20, r=20, t=20, b=20),
             xaxis_title="Data",
-            yaxis_title="Operador"
+            yaxis_title="Operador",
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)"
         )
 
-        # 🔥 LINHA HOJE
+        fig.update_xaxes(
+            tickfont=dict(size=12)
+        )
+
+        fig.update_xaxes(
+            showgrid=True,
+            gridcolor="rgba(200,200,200,0.2)",
+            dtick="D1",
+            tickformat="%d/%m",
+            ticklabelmode="period"
+        )
+
+        fig.update_yaxes(showgrid=False)
+
+        # -------------------------------------------------
+        # LINHA DE HOJE
+        # -------------------------------------------------
+
+        hoje = pd.Timestamp.today().normalize()
+
         fig.add_vline(
             x=hoje,
-            line_width=2,
+            line_width=3,
             line_dash="dash",
             line_color="red"
         )
 
+        fig.add_annotation(
+            x=hoje,
+            y=1.02,
+            yref="paper",
+            text="HOJE",
+            showarrow=False,
+            font=dict(size=12, color="red")
+        )
+
         st.plotly_chart(fig, use_container_width=True)
 
-
 # -------------------------------------------------
-# HISTÓRICO (OTIMIZADO)
+# HISTÓRICO
 # -------------------------------------------------
 
 st.divider()
@@ -1443,12 +1534,22 @@ if not df_finalizados.empty:
 
     df_hist = df_finalizados.copy()
 
+    # -------------------------
+    # FORMATAÇÃO DE DATAS
+    # -------------------------
+
     df_hist["data_finalizado"] = pd.to_datetime(df_hist["data_finalizado"], errors="coerce")
 
     df_hist = df_hist.sort_values("data_finalizado", ascending=False)
 
-    for col in ["inicio", "fim", "prazo_limite", "data_finalizado"]:
-        df_hist[col] = pd.to_datetime(df_hist[col], errors="coerce").dt.strftime("%d/%m/%Y")
+    df_hist["inicio"] = pd.to_datetime(df_hist["inicio"], errors="coerce").dt.strftime("%d/%m/%Y")
+    df_hist["fim"] = pd.to_datetime(df_hist["fim"], errors="coerce").dt.strftime("%d/%m/%Y")
+    df_hist["prazo_limite"] = pd.to_datetime(df_hist["prazo_limite"], errors="coerce").dt.strftime("%d/%m/%Y")
+    df_hist["data_finalizado"] = df_hist["data_finalizado"].dt.strftime("%d/%m/%Y")
+
+    # -------------------------
+    # RENOMEAR COLUNAS
+    # -------------------------
 
     df_hist = df_hist.rename(columns={
         "produto": "Produto",
@@ -1460,13 +1561,30 @@ if not df_finalizados.empty:
         "data_finalizado": "Finalizado em"
     })
 
+    # -------------------------
+    # ORDENAR PELO MAIS RECENTE
+    # -------------------------
+
+    # -------------------------
+    # MOSTRAR TABELA
+    # -------------------------
+
     st.dataframe(
         df_hist[
-            ["Produto", "Quantidade", "Operador", "Início", "Fim", "Prazo limite", "Finalizado em"]
+            [
+                "Produto",
+                "Quantidade",
+                "Operador",
+                "Início",
+                "Fim",
+                "Prazo limite",
+                "Finalizado em"
+            ]
         ],
         use_container_width=True,
         hide_index=True
     )
 
 else:
+
     st.info("Nenhuma programação finalizada ainda")
