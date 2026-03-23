@@ -1085,7 +1085,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                         pass
 
                                 # -------------------------
-                                # 🔥 EXTRAÇÃO SEGURA
+                                # EXTRAÇÃO SEGURA
                                 # -------------------------
 
                                 if imagens and imagens != "null":
@@ -1121,7 +1121,6 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
                                         image = None
 
-                                        # 🔥 TENTA BASE64
                                         if isinstance(img_base64, str):
                                             try:
                                                 image_bytes = base64.b64decode(img_base64)
@@ -1129,14 +1128,12 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                             except:
                                                 image = None
 
-                                        # 🔥 TENTA BYTES (LEGADO)
                                         elif isinstance(img_base64, (bytes, bytearray)):
                                             try:
                                                 image = Image.open(io.BytesIO(img_base64)).convert("RGB")
                                             except:
                                                 image = None
 
-                                        # 🔥 RESULTADO FINAL
                                         if image:
                                             st.image(image, use_container_width=True)
                                         else:
@@ -1169,20 +1166,22 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                 if st.button(
                                     "💾 Salvar alterações",
                                     use_container_width=True,
-                                    key=f"salvar_op_{operador}_{linha['id']}"
+                                    key=f"salvar_op_{linha['id']}"
                                 ):
 
                                     novas_imagens = []
 
+                                    # 🔥 PROCESSA APENAS SE EXISTIR ARQUIVO
                                     if novos_arquivos:
 
                                         for arquivo in novos_arquivos:
 
-                                            file_bytes = arquivo.read()
+                                            try:
+                                                file_bytes = arquivo.read()
 
-                                            # PDF → imagens
-                                            if arquivo.type == "application/pdf":
-                                                try:
+                                                # PDF → imagens
+                                                if arquivo.type == "application/pdf":
+
                                                     pdf = fitz.open(stream=file_bytes, filetype="pdf")
 
                                                     for pagina in pdf:
@@ -1193,12 +1192,9 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                                             base64.b64encode(img_bytes).decode()
                                                         )
 
-                                                except:
-                                                    st.warning(f"Erro ao converter PDF: {arquivo.name}")
+                                                # imagem normal
+                                                else:
 
-                                            # imagem normal
-                                            else:
-                                                try:
                                                     image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
 
                                                     buffer = io.BytesIO()
@@ -1208,20 +1204,18 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                                         base64.b64encode(buffer.getvalue()).decode()
                                                     )
 
-                                                except:
-                                                    st.warning(f"Imagem inválida: {arquivo.name}")
+                                            except:
+                                                st.warning(f"Erro ao processar arquivo: {arquivo.name}")
 
                                     # -------------------------
-                                    # 🔥 CONTROLE INTELIGENTE
+                                    # CONTROLE INTELIGENTE
                                     # -------------------------
 
                                     houve_alteracao = False
 
-                                    # removeu algo?
                                     if len(desenhos_restantes) != len(desenhos_existentes):
                                         houve_alteracao = True
 
-                                    # adicionou algo?
                                     if novas_imagens:
                                         houve_alteracao = True
 
@@ -1229,48 +1223,51 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                         imagens_finais = desenhos_restantes + novas_imagens
                                         imagens_json = json.dumps(imagens_finais) if imagens_finais else None
                                     else:
-                                        imagens_json = linha["desenho"]  # 🔥 mantém original
+                                        imagens_json = linha["desenho"]
 
-                                    # -------------------------
-                                    # UPDATE
-                                    # -------------------------
+                                    # 🔥 SÓ ATUALIZA SE PRECISAR
+                                    if houve_alteracao or (
+                                        novo_produto != linha["produto"] or
+                                        int(nova_quantidade) != int(linha["quantidade"]) or
+                                        nova_inicio != pd.to_datetime(linha["inicio"]).date() or
+                                        novo_fim != pd.to_datetime(linha["fim"]).date() or
+                                        novo_prazo != pd.to_datetime(linha["prazo_limite"]).date() or
+                                        int(nova_sequencia) != int(linha.get("sequencia", linha["id"]))
+                                    ):
 
-                                    query = """
-                                    UPDATE programacao
-                                    SET produto = :produto,
-                                        quantidade = :quantidade,
-                                        inicio = :inicio,
-                                        fim = :fim,
-                                        prazo_limite = :prazo,
-                                        sequencia = :sequencia,
-                                        desenho = :desenho
-                                    WHERE id = :id
-                                    """
+                                        sucesso = executar_update("""
+                                            UPDATE programacao
+                                            SET produto = :produto,
+                                                quantidade = :quantidade,
+                                                inicio = :inicio,
+                                                fim = :fim,
+                                                prazo_limite = :prazo,
+                                                sequencia = :sequencia,
+                                                desenho = :desenho
+                                            WHERE id = :id
+                                        """, {
+                                            "produto": novo_produto,
+                                            "quantidade": int(nova_quantidade),
+                                            "inicio": nova_inicio,
+                                            "fim": novo_fim,
+                                            "prazo": novo_prazo,
+                                            "sequencia": int(nova_sequencia),
+                                            "desenho": imagens_json,
+                                            "id": int(linha["id"])
+                                        })
 
-                                    with engine.begin() as conn:
-                                        conn.execute(
-                                            text(query),
-                                            {
-                                                "produto": novo_produto,
-                                                "quantidade": nova_quantidade,
-                                                "inicio": nova_inicio,
-                                                "fim": novo_fim,
-                                                "prazo": novo_prazo,
-                                                "sequencia": nova_sequencia,
-                                                "desenho": imagens_json,
-                                                "id": int(linha["id"])
-                                            }
-                                        )
+                                        if sucesso:
+                                            st.success("OP atualizada com sucesso")
+                                            st.rerun()
 
-                                    st.success("OP atualizada com sucesso")
-                                    st.rerun()
-                        
+                                    else:
+                                        st.info("Nenhuma alteração detectada")
 
-# -------------------------------------------------
-# FILTRAR APENAS PRODUÇÃO ATIVA
-# -------------------------------------------------
+                                # -------------------------------------------------
+                                # FILTRAR APENAS PRODUÇÃO ATIVA
+                                # -------------------------------------------------
 
-df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"]
+                                df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"]
 
 
 # -------------------------------------------------
