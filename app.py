@@ -1283,6 +1283,18 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                     df_producao = pd.DataFrame()
 
 # -------------------------------------------------
+# GARANTIR DF PRODUÇÃO (ANTI-ERRO OPERADOR)
+# -------------------------------------------------
+
+if "df_filtrado" not in locals() or df_filtrado is None:
+    df_filtrado = df.copy()
+
+df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"].copy()
+
+if df_producao.empty:
+    df_producao = pd.DataFrame(columns=df.columns)
+
+# -------------------------------------------------
 # KANBAN DE PRODUÇÃO (VISUAL MELHORADO)
 # -------------------------------------------------
 
