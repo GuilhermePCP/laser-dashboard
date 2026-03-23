@@ -787,32 +787,39 @@ if not df_tabela.empty:
             df_exibicao = df_exibicao[[col for col in ordem_colunas if col in df_exibicao.columns]]
 
             # -------------------------
-            # TABELA (MESMO VISUAL, SEM EDIÇÃO)
+            # TABELA ORIGINAL
             # -------------------------
 
-            tabela = st.data_editor(
+            st.dataframe(
                 df_exibicao,
                 use_container_width=True,
-                hide_index=True,
-                disabled=True,  # 🔥 trava edição (igual dataframe)
-                key=f"editor_{operador}"
+                hide_index=True
             )
 
             # -------------------------
-            # SELEÇÃO REAL (CORRIGIDA)
+            # CLIQUE NA LINHA (PADRÃO ANTIGO)
             # -------------------------
 
-            state = st.session_state.get(f"editor_{operador}", {})
+            if "linha_selecionada" not in st.session_state:
+                st.session_state.linha_selecionada = None
 
-            if (
-                isinstance(state, dict)
-                and "selection" in state
-                and state["selection"]
-                and "rows" in state["selection"]
-                and len(state["selection"]["rows"]) > 0
-            ):
+            # cria botões invisíveis por linha (hack que você usava sem perceber)
+            for i, row in df_exibicao.iterrows():
 
-                index = state["selection"]["rows"][0]
+                if st.button(
+                    " ",
+                    key=f"select_{operador}_{i}",
+                    help=f"Abrir {row['Produto']}"
+                ):
+                    st.session_state.linha_selecionada = i
+
+            # -------------------------
+            # EXIBE DETALHES
+            # -------------------------
+
+            if st.session_state.linha_selecionada is not None:
+
+                index = st.session_state.linha_selecionada
 
                 if index < len(df_operador):
 
