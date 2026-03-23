@@ -1,19 +1,9 @@
 import sys
 import os
 
-# -------------------------------------------------
-# GARANTIR CAMINHO DA PASTA SRC (FUNCIONA LOCAL E CLOUD)
-# -------------------------------------------------
-
+# 🔥 CAMINHO CORRETO PARA src
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SRC_PATH = os.path.join(BASE_DIR, "src")
-
-if SRC_PATH not in sys.path:
-    sys.path.append(SRC_PATH)
-
-# -------------------------------------------------
-# IMPORTS PRINCIPAIS
-# -------------------------------------------------
+sys.path.append(os.path.join(BASE_DIR, "src"))
 
 import streamlit as st
 import pandas as pd
@@ -21,50 +11,29 @@ import base64
 import json
 from datetime import datetime
 from PIL import Image
-import io
-import re
-import unicodedata
 
-# -------------------------------------------------
-# IMPORTS DO PROJETO (AGORA 100% SEGURO)
-# -------------------------------------------------
-
-try:
-    from analytics import calcular_metricas, filtrar_dados
-    #from visuals import grafico_gantt
-    from database import (
-        criar_tabela,
-        carregar_dados,
-        salvar_programacao,
-        carregar_operadores,
-        adicionar_operador,
-        remover_operador,
-        finalizar_programacao,
-        engine
-    )
-except ImportError:
-    # fallback (caso rode fora do padrão esperado)
-    from src.analytics import calcular_metricas, filtrar_dados
-    #from src.visuals import grafico_gantt
-    from src.database import (
-        criar_tabela,
-        carregar_dados,
-        salvar_programacao,
-        carregar_operadores,
-        adicionar_operador,
-        remover_operador,
-        finalizar_programacao,
-        engine
-    )
-
-# -------------------------------------------------
-# OUTROS
-# -------------------------------------------------
+# 🔥 IMPORTS SEM "src." (CORRETO COM ESSE PATH)
+from analytics import calcular_metricas, filtrar_dados
+from visuals import grafico_gantt
+from database import (
+    criar_tabela,
+    carregar_dados,
+    salvar_programacao,
+    carregar_operadores,
+    adicionar_operador,
+    remover_operador,
+    finalizar_programacao,
+    engine
+)
 
 from sqlalchemy import text
 import fitz
+import io
 import plotly.express as px
+import re
+import unicodedata
 from streamlit_cookies_manager import EncryptedCookieManager
+from streamlit_autorefresh import st_autorefresh
 
 
 def normalizar_texto(texto):
@@ -204,19 +173,7 @@ if not st.session_state.logado:
 
 # ❌ REMOVIDO AUTOREFRESH PESADO
 # st_autorefresh(interval=300000, key="auto_refresh")
-# -------------------------------------------------
-# ATUALIZAÇÃO MANUAL (ANTI-SUPABASE OVERLOAD)
-# -------------------------------------------------
 
-col_refresh, col_auto = st.columns([1,1])
-
-with col_refresh:
-    if st.button("🔄 Atualizar dados", use_container_width=True):
-        st.cache_data.clear()  # 🔥 limpa cache
-        st.rerun()
-
-with col_auto:
-    auto = st.toggle("Auto atualizar (leve)", value=False)
 
 # -------------------------------------------------
 # CRIAR TABELA
@@ -249,50 +206,6 @@ def carregar():
 
 
 df = carregar()
-
-# -------------------------------------------------
-# BASE DE DADOS GLOBAL (ANTI-ERRO DEFINITIVO)
-# -------------------------------------------------
-
-# fallback de segurança
-if df is None or df.empty:
-    df = pd.DataFrame(columns=[
-        "id", "produto", "quantidade", "operador",
-        "status", "inicio", "fim", "prazo_limite",
-        "data_finalizado", "sequencia", "desenho",
-        "quantidade_produzida"
-    ])
-
-# filtros padrão (caso ainda não existam)
-if "maquina" not in locals():
-    maquina = "Todas"
-
-if "status" not in locals():
-    status = "Todos"
-
-# aplica filtro SEMPRE
-df_filtrado = filtrar_dados(df, maquina, status)
-
-# operador vê só o dele
-if st.session_state.nivel == "operador":
-    df_filtrado = df_filtrado[
-        df_filtrado["operador"].apply(normalizar_texto)
-        == normalizar_texto(st.session_state.usuario)
-    ]
-
-if df_filtrado.empty and st.session_state.nivel == "operador":
-    st.warning("Nenhuma OP encontrada para este operador.")
-
-# separações padrão (SEMPRE EXISTEM)
-df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"].copy()
-df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"].copy()
-
-# segurança extra (evita crash em qualquer tela)
-if df_producao is None:
-    df_producao = pd.DataFrame(columns=df.columns)
-
-if df_finalizados is None:
-    df_finalizados = pd.DataFrame(columns=df.columns)
 
 # -------------------------------------------------
 # KPIs
@@ -617,6 +530,17 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
     df_filtrado = filtrar_dados(df, maquina, status)
 
+    # 🔥 OTIMIZAÇÃO (sem apply)
+    if st.session_state.nivel == "operador":
+
+        usuario_norm = normalizar_texto(st.session_state.usuario)
+
+        df_filtrado["operador_norm"] = df_filtrado["operador"].astype(str).str.lower()
+
+        df_filtrado = df_filtrado[
+            df_filtrado["operador_norm"] == usuario_norm
+        ]
+
     df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
     df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
 
@@ -649,11 +573,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
             with abas[i]:
 
-                usuario_norm = normalizar_texto(operador)
-
-                df_operador = df_tabela[
-                    df_tabela["operador"].apply(normalizar_texto) == usuario_norm
-                ].copy()
+                df_operador = df_tabela[df_tabela["operador"] == operador].copy()
 
                 hoje = pd.Timestamp.today().normalize()
 
@@ -729,7 +649,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
                 if "nivel" not in st.session_state:
                     st.session_state.nivel = None
 
-                if st.session_state.nivel in ["admin", "pcp", "operador"]:
+                if st.session_state.nivel in ["admin", "pcp"]:
                     df_operador = df_operador[colunas_base + colunas_data]
                 else:
                     df_operador = df_operador[colunas_base]
@@ -812,16 +732,18 @@ if st.session_state.nivel in ["admin", "pcp"]:
                 tabela = st.dataframe(
                     df_exibicao,
                     use_container_width=True,
+                    selection_mode="single-row",
+                    on_select="rerun",
                     hide_index=True
                 )
 
-                selecionado = tabela.selection.rows if hasattr(tabela, "selection") else []
+            # -------------------------
+            # SELEÇÃO
+            # -------------------------
 
-                if not selecionado:
-                    st.info("Selecione uma OP na tabela para ver os detalhes")
-                    continue  # 🔥 ESSENCIAL (evita quebrar o loop)
+            if tabela["selection"]["rows"]:
 
-                index = selecionado[0]
+                index = tabela["selection"]["rows"][0]
                 linha = df_operador.iloc[index]
 
                 col1, col2 = st.columns([2,1])
@@ -1348,17 +1270,7 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                 else:
                                     df_producao = pd.DataFrame()
 
-# -------------------------------------------------
-# GARANTIR DF PRODUÇÃO (ANTI-ERRO OPERADOR)
-# -------------------------------------------------
 
-if "df_filtrado" not in locals() or df_filtrado is None:
-    df_filtrado = df.copy()
-
-df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"].copy()
-
-if df_producao.empty:
-    df_producao = pd.DataFrame(columns=df.columns)
 
 # -------------------------------------------------
 # KANBAN DE PRODUÇÃO (VISUAL MELHORADO)
