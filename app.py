@@ -1,9 +1,19 @@
 import sys
 import os
 
-# 🔥 CAMINHO CORRETO PARA src
+# -------------------------------------------------
+# GARANTIR CAMINHO DA PASTA SRC (FUNCIONA LOCAL E CLOUD)
+# -------------------------------------------------
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(BASE_DIR, "src"))
+SRC_PATH = os.path.join(BASE_DIR, "src")
+
+if SRC_PATH not in sys.path:
+    sys.path.append(SRC_PATH)
+
+# -------------------------------------------------
+# IMPORTS PRINCIPAIS
+# -------------------------------------------------
 
 import streamlit as st
 import pandas as pd
@@ -11,29 +21,50 @@ import base64
 import json
 from datetime import datetime
 from PIL import Image
+import io
+import re
+import unicodedata
 
-# 🔥 IMPORTS SEM "src." (CORRETO COM ESSE PATH)
-from analytics import calcular_metricas, filtrar_dados
-from visuals import grafico_gantt
-from database import (
-    criar_tabela,
-    carregar_dados,
-    salvar_programacao,
-    carregar_operadores,
-    adicionar_operador,
-    remover_operador,
-    finalizar_programacao,
-    engine
-)
+# -------------------------------------------------
+# IMPORTS DO PROJETO (AGORA 100% SEGURO)
+# -------------------------------------------------
+
+try:
+    from analytics import calcular_metricas, filtrar_dados
+    from visuals import grafico_gantt
+    from database import (
+        criar_tabela,
+        carregar_dados,
+        salvar_programacao,
+        carregar_operadores,
+        adicionar_operador,
+        remover_operador,
+        finalizar_programacao,
+        engine
+    )
+except ImportError:
+    # fallback (caso rode fora do padrão esperado)
+    from src.analytics import calcular_metricas, filtrar_dados
+    from src.visuals import grafico_gantt
+    from src.database import (
+        criar_tabela,
+        carregar_dados,
+        salvar_programacao,
+        carregar_operadores,
+        adicionar_operador,
+        remover_operador,
+        finalizar_programacao,
+        engine
+    )
+
+# -------------------------------------------------
+# OUTROS
+# -------------------------------------------------
 
 from sqlalchemy import text
 import fitz
-import io
 import plotly.express as px
-import re
-import unicodedata
 from streamlit_cookies_manager import EncryptedCookieManager
-from streamlit_autorefresh import st_autorefresh
 
 
 def normalizar_texto(texto):
