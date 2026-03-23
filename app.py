@@ -787,36 +787,38 @@ if not df_tabela.empty:
             df_exibicao = df_exibicao[[col for col in ordem_colunas if col in df_exibicao.columns]]
 
             # -------------------------
-            # TABELA (ESTILO ORIGINAL)
+            # TABELA (MESMO VISUAL, SEM EDIÇÃO)
             # -------------------------
 
-            st.dataframe(
+            tabela = st.data_editor(
                 df_exibicao,
                 use_container_width=True,
-                hide_index=True
+                hide_index=True,
+                disabled=True,  # 🔥 trava edição (igual dataframe)
+                key=f"editor_{operador}"
             )
 
             # -------------------------
-            # SELETOR DE OP (SUBSTITUI CLIQUE)
+            # SELEÇÃO REAL (CORRIGIDA)
             # -------------------------
 
-            op_labels = [
-                f"{row['Produto']} • Seq {row['Sequência']}"
-                for _, row in df_exibicao.iterrows()
-            ]
+            state = st.session_state.get(f"editor_{operador}", {})
 
-            if op_labels:
+            if (
+                isinstance(state, dict)
+                and "selection" in state
+                and state["selection"]
+                and "rows" in state["selection"]
+                and len(state["selection"]["rows"]) > 0
+            ):
 
-                op_escolhida = st.selectbox(
-                    "Selecione uma OP para ver detalhes",
-                    options=op_labels,
-                    key=f"select_op_{operador}"
-                )
+                index = state["selection"]["rows"][0]
 
-                index = op_labels.index(op_escolhida)
-                linha = df_operador.iloc[index]
+                if index < len(df_operador):
 
-                col1, col2 = st.columns([2,1])
+                    linha = df_operador.iloc[index]
+
+                    col1, col2 = st.columns([2,1])
 
             # -------------------------
             # SELEÇÃO
