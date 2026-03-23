@@ -544,6 +544,9 @@ if st.session_state.nivel in ["admin", "pcp"]:
     df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
     df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
 
+    # 🔥 CORREÇÃO GLOBAL (ESSENCIAL)
+    df_producao = df_ativos.copy() if not df_ativos.empty else pd.DataFrame()
+
     # -------------------------------------------------
     # TABELA DE FABRICAÇÃO
     # -------------------------------------------------
