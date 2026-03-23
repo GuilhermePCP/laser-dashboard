@@ -280,6 +280,9 @@ if st.session_state.nivel == "operador":
         == normalizar_texto(st.session_state.usuario)
     ]
 
+if df_filtrado.empty and st.session_state.nivel == "operador":
+    st.warning("Nenhuma OP encontrada para este operador.")
+
 # separações padrão (SEMPRE EXISTEM)
 df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"].copy()
 df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"].copy()
@@ -613,17 +616,6 @@ if st.session_state.nivel in ["admin", "pcp"]:
     # -------------------------------------------------
 
     df_filtrado = filtrar_dados(df, maquina, status)
-
-    # 🔥 OTIMIZAÇÃO (sem apply)
-    if st.session_state.nivel == "operador":
-
-        usuario_norm = normalizar_texto(st.session_state.usuario)
-
-        df_filtrado["operador_norm"] = df_filtrado["operador"].astype(str).str.lower()
-
-        df_filtrado = df_filtrado[
-            df_filtrado["operador_norm"] == usuario_norm
-        ]
 
     df_ativos = df_filtrado[df_filtrado["status"] != "Finalizado"]
     df_finalizados = df_filtrado[df_filtrado["status"] == "Finalizado"]
