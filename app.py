@@ -803,9 +803,9 @@ if st.session_state.nivel in ["admin", "pcp"]:
                         # -------------------------
                         lista = [img for img in lista if img]
 
-                        # ----------------------------------------
+                        # -------------------------
                         # 🔥 EXIBIÇÃO
-                        # ----------------------------------------
+                        # -------------------------
                         if lista:
 
                             for i, img in enumerate(lista):
@@ -829,7 +829,6 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                         except:
                                             pass
 
-                                    # RESULTADO
                                     if image:
                                         st.image(image, use_container_width=True)
                                     else:
@@ -841,7 +840,22 @@ if st.session_state.nivel in ["admin", "pcp"]:
                     else:
                         st.info("Sem desenho para essa OP")
 
+                # -------------------------
+                # FUNÇÃO CENTRAL DE UPDATE (🔥 reduz carga no Supabase)
+                # -------------------------
+                def executar_update(query, params):
+                    try:
+                        with engine.begin() as conn:
+                            conn.execute(text(query), params)
+                        return True
+                    except Exception as e:
+                        st.error(f"Erro ao atualizar banco: {e}")
+                        return False
+
+
+                # -------------------------
                 # CONTROLE
+                # -------------------------
                 with col2:
 
                     status_op = linha["status"]
@@ -860,24 +874,31 @@ if st.session_state.nivel in ["admin", "pcp"]:
                         if status_op == "Atrasado":
                             status_op = "Em produção"
 
+                        # -------------------------
+                        # INICIAR
+                        # -------------------------
                         if status_op == "Programado":
 
                             if st.button("▶ Iniciar produção", use_container_width=True,
-                                         key=f"iniciar_{operador}_{linha['id']}"):
+                                        key=f"iniciar_{linha['id']}"):
 
-                                with engine.begin() as conn:
-                                    conn.execute(text("""
-                                        UPDATE programacao
-                                        SET status = 'Em produção'
-                                        WHERE id = :id
-                                    """), {"id": int(linha["id"])})
+                                if executar_update("""
+                                    UPDATE programacao
+                                    SET status = 'Em produção'
+                                    WHERE id = :id
+                                """, {"id": int(linha["id"])}):
+                                    st.rerun()
 
-                                st.rerun()
-
+                        # -------------------------
+                        # EM PRODUÇÃO
+                        # -------------------------
                         elif status_op == "Em produção":
 
                             col_pause, col_finish = st.columns(2)
 
+                            # -------------------------
+                            # PAUSAR
+                            # -------------------------
                             with col_pause:
 
                                 if st.button("⏸ Pausar", use_container_width=True,
@@ -903,20 +924,18 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                                     use_container_width=True,
                                                     key=f"confirmar_pausa_{linha['id']}"):
 
-                                            with engine.begin() as conn:
-                                                conn.execute(text("""
-                                                    UPDATE programacao
-                                                    SET status = 'Parado',
-                                                        quantidade_produzida = :qtd
-                                                    WHERE id = :id
-                                                """), {
-                                                    "id": int(linha["id"]),
-                                                    "qtd": int(qtd_produzida)
-                                                })
-
-                                            st.session_state[f"pausando_{linha['id']}"] = False
-                                            st.success("Quantidade salva corretamente")
-                                            st.rerun()
+                                            if executar_update("""
+                                                UPDATE programacao
+                                                SET status = 'Parado',
+                                                    quantidade_produzida = :qtd
+                                                WHERE id = :id
+                                            """, {
+                                                "id": int(linha["id"]),
+                                                "qtd": int(qtd_produzida)
+                                            }):
+                                                st.session_state[f"pausando_{linha['id']}"] = False
+                                                st.success("Quantidade salva corretamente")
+                                                st.rerun()
 
                                     with col_cancel:
                                         if st.button("❌ Cancelar",
@@ -926,83 +945,73 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                             st.session_state[f"pausando_{linha['id']}"] = False
                                             st.rerun()
 
+                            # -------------------------
+                            # FINALIZAR
+                            # -------------------------
                             with col_finish:
                                 if st.button("✔ Finalizar", use_container_width=True,
-                                             key=f"finalizar_{linha['id']}"):
+                                            key=f"finalizar_{linha['id']}"):
 
-                                    with engine.begin() as conn:
-                                        conn.execute(text("""
-                                            UPDATE programacao
-                                            SET status = 'Finalizado',
-                                                data_finalizado = :data
-                                            WHERE id = :id
-                                        """), {
-                                            "id": int(linha["id"]),
-                                            "data": datetime.now()
-                                        })
+                                    if executar_update("""
+                                        UPDATE programacao
+                                        SET status = 'Finalizado',
+                                            data_finalizado = :data
+                                        WHERE id = :id
+                                    """, {
+                                        "id": int(linha["id"]),
+                                        "data": datetime.now()
+                                    }):
+                                        st.rerun()
 
-                                    st.rerun()
-
+                        # -------------------------
+                        # PARADO
+                        # -------------------------
                         elif status_op == "Parado":
 
                             if st.button("▶ Retomar produção", use_container_width=True,
-                                         key=f"retomar_{linha['id']}"):
+                                        key=f"retomar_{linha['id']}"):
 
-                                with engine.begin() as conn:
-                                    conn.execute(text("""
-                                        UPDATE programacao
-                                        SET status = 'Em produção'
-                                        WHERE id = :id
-                                    """), {"id": int(linha["id"])})
+                                if executar_update("""
+                                    UPDATE programacao
+                                    SET status = 'Em produção'
+                                    WHERE id = :id
+                                """, {"id": int(linha["id"])}):
+                                    st.rerun()
 
-                                st.rerun()
-                        
                         # -------------------------
                         # EXCLUIR OP
                         # -------------------------
                         if st.session_state.nivel in ["admin", "pcp"]:
-                            
-                            if st.button(
-                                "🗑 Excluir OP",
-                                use_container_width=True,
-                                key=f"excluir_{linha['id']}"
-                            ):
+
+                            if st.button("🗑 Excluir OP",
+                                        use_container_width=True,
+                                        key=f"excluir_{linha['id']}"):
 
                                 st.session_state[f"confirmar_delete_{linha['id']}"] = True
 
-
                             if st.session_state.get(f"confirmar_delete_{linha['id']}", False):
 
-                                st.warning("⚠️ Tem certeza que deseja excluir esta OP? Esta ação não pode ser desfeita.")
+                                st.warning("⚠️ Tem certeza que deseja excluir esta OP?")
 
                                 col_confirmar, col_cancelar = st.columns(2)
 
                                 with col_confirmar:
-                                    if st.button(
-                                        "✅ Sim, excluir",
-                                        use_container_width=True,
-                                        key=f"confirmar_{linha['id']}"
-                                    ):
+                                    if st.button("✅ Sim, excluir",
+                                                use_container_width=True,
+                                                key=f"confirmar_{linha['id']}"):
 
-                                        query = "DELETE FROM programacao WHERE id = :id"
-
-                                        with engine.begin() as conn:
-                                            conn.execute(
-                                                text(query),
-                                                {"id": int(linha["id"])}
-                                            )
-
-                                        st.success("OP excluída com sucesso")
-
-                                        st.session_state[f"confirmar_delete_{linha['id']}"] = False
-                                        st.rerun()
+                                        if executar_update(
+                                            "DELETE FROM programacao WHERE id = :id",
+                                            {"id": int(linha["id"])}
+                                        ):
+                                            st.success("OP excluída com sucesso")
+                                            st.session_state[f"confirmar_delete_{linha['id']}"] = False
+                                            st.rerun()
 
                                 with col_cancelar:
-                                    if st.button(
-                                        "❌ Cancelar",
-                                        use_container_width=True,
-                                        key=f"cancelar_{linha['id']}"
-                                    ):
+                                    if st.button("❌ Cancelar",
+                                                use_container_width=True,
+                                                key=f"cancelar_{linha['id']}"):
 
                                         st.session_state[f"confirmar_delete_{linha['id']}"] = False
                                         st.rerun()
@@ -1010,27 +1019,22 @@ if st.session_state.nivel in ["admin", "pcp"]:
                         # -------------------------
                         # EDITAR OP
                         # -------------------------
-
                         if st.session_state.nivel in ["admin", "pcp"]:
 
                             with st.expander("✏️ Editar OP"):
-
-                                # -------------------------
-                                # CAMPOS
-                                # -------------------------
 
                                 nova_sequencia = st.number_input(
                                     "Sequência",
                                     min_value=1,
                                     step=1,
                                     value=int(linha.get("sequencia", linha["id"])),
-                                    key=f"seq_{operador}_{linha['id']}"
+                                    key=f"seq_{linha['id']}"
                                 )
 
                                 novo_produto = st.text_input(
                                     "Produto",
                                     value=linha["produto"],
-                                    key=f"produto_{operador}_{linha['id']}"
+                                    key=f"produto_{linha['id']}"
                                 )
 
                                 nova_quantidade = st.number_input(
@@ -1038,28 +1042,28 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                     min_value=1,
                                     step=1,
                                     value=int(linha["quantidade"]),
-                                    key=f"quantidade_{operador}_{linha['id']}"
+                                    key=f"quantidade_{linha['id']}"
                                 )
 
                                 nova_inicio = st.date_input(
                                     "Início",
                                     pd.to_datetime(linha["inicio"], dayfirst=True),
                                     format="DD/MM/YYYY",
-                                    key=f"inicio_{operador}_{linha['id']}"
+                                    key=f"inicio_{linha['id']}"
                                 )
 
                                 novo_fim = st.date_input(
                                     "Fim",
                                     pd.to_datetime(linha["fim"], dayfirst=True),
                                     format="DD/MM/YYYY",
-                                    key=f"fim_{operador}_{linha['id']}"
+                                    key=f"fim_{linha['id']}"
                                 )
 
                                 novo_prazo = st.date_input(
                                     "Prazo limite",
                                     pd.to_datetime(linha["prazo_limite"], dayfirst=True),
                                     format="DD/MM/YYYY",
-                                    key=f"prazo_{operador}_{linha['id']}"
+                                    key=f"prazo_{linha['id']}"
                                 )
 
                                 # -------------------------
