@@ -1270,30 +1270,22 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                 else:
                                     df_producao = pd.DataFrame()
 
-
 # -------------------------------------------------
 # KANBAN DE PRODUÇÃO (VISUAL MELHORADO)
 # -------------------------------------------------
 
 st.divider()
-
 st.subheader("📋 Kanban de produção")
 
 if st.session_state.nivel == "operador":
     operadores = [st.session_state.usuario]
 else:
-    operadores = df_producao["operador"].unique()
+    operadores = df_producao["operador"].dropna().unique() if not df_producao.empty else []
 
 if len(operadores) > 0:
     cols = st.columns(len(operadores))
 else:
     st.info("Nenhuma OP em produção")
-
-status_cores = {
-    "Programado": "🟡",
-    "Em produção": "🟢",
-    "Parado": "🟠"
-}
 
 for i, operador in enumerate(operadores):
 
@@ -1301,69 +1293,69 @@ for i, operador in enumerate(operadores):
 
         df_op = df_producao[df_producao["operador"] == operador].copy()
 
+        if df_op.empty:
+            st.caption("Sem OPs")
+            continue
+
         hoje = pd.Timestamp.today().normalize()
 
-        # detectar atrasos
-        df_op["atrasado"] = (
-            (pd.to_datetime(df_op["prazo_limite"], errors="coerce").dt.normalize() < hoje) &
-            (df_op["status"] != "Finalizado")
-        )
+        # 🔥 VETORIZADO (muito mais leve que apply)
+        prazo = pd.to_datetime(df_op["prazo_limite"], errors="coerce").dt.normalize()
 
-        # prioridade de exibição
-        def prioridade(row):
+        df_op["atrasado"] = (prazo < hoje) & (df_op["status"] != "Finalizado")
 
-            if row["atrasado"]:
-                return 0
-            if row["status"] == "Em produção":
-                return 1
-            if row["status"] == "Parado":
-                return 2
-            return 3
+        # 🔥 PRIORIDADE OTIMIZADA
+        df_op["prioridade"] = 3
+        df_op.loc[df_op["status"] == "Parado", "prioridade"] = 2
+        df_op.loc[df_op["status"] == "Em produção", "prioridade"] = 1
+        df_op.loc[df_op["atrasado"], "prioridade"] = 0
 
-        df_op["prioridade"] = df_op.apply(prioridade, axis=1)
-
-        # ordenar
         df_op = df_op.sort_values(["prioridade", "inicio"])
 
-        # Caixa principal do operador
         with st.container(border=True):
 
             st.markdown(f"### ⚙ {operador}")
             st.caption(f"{len(df_op)} OP(s) programadas")
-            st.caption(f"📦 {int(df_op['quantidade'].sum())} peças totais")
+
+            try:
+                st.caption(f"📦 {int(df_op['quantidade'].fillna(0).sum())} peças totais")
+            except:
+                st.caption("📦 -")
 
             st.divider()
 
             for _, row in df_op.iterrows():
 
-                inicio = pd.to_datetime(row["inicio"]).strftime("%d/%m")
-                fim = pd.to_datetime(row["fim"]).strftime("%d/%m")
-
                 with st.container(border=True):
 
-                    st.write(f"**{row['produto']}**")
+                    st.write(f"**{row.get('produto', '-')}**")
 
-                    st.write(f"📦 Quantidade: {int(row['quantidade'])}")
+                    try:
+                        st.write(f"📦 Quantidade: {int(row.get('quantidade', 0))}")
+                    except:
+                        st.write("📦 Quantidade: -")
 
                     if st.session_state.nivel in ["admin", "pcp"]:
-                        st.caption(f"{inicio} → {fim}")
+                        try:
+                            inicio = pd.to_datetime(row["inicio"]).strftime("%d/%m")
+                            fim = pd.to_datetime(row["fim"]).strftime("%d/%m")
+                            st.caption(f"{inicio} → {fim}")
+                        except:
+                            pass
 
-                    # STATUS VISUAL
+                    # STATUS
                     if row["atrasado"]:
                         st.error("🔴 ATRASADO")
-
                     elif row["status"] == "Em produção":
                         st.success("🟢 Em produção")
-
                     elif row["status"] == "Parado":
                         st.warning("🟠 Parado")
-
                     else:
                         st.write("🟡 Programado")
 
 
 # -------------------------------------------------
-# MINI GANTT (VISUAL MELHORADO)
+# MINI GANTT (OTIMIZADO)
 # -------------------------------------------------
 
 st.divider()
@@ -1377,24 +1369,14 @@ if st.session_state.nivel in ["admin", "pcp"]:
     else:
         df_gantt = df_producao.copy()
 
-        df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"])
-        df_gantt["fim"] = pd.to_datetime(df_gantt["fim"])
-        df_gantt["quantidade"] = df_gantt["quantidade"].astype(int)
+        # 🔥 CONVERSÕES SEGURAS
+        df_gantt["inicio"] = pd.to_datetime(df_gantt["inicio"], errors="coerce")
+        df_gantt["fim"] = pd.to_datetime(df_gantt["fim"], errors="coerce")
+        df_gantt["quantidade"] = pd.to_numeric(df_gantt["quantidade"], errors="coerce").fillna(0)
 
-        # -------------------------------------------------
-        # CORREÇÃO PARA OP DE 1 DIA NÃO VIRAR TRACINHO
-        # -------------------------------------------------
-
+        # 🔥 AJUSTE PARA 1 DIA
         df_gantt["fim_plot"] = df_gantt["fim"]
-
-        df_gantt.loc[
-            df_gantt["inicio"] == df_gantt["fim"],
-            "fim_plot"
-        ] = df_gantt["fim"] + pd.Timedelta(days=1)
-
-        # -------------------------------------------------
-        # DETECTAR ATRASO
-        # -------------------------------------------------
+        df_gantt.loc[df_gantt["inicio"] == df_gantt["fim"], "fim_plot"] += pd.Timedelta(days=1)
 
         hoje = pd.Timestamp.today().normalize()
 
@@ -1403,7 +1385,6 @@ if st.session_state.nivel in ["admin", "pcp"]:
             (df_gantt["status"] != "Finalizado")
         )
 
-        # status visual
         df_gantt["status_visual"] = df_gantt["status"]
         df_gantt.loc[df_gantt["atrasado"], "status_visual"] = "Atrasado"
 
@@ -1417,80 +1398,40 @@ if st.session_state.nivel in ["admin", "pcp"]:
         fig = px.timeline(
             df_gantt,
             x_start="inicio",
-            x_end="fim_plot",   # 👈 usamos a nova coluna
+            x_end="fim_plot",
             y="operador",
             color="status_visual",
             color_discrete_map=cores_status,
-            text=df_gantt["produto"] + " • " + df_gantt["quantidade"].astype(str)
+            text=df_gantt["produto"].astype(str) + " • " + df_gantt["quantidade"].astype(int).astype(str)
         )
 
         fig.update_traces(
             textposition="inside",
             insidetextanchor="middle",
-            textfont=dict(
-                color="black",
-                size=13,
-                family="Arial Black"
-            ),
-            width=0.4,
-            marker=dict(
-                line=dict(
-                    color="white",
-                    width=2
-                )
-            )
+            textfont=dict(size=12),
+            width=0.4
         )
 
         fig.update_layout(
             height=380,
-            showlegend=True,
-            margin=dict(l=20, r=20, t=20, b=20),
+            margin=dict(l=10, r=10, t=10, b=10),
             xaxis_title="Data",
-            yaxis_title="Operador",
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)"
+            yaxis_title="Operador"
         )
 
-        fig.update_xaxes(
-            tickfont=dict(size=12)
-        )
-
-        fig.update_xaxes(
-            showgrid=True,
-            gridcolor="rgba(200,200,200,0.2)",
-            dtick="D1",
-            tickformat="%d/%m",
-            ticklabelmode="period"
-        )
-
-        fig.update_yaxes(showgrid=False)
-
-        # -------------------------------------------------
-        # LINHA DE HOJE
-        # -------------------------------------------------
-
-        hoje = pd.Timestamp.today().normalize()
-
+        # 🔥 LINHA HOJE
         fig.add_vline(
             x=hoje,
-            line_width=3,
+            line_width=2,
             line_dash="dash",
             line_color="red"
         )
 
-        fig.add_annotation(
-            x=hoje,
-            y=1.02,
-            yref="paper",
-            text="HOJE",
-            showarrow=False,
-            font=dict(size=12, color="red")
-        )
-
         st.plotly_chart(fig, use_container_width=True)
 
+
 # -------------------------------------------------
-# HISTÓRICO
+# HISTÓRICO (OTIMIZADO)
 # -------------------------------------------------
 
 st.divider()
@@ -1500,22 +1441,12 @@ if not df_finalizados.empty:
 
     df_hist = df_finalizados.copy()
 
-    # -------------------------
-    # FORMATAÇÃO DE DATAS
-    # -------------------------
-
     df_hist["data_finalizado"] = pd.to_datetime(df_hist["data_finalizado"], errors="coerce")
 
     df_hist = df_hist.sort_values("data_finalizado", ascending=False)
 
-    df_hist["inicio"] = pd.to_datetime(df_hist["inicio"], errors="coerce").dt.strftime("%d/%m/%Y")
-    df_hist["fim"] = pd.to_datetime(df_hist["fim"], errors="coerce").dt.strftime("%d/%m/%Y")
-    df_hist["prazo_limite"] = pd.to_datetime(df_hist["prazo_limite"], errors="coerce").dt.strftime("%d/%m/%Y")
-    df_hist["data_finalizado"] = df_hist["data_finalizado"].dt.strftime("%d/%m/%Y")
-
-    # -------------------------
-    # RENOMEAR COLUNAS
-    # -------------------------
+    for col in ["inicio", "fim", "prazo_limite", "data_finalizado"]:
+        df_hist[col] = pd.to_datetime(df_hist[col], errors="coerce").dt.strftime("%d/%m/%Y")
 
     df_hist = df_hist.rename(columns={
         "produto": "Produto",
@@ -1527,30 +1458,13 @@ if not df_finalizados.empty:
         "data_finalizado": "Finalizado em"
     })
 
-    # -------------------------
-    # ORDENAR PELO MAIS RECENTE
-    # -------------------------
-
-    # -------------------------
-    # MOSTRAR TABELA
-    # -------------------------
-
     st.dataframe(
         df_hist[
-            [
-                "Produto",
-                "Quantidade",
-                "Operador",
-                "Início",
-                "Fim",
-                "Prazo limite",
-                "Finalizado em"
-            ]
+            ["Produto", "Quantidade", "Operador", "Início", "Fim", "Prazo limite", "Finalizado em"]
         ],
         use_container_width=True,
         hide_index=True
     )
 
 else:
-
     st.info("Nenhuma programação finalizada ainda")
