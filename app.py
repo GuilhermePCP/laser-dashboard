@@ -173,7 +173,19 @@ if not st.session_state.logado:
 
 # ❌ REMOVIDO AUTOREFRESH PESADO
 # st_autorefresh(interval=300000, key="auto_refresh")
+# -------------------------------------------------
+# ATUALIZAÇÃO MANUAL (ANTI-SUPABASE OVERLOAD)
+# -------------------------------------------------
 
+col_refresh, col_auto = st.columns([1,1])
+
+with col_refresh:
+    if st.button("🔄 Atualizar dados", use_container_width=True):
+        st.cache_data.clear()  # 🔥 limpa cache
+        st.rerun()
+
+with col_auto:
+    auto = st.toggle("Auto atualizar (leve)", value=False)
 
 # -------------------------------------------------
 # CRIAR TABELA
