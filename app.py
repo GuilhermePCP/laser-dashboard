@@ -166,7 +166,7 @@ if not st.session_state.logado:
 
     st.stop()
 
-st_autorefresh(interval=60000, key="auto_refresh")
+st_autorefresh(interval=300000, key="auto_refresh")
 
 # -------------------------------------------------
 # CRIAR TABELA
@@ -178,6 +178,7 @@ criar_tabela()
 # FUNÇÃO CARREGAR DADOS
 # -------------------------------------------------
 
+@st.cache_data(ttl=60)
 def carregar():
     df = carregar_dados()
 
@@ -186,7 +187,7 @@ def carregar():
         .str.strip()
         .str.lower()
         .str.replace(" ", "_")
-        .str.replace(r"[^\w]", "", regex=True)  # 🔥 REMOVE lixo invisível
+        .str.replace(r"[^\w]", "", regex=True)
     )
 
     datas = ["inicio", "fim", "prazo_limite", "data_finalizado"]
@@ -196,8 +197,6 @@ def carregar():
             df[col] = pd.to_datetime(df[col], errors="coerce", dayfirst=True)
 
     return df
-
-df = carregar()
 
 # -------------------------------------------------
 # KPIs
@@ -768,7 +767,7 @@ if not df_tabela.empty:
                 df_exibicao,
                 use_container_width=True,
                 selection_mode="single-row",
-                on_select="rerun",
+                on_select=None,
                 hide_index=True
             )
 
