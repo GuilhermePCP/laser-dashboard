@@ -80,7 +80,6 @@ cookies = EncryptedCookieManager(
 )
 
 if not cookies.ready():
-    st.warning("Carregando sessão...")
     st.stop()
 
 # -------------------------------------------------
@@ -167,7 +166,7 @@ if not st.session_state.logado:
 
     st.stop()
 
-st_autorefresh(interval=300000, key="auto_refresh")
+st_autorefresh(interval=60000, key="auto_refresh")
 
 # -------------------------------------------------
 # CRIAR TABELA
@@ -179,43 +178,22 @@ criar_tabela()
 # FUNÇÃO CARREGAR DADOS
 # -------------------------------------------------
 
-@st.cache_data(ttl=30, show_spinner=False)
 def carregar():
     df = carregar_dados()
 
-    # 🔥 CONVERTE TUDO PRA TIPOS SEGUROS
-    def normalizar_valor(x):
-        if isinstance(x, memoryview):
-            return x.tobytes()
-        if isinstance(x, bytes):
-            try:
-                return x.decode("utf-8")
-            except:
-                return None  # evita quebrar cache
-        return x
-
-    for col in df.columns:
-        df[col] = df[col].apply(normalizar_valor)
-
-    # 🔥 GARANTE TIPOS SIMPLES
-    for col in df.columns:
-        df[col] = df[col].astype("object")
-
-    # 🔥 PADRONIZA COLUNAS
     df.columns = (
         df.columns
         .str.strip()
         .str.lower()
         .str.replace(" ", "_")
-        .str.replace(r"[^\w]", "", regex=True)
+        .str.replace(r"[^\w]", "", regex=True)  # 🔥 REMOVE lixo invisível
     )
 
-    # 🔥 DATAS
     datas = ["inicio", "fim", "prazo_limite", "data_finalizado"]
 
     for col in datas:
         if col in df.columns:
-            df[col] = pd.to_datetime(df[col], errors="coerce")
+            df[col] = pd.to_datetime(df[col], errors="coerce", dayfirst=True)
 
     return df
 
@@ -786,175 +764,207 @@ if not df_tabela.empty:
 
             df_exibicao = df_exibicao[[col for col in ordem_colunas if col in df_exibicao.columns]]
 
-            # -------------------------
-            # TABELA ORIGINAL
-            # -------------------------
-
-            st.dataframe(
+            tabela = st.dataframe(
                 df_exibicao,
                 use_container_width=True,
+                selection_mode="single-row",
+                on_select="rerun",
                 hide_index=True
             )
-
-            # -------------------------
-            # CLIQUE NA LINHA (PADRÃO ANTIGO)
-            # -------------------------
-
-            if "linha_selecionada" not in st.session_state:
-                st.session_state.linha_selecionada = None
-
-            # cria botões invisíveis por linha (hack que você usava sem perceber)
-            for i, row in df_exibicao.iterrows():
-
-                if st.button(
-                    " ",
-                    key=f"select_{operador}_{i}",
-                    help=f"Abrir {row['Produto']}"
-                ):
-                    st.session_state.linha_selecionada = i
-
-            # -------------------------
-            # EXIBE DETALHES
-            # -------------------------
-
-            if st.session_state.linha_selecionada is not None:
-
-                index = st.session_state.linha_selecionada
-
-                if index < len(df_operador):
-
-                    linha = df_operador.iloc[index]
-
-                    col1, col2 = st.columns([2,1])
 
             # -------------------------
             # SELEÇÃO
             # -------------------------
 
-            selecionado = st.session_state.get(f"editor_{operador}", {})
+            if tabela["selection"]["rows"]:
 
-            if "selection" in selecionado and selecionado["selection"]["rows"]:
+                index = tabela["selection"]["rows"][0]
+                linha = df_operador.iloc[index]
 
-                index = selecionado["selection"]["rows"][0]
+                col1, col2 = st.columns([2,1])
 
-                if index < len(df_operador):
+                # IMAGEM
+                with col1:
 
-                    linha = df_operador.iloc[index]
+                    imagens = linha.get("desenho")
 
-                    col1, col2 = st.columns([2,1])
+                    # 🔥 TRATAMENTO ROBUSTO DO BANCO
+                    if isinstance(imagens, memoryview):
+                        imagens = imagens.tobytes()
 
-                    # -------------------------
-                    # IMAGEM
-                    # -------------------------
-                    with col1:
+                    if isinstance(imagens, bytes):
+                        try:
+                            imagens = imagens.decode("utf-8")  # tenta JSON
+                        except:
+                            pass  # mantém como bytes (imagem antiga)
 
-                        imagens = linha.get("desenho")
+                    if imagens and imagens != "null":
 
-                        if isinstance(imagens, memoryview):
-                            imagens = imagens.tobytes()
+                        lista = []
 
-                        if isinstance(imagens, bytes):
+                        # ----------------------------------------
+                        # 🔥 1. JSON (NOVO PADRÃO)
+                        # ----------------------------------------
+                        if isinstance(imagens, str):
                             try:
-                                imagens = imagens.decode("utf-8")
+                                parsed = json.loads(imagens)
+
+                                if isinstance(parsed, list):
+                                    lista = parsed
+                                else:
+                                    lista = [parsed]
+
                             except:
-                                pass
+                                lista = []
 
-                        if imagens and imagens not in ["null", None, ""]:
+                        # ----------------------------------------
+                        # 🔥 2. FALLBACK (ANTIGO)
+                        # ----------------------------------------
+                        if not lista:
 
-                            lista = []
-
-                            # JSON
                             if isinstance(imagens, str):
-                                try:
-                                    parsed = json.loads(imagens)
-                                    lista = parsed if isinstance(parsed, list) else [parsed]
-                                except:
-                                    lista = []
 
-                            # fallback
-                            if not lista:
-                                if isinstance(imagens, str):
-                                    lista = [imagens]
-                                elif isinstance(imagens, (bytes, bytearray)):
+                                # múltiplas imagens grudadas (bug antigo)
+                                if imagens.count("iVBOR") > 1:
+                                    partes = imagens.split("iVBOR")
+                                    lista = ["iVBOR" + p for p in partes if p.strip()]
+                                else:
                                     lista = [imagens]
 
-                            lista = [img for img in lista if img]
+                            elif isinstance(imagens, (bytes, bytearray)):
+                                lista = [imagens]
 
-                            if lista:
+                        # ----------------------------------------
+                        # 🔥 LIMPEZA FINAL
+                        # ----------------------------------------
+                        lista = [img for img in lista if img]
 
-                                for i, img in enumerate(lista):
+                        # ----------------------------------------
+                        # 🔥 EXIBIÇÃO
+                        # ----------------------------------------
+                        if lista:
 
-                                    with st.expander(f"📄 Desenho {i+1}", expanded=(i == 0)):
+                            for i, img in enumerate(lista):
 
-                                        image = None
+                                with st.expander(f"📄 Desenho {i+1}", expanded=(i == 0)):
 
-                                        if isinstance(img, str):
-                                            try:
-                                                image_bytes = base64.b64decode(img)
-                                                image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-                                            except:
-                                                pass
+                                    image = None
 
-                                        elif isinstance(img, (bytes, bytearray)):
-                                            try:
-                                                image = Image.open(io.BytesIO(img)).convert("RGB")
-                                            except:
-                                                pass
+                                    # BASE64 (novo padrão)
+                                    if isinstance(img, str):
+                                        try:
+                                            image_bytes = base64.b64decode(img)
+                                            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+                                        except:
+                                            pass
 
-                                        if image:
-                                            st.image(image, use_container_width=True)
-                                        else:
-                                            st.warning(f"Imagem {i+1} inválida")
+                                    # BYTES (legado)
+                                    if image is None and isinstance(img, (bytes, bytearray)):
+                                        try:
+                                            image = Image.open(io.BytesIO(img)).convert("RGB")
+                                        except:
+                                            pass
 
-                            else:
-                                st.info("Sem desenho para essa OP")
+                                    # RESULTADO
+                                    if image:
+                                        st.image(image, use_container_width=True)
+                                    else:
+                                        st.warning(f"Imagem {i+1} inválida")
 
                         else:
                             st.info("Sem desenho para essa OP")
 
-                    # -------------------------
-                    # CONTROLE
-                    # -------------------------
-                    with col2:
+                    else:
+                        st.info("Sem desenho para essa OP")
 
-                        status_op = linha.get("status", "")
+                # CONTROLE
+                with col2:
 
-                        with st.container(border=True):
+                    status_op = linha["status"]
 
-                            st.subheader("⚙ Controle da OP")
+                    with st.container(border=True):
 
-                            st.write(f"**Produto:** {linha.get('produto','-')}")
-                            st.write(f"**Quantidade:** {int(linha.get('quantidade',0))}")
-                            st.write(f"**Operador:** {linha.get('operador','-')}")
-                            st.write(f"**Sequência:** {int(linha.get('sequencia', linha.get('id',0)))}")
+                        st.subheader("⚙ Controle da OP")
 
-                            st.divider()
+                        st.write(f"**Produto:** {linha['produto']}")
+                        st.write(f"**Quantidade:** {int(linha['quantidade'])}")
+                        st.write(f"**Operador:** {linha['operador']}")
+                        st.write(f"**Sequência:** {int(linha.get('sequencia', linha['id']))}")
 
-                            if status_op == "Atrasado":
-                                status_op = "Em produção"
+                        st.divider()
 
-                            # -------------------------
-                            # AÇÕES
-                            # -------------------------
+                        if status_op == "Atrasado":
+                            status_op = "Em produção"
 
-                            if status_op == "Programado":
+                        if status_op == "Programado":
 
-                                if st.button("▶ Iniciar produção", use_container_width=True,
-                                            key=f"iniciar_{operador}_{linha['id']}"):
+                            if st.button("▶ Iniciar produção", use_container_width=True,
+                                         key=f"iniciar_{operador}_{linha['id']}"):
 
-                                    with engine.begin() as conn:
-                                        conn.execute(text("""
-                                            UPDATE programacao
-                                            SET status = 'Em produção'
-                                            WHERE id = :id
-                                        """), {"id": int(linha["id"])})
+                                with engine.begin() as conn:
+                                    conn.execute(text("""
+                                        UPDATE programacao
+                                        SET status = 'Em produção'
+                                        WHERE id = :id
+                                    """), {"id": int(linha["id"])})
 
-                                    st.rerun()
+                                st.rerun()
 
-                            elif status_op == "Em produção":
+                        elif status_op == "Em produção":
 
+                            col_pause, col_finish = st.columns(2)
+
+                            with col_pause:
+
+                                if st.button("⏸ Pausar", use_container_width=True,
+                                            key=f"pausar_{linha['id']}"):
+
+                                    st.session_state[f"pausando_{linha['id']}"] = True
+
+                                if st.session_state.get(f"pausando_{linha['id']}", False):
+
+                                    qtd_produzida = st.number_input(
+                                        "Quantidade já produzida",
+                                        min_value=0,
+                                        max_value=int(linha["quantidade"]),
+                                        step=1,
+                                        value=int(linha.get("quantidade_produzida", 0)),
+                                        key=f"input_qtd_{linha['id']}"
+                                    )
+
+                                    col_confirm, col_cancel = st.columns(2)
+
+                                    with col_confirm:
+                                        if st.button("💾 Confirmar pausa",
+                                                    use_container_width=True,
+                                                    key=f"confirmar_pausa_{linha['id']}"):
+
+                                            with engine.begin() as conn:
+                                                conn.execute(text("""
+                                                    UPDATE programacao
+                                                    SET status = 'Parado',
+                                                        quantidade_produzida = :qtd
+                                                    WHERE id = :id
+                                                """), {
+                                                    "id": int(linha["id"]),
+                                                    "qtd": int(qtd_produzida)
+                                                })
+
+                                            st.session_state[f"pausando_{linha['id']}"] = False
+                                            st.success("Quantidade salva corretamente")
+                                            st.rerun()
+
+                                    with col_cancel:
+                                        if st.button("❌ Cancelar",
+                                                    use_container_width=True,
+                                                    key=f"cancelar_pausa_{linha['id']}"):
+
+                                            st.session_state[f"pausando_{linha['id']}"] = False
+                                            st.rerun()
+
+                            with col_finish:
                                 if st.button("✔ Finalizar", use_container_width=True,
-                                            key=f"finalizar_{linha['id']}"):
+                                             key=f"finalizar_{linha['id']}"):
 
                                     with engine.begin() as conn:
                                         conn.execute(text("""
@@ -969,19 +979,19 @@ if not df_tabela.empty:
 
                                     st.rerun()
 
-                            elif status_op == "Parado":
+                        elif status_op == "Parado":
 
-                                if st.button("▶ Retomar produção", use_container_width=True,
-                                            key=f"retomar_{linha['id']}"):
+                            if st.button("▶ Retomar produção", use_container_width=True,
+                                         key=f"retomar_{linha['id']}"):
 
-                                    with engine.begin() as conn:
-                                        conn.execute(text("""
-                                            UPDATE programacao
-                                            SET status = 'Em produção'
-                                            WHERE id = :id
-                                        """), {"id": int(linha["id"])})
+                                with engine.begin() as conn:
+                                    conn.execute(text("""
+                                        UPDATE programacao
+                                        SET status = 'Em produção'
+                                        WHERE id = :id
+                                    """), {"id": int(linha["id"])})
 
-                                    st.rerun()
+                                st.rerun()
                         
                         # -------------------------
                         # EXCLUIR OP
