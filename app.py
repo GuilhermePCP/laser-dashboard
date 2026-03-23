@@ -786,12 +786,37 @@ if not df_tabela.empty:
 
             df_exibicao = df_exibicao[[col for col in ordem_colunas if col in df_exibicao.columns]]
 
-            tabela = st.data_editor(
+            # -------------------------
+            # TABELA (ESTILO ORIGINAL)
+            # -------------------------
+
+            st.dataframe(
                 df_exibicao,
                 use_container_width=True,
-                hide_index=True,
-                key=f"editor_{operador}"
+                hide_index=True
             )
+
+            # -------------------------
+            # SELETOR DE OP (SUBSTITUI CLIQUE)
+            # -------------------------
+
+            op_labels = [
+                f"{row['Produto']} • Seq {row['Sequência']}"
+                for _, row in df_exibicao.iterrows()
+            ]
+
+            if op_labels:
+
+                op_escolhida = st.selectbox(
+                    "Selecione uma OP para ver detalhes",
+                    options=op_labels,
+                    key=f"select_op_{operador}"
+                )
+
+                index = op_labels.index(op_escolhida)
+                linha = df_operador.iloc[index]
+
+                col1, col2 = st.columns([2,1])
 
             # -------------------------
             # SELEÇÃO
