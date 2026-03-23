@@ -812,18 +812,16 @@ if st.session_state.nivel in ["admin", "pcp"]:
                 tabela = st.dataframe(
                     df_exibicao,
                     use_container_width=True,
-                    hide_index=True,
-                    selection_mode="single-row"
+                    hide_index=True
                 )
 
-                selecionado = tabela.selection.rows
+                selecionado = tabela.selection.rows if hasattr(tabela, "selection") else []
 
-                if selecionado:
+                if not selecionado:
+                    st.info("Selecione uma OP na tabela para ver os detalhes")
+                    continue  # 🔥 ESSENCIAL (evita quebrar o loop)
 
-                    index = selecionado[0]
-                    linha = df_operador.iloc[index]
-
-                index = tabela["selection"]["rows"][0]
+                index = selecionado[0]
                 linha = df_operador.iloc[index]
 
                 col1, col2 = st.columns([2,1])
