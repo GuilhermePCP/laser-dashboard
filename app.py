@@ -649,7 +649,11 @@ if st.session_state.nivel in ["admin", "pcp"]:
 
             with abas[i]:
 
-                df_operador = df_tabela[df_tabela["operador"] == operador].copy()
+                usuario_norm = normalizar_texto(operador)
+
+                df_operador = df_tabela[
+                    df_tabela["operador"].apply(normalizar_texto) == usuario_norm
+                ].copy()
 
                 hoje = pd.Timestamp.today().normalize()
 
