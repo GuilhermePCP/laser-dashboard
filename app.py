@@ -166,7 +166,7 @@ if not st.session_state.logado:
 
     st.stop()
 
-#st_autorefresh(interval=60000, key="auto_refresh")
+st_autorefresh(interval=600000, key="auto_refresh")
 
 # -------------------------------------------------
 # CRIAR TABELA
