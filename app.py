@@ -1267,6 +1267,9 @@ if st.session_state.nivel in ["admin", "pcp"]:
                                 # FILTRAR APENAS PRODUÇÃO ATIVA
                                 # -------------------------------------------------
 
+                                df_filtrado = filtrar_dados(df, maquina, status)
+
+                                # 🔥 GARANTE QUE EXISTE
                                 df_producao = df_filtrado[df_filtrado["status"] != "Finalizado"]
 
 
