@@ -115,7 +115,7 @@ def verificar_login(usuario, senha):
         return None
 
 
-# estado da sessão
+#uooooo, vc joga sujo, sabe que voce é o meu ponto fraco, tenta ser feliz mas ta fznd errado, procurando em outro alguem oq esta do seu ladooo
 # estado da sessão
 if "logado" not in st.session_state:
 
@@ -614,7 +614,8 @@ if not df_tabela.empty:
 
             df_operador["status_visual_base"] = df_operador.apply(
                 lambda row: "Atrasado"
-                if row["atrasado"] and row["status_original"] != "Finalizado"
+                if row["atrasado"]
+                and row["status_original"] not in ["Finalizado", "Em produção"]
                 else row["status_original"],
                 axis=1
             )
